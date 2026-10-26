@@ -1,0 +1,38 @@
+# Dependencies & build output
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.vite/
+coverage/
+test-results/
+playwright-report/
+
+# Runtime data must live outside the repo (%LOCALAPPDATA%/AutoPostMKT) — guard against accidents
+data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+logs/
+*.log
+profiles/
+browser-profiles/
+media/
+
+# Secrets / environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Spike artefacts (screenshots/traces may contain personal data)
+spikes/output/
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.idea/

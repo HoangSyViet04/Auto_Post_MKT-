@@ -1,0 +1,39 @@
+{
+  "name": "auto-post-mkt",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ứng dụng nội bộ hỗ trợ đăng bài bán điện thoại lên Facebook (TCN, group, fanpage).",
+  "type": "module",
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
+  "imports": {
+    "#domain": "./packages/domain/src/index.ts",
+    "#config": "./packages/config/src/index.ts",
+    "#storage": "./packages/storage/src/index.ts",
+    "#contracts": "./packages/integrations/contracts/src/index.ts",
+    "#browser": "./packages/integrations/browser/src/index.ts",
+    "#fb-profile": "./packages/integrations/facebook-profile/src/index.ts",
+    "#fb-group": "./packages/integrations/facebook-group/src/index.ts",
+    "#fb-page": "./packages/integrations/facebook-page/src/index.ts"
+  },
+  "scripts": {
+    "dev:server": "node --watch apps/server/src/index.ts",
+    "dev:worker": "node --watch apps/worker/src/index.ts",
+    "dev:web": "vite --config apps/web/vite.config.ts",
+    "build:web": "vite build --config apps/web/vite.config.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p apps/web/tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

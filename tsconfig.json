@@ -1,0 +1,18 @@
+{
+  // Node side: server, worker, packages, scripts, spikes, tests. Web UI has its own: apps/web/tsconfig.json
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"]
+  },
+  "include": [
+    "apps/server/**/*.ts",
+    "apps/worker/**/*.ts",
+    "apps/web/vite.config.ts",
+    "packages/**/*.ts",
+    "scripts/**/*.ts",
+    "spikes/**/*.ts",
+    "tests/**/*.ts"
+  ]
+}

@@ -1,0 +1,1 @@
+-- Migration được thêm từ P02. Đặt tên: NNNN_mo_ta.sql
