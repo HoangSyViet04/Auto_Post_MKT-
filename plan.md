@@ -90,7 +90,7 @@ README.md
 plan.md
 ```
 
-Đã tạo ở P00.3. Dự án nằm trong OneDrive để làm việc trên hai máy, nên dùng **một `package.json` npm, không workspaces/pnpm**. Các module tham chiếu nhau qua `#domain`, `#config`, `#storage`, ... (xem [ADR 0001](docs/adr/0001-onedrive-single-package.md)). Dữ liệu vận hành đặt ngoài mã nguồn và ngoài OneDrive, mặc định `%LOCALAPPDATA%/AutoPostMKT/`: DB, media, log, browser profiles, cache. Ghi đè được bằng `APM_DATA_DIR`, không ghi cứng theo máy hiện tại.
+Đã tạo ở P00.3. Bản làm việc đặt tại `D:/Project/Auto_Post_MKT` (ngoài OneDrive), hai máy đồng bộ qua git/GitHub. Dùng **một `package.json` npm, không workspaces/pnpm**. Các module tham chiếu nhau qua `#domain`, `#config`, `#storage`, ... (xem [ADR 0001](docs/adr/0001-onedrive-single-package.md)). Dữ liệu vận hành đặt ngoài mã nguồn, mặc định `%LOCALAPPDATA%/AutoPostMKT/`: DB, media, log, browser profiles, cache. Ghi đè được bằng `APM_DATA_DIR`, không ghi cứng theo máy hiện tại.
 
 ## 4. Dữ liệu và giao ước cần thiết kế
 
@@ -154,7 +154,7 @@ Tất cả phần đều **chưa bắt đầu**. Pxx là mã phần giao việc,
 
 | Phần | Đầu ra | Phụ thuộc | Trạng thái |
 | --- | --- | --- | --- |
-| P00 | Nền dự án, môi trường Windows | README/plan | Đang làm (P00.1–P00.4 xong) |
+| P00 | Nền dự án, môi trường Windows | README/plan | Đang làm (P00.1–P00.5 xong) |
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Chưa bắt đầu |
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Chưa bắt đầu |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
@@ -181,7 +181,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [x] P00.2. Khởi tạo Git nếu chưa có, giữ README/plan; ignore dữ liệu, ảnh, profiles, secrets, log và file môi trường.
 - [x] P00.3. Tạo workspace TypeScript web/server/worker và kiểu dùng chung; khóa dependencies bằng lockfile. *(Một package npm + `#alias`, theo ADR 0001.)*
 - [x] P00.4. Chọn SQLite driver chạy được trên Windows; thử DB tạm và migration tối thiểu. *(`node:sqlite` tích hợp sẵn, WAL, migration có checksum — ADR 0002.)*
-- [ ] P00.5. Dựng API health, UI bốn mục; hành động chưa có ghi chưa triển khai.
+- [x] P00.5. Dựng API health, UI bốn mục; hành động chưa có ghi chưa triển khai. *(Fastify `GET /api/health` trên 127.0.0.1:4317, UI hash-routing, Vite proxy `/api`.)*
 - [ ] P00.6. Cấu hình dev/test/local và adapter giả mặc định; không tự đăng Facebook khi mở app.
 - [ ] P00.7. Thiết lập typecheck, lint, build và kiểm tra nghiệp vụ; log có lọc bí mật từ đầu.
 - [ ] P00.8. Server chỉ trên loopback; chuẩn bị kiểm tra origin/CSRF và cơ chế truy cập cục bộ cho lệnh thay đổi dữ liệu. Localhost không đồng nghĩa bỏ mọi kiểm tra request.
@@ -481,12 +481,13 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 26/10/2026 | Tài liệu | Lập kế hoạch theo README | Rà soát phạm vi/phụ thuộc; chưa thử ứng dụng | Bắt đầu P00 |
 | 26/10/2026 | P00.1–P00.3 | Git, cấu trúc thư mục, khung TS, ADR 0001, CLAUDE.md | typecheck, chạy server/worker, build web đạt | P00.4 SQLite |
 | 26/10/2026 | P00.4 | `node:sqlite`, WAL, transaction, migration runner, `npm test`, ADR 0002 | 13/13 test ×3 lần, gồm 4 tiến trình nhận 2.000 job không trùng | P00.5 Fastify health + UI 4 mục |
+| 26/10/2026 | P00.5 + hạ tầng | Fastify health, UI 4 mục; chuyển repo ra `D:/Project` vì OneDrive làm hỏng node_modules | 15/15 test; server thật + proxy trả health đúng, chỉ nghe loopback | P00.6 cấu hình dev/test + adapter giả |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 
 ## 11. Việc làm ở lượt triển khai đầu tiên
 
-- [x] Kiểm tra môi trường/đường dẫn tại `D:/OneDrive - EDUPIA/Auto_Post_MKT` (đồng bộ OneDrive giữa hai máy).
+- [x] Kiểm tra môi trường/đường dẫn tại `D:/Project/Auto_Post_MKT` (hai máy đồng bộ qua git; đã bỏ OneDrive — ADR 0001).
 - [ ] P00: khung bốn mục, API health, SQLite tối thiểu, adapter giả.
 - [ ] Chuẩn bị P01 và liệt kê đầu vào người dùng cần cung cấp: đăng nhập hai tài khoản, đích thử, proxy nếu dùng.
 - [ ] Chưa bật lịch đăng thật trước khi adapter và dừng/đối chiếu đạt yêu cầu.

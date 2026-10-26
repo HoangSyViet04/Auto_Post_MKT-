@@ -17,6 +17,17 @@ export function getDataDir(): string {
   return join(localAppData, 'AutoPostMKT');
 }
 
+export const DEFAULT_SERVER_PORT = 4317;
+
+/** Cổng server cục bộ (APM_SERVER_PORT); web dev proxy dùng cùng giá trị. */
+export function getServerPort(): number {
+  const raw = process.env.APM_SERVER_PORT;
+  if (!raw) return DEFAULT_SERVER_PORT;
+  const port = Number(raw);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error(`APM_SERVER_PORT không hợp lệ: ${raw}`);
+  return port;
+}
+
 /** Mỗi môi trường một file DB để dữ liệu dev/test không lẫn với vận hành. */
 export function getDatabasePath(): string {
   return join(getDataDir(), 'db', `${getAppEnv()}.sqlite`);

@@ -1,7 +1,7 @@
 # ADR 0001 — Mã nguồn trong OneDrive, một package npm, import nội bộ bằng `#alias`
 
 - Ngày: 2026-10-26
-- Trạng thái: Đã chấp nhận
+- Trạng thái: **Thay thế một phần** (2026-10-26 23:18). Mục 1 bị bỏ, các mục 2–6 vẫn giữ. Xem phần "Cập nhật" ở cuối file.
 
 ## Bối cảnh
 
@@ -26,3 +26,16 @@ pnpm (node_modules dạng symlink) và npm workspaces (link `node_modules/@scope
 - Khi `package-lock.json` đổi, chạy `npm ci` trên máy đang dùng; không chạy install đồng thời ở hai máy.
 - Nên đặt thư mục dự án ở chế độ OneDrive "Always keep on this device" để tránh file placeholder.
 - Nếu đồng bộ `node_modules` gây lỗi thường xuyên, phương án thay thế: bare git repo trong OneDrive, bản làm việc đặt ngoài OneDrive trên từng máy.
+
+## Cập nhật 2026-10-26 23:18 — chuyển ra khỏi OneDrive
+
+**Sự cố:** Khi cài `fastify`, OneDrive Files On-Demand biến mọi thư mục trong `node_modules` thành reparse point của nó. Thư mục `node_modules/pino-std-serializers` nhận reparse tag hỏng: không đọc, xóa, đổi tên được, kể cả bằng `fsutil`. Server không khởi động được.
+
+**Quyết định mới (người dùng chọn):**
+- Bản làm việc chuyển sang `D:\Project\Auto_Post_MKT`, ngoài OneDrive.
+- Đồng bộ giữa hai máy bằng **git + GitHub** (`HoangSyViet04`): làm xong thì `git push`, sang máy kia thì `git pull` rồi `npm ci`.
+- Thư mục cũ `D:\OneDrive - EDUPIA\Auto_Post_MKT` không còn dùng.
+
+**Các mục giữ nguyên:** npm, một `package.json`, alias `#...`, chạy TS trực tiếp, hai tsconfig, dữ liệu ở `%LOCALAPPDATA%`. Lý do ban đầu (tránh junction trong OneDrive) không còn, nhưng cách làm này vẫn đơn giản và đang chạy tốt, nên không đổi. Có thể xem lại nếu sau này cần tách package.
+
+**Quy tắc vận hành thay cho mục "Hệ quả" phía trên:** không làm song song trên hai máy khi chưa push/pull; máy mới clone repo rồi chạy `npm ci`.

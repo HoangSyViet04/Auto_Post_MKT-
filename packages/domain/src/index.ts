@@ -3,3 +3,4 @@
  * Không được dùng API của Node (fs, path, ...) — apps/web cũng import module này.
  */
 export * from './job-status.ts';
+export * from './api.ts';

@@ -14,7 +14,8 @@ Cập nhật checkbox/trạng thái tương ứng trong `plan.md` khi đạt ti�
 
 ## Môi trường
 
-- Windows, dự án nằm trong OneDrive (đường dẫn có khoảng trắng) — xem ADR 0001. Không tạo symlink/junction trong repo; không dùng pnpm/npm workspaces.
+- Windows, bản làm việc ở `D:\Project\Auto_Post_MKT` (**không** đặt trong OneDrive — OneDrive làm hỏng `node_modules`, xem ADR 0001).
+- Hai máy đồng bộ qua git: **đầu phiên** chạy `git pull`, rồi `npm ci` nếu `package-lock.json` đổi; **cuối mỗi việc** commit và `git push` sau khi đã ghi `report_daily.md`.
 - Node 24, npm, một `package.json`. Import nội bộ bằng `#domain`, `#config`, `#storage`, `#contracts`, `#browser`, `#fb-profile`, `#fb-group`, `#fb-page`.
 - TypeScript chạy trực tiếp bằng Node (type stripping): import tương đối phải có đuôi `.ts`; không `enum`/`namespace`/parameter properties.
 - Dữ liệu vận hành ở `%LOCALAPPDATA%\AutoPostMKT\` (ghi đè bằng `APM_DATA_DIR`), không bao giờ trong repo.

@@ -1,0 +1,148 @@
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --sidebar: #1f2937;
+  --sidebar-text: #d1d5db;
+  --sidebar-active: #374151;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #2563eb;
+  --ok: #059669;
+  --error: #dc2626;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--sidebar);
+  color: var(--sidebar-text);
+  padding: 16px 8px;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+  padding: 0 12px 16px;
+}
+
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  background: var(--sidebar-active);
+  color: #fff;
+}
+
+.nav-item.sub {
+  padding-left: 28px;
+  font-size: 14px;
+}
+
+.health {
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--sidebar-active);
+}
+
+.health.ok {
+  color: #a7f3d0;
+}
+
+.health.error {
+  color: #fecaca;
+}
+
+.content {
+  padding: 24px 32px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.tag {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.actions button {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font: inherit;
+}
+
+.actions button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.notice {
+  font-size: 13px;
+  color: var(--muted);
+  border-left: 3px solid var(--border);
+  padding-left: 10px;
+}
