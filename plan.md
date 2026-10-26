@@ -154,7 +154,7 @@ Tất cả phần đều **chưa bắt đầu**. Pxx là mã phần giao việc,
 
 | Phần | Đầu ra | Phụ thuộc | Trạng thái |
 | --- | --- | --- | --- |
-| P00 | Nền dự án, môi trường Windows | README/plan | Đang làm (P00.1–P00.3 xong) |
+| P00 | Nền dự án, môi trường Windows | README/plan | Đang làm (P00.1–P00.4 xong) |
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Chưa bắt đầu |
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Chưa bắt đầu |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
@@ -180,7 +180,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [x] P00.1. Kiểm tra Node, công cụ cài dependency, browser thử và đường dẫn dữ liệu; ghi phiên bản/giới hạn máy. *(Node 24.16.0, npm 11.13.0, git 2.54; browser Playwright kiểm tra ở P01.)*
 - [x] P00.2. Khởi tạo Git nếu chưa có, giữ README/plan; ignore dữ liệu, ảnh, profiles, secrets, log và file môi trường.
 - [x] P00.3. Tạo workspace TypeScript web/server/worker và kiểu dùng chung; khóa dependencies bằng lockfile. *(Một package npm + `#alias`, theo ADR 0001.)*
-- [ ] P00.4. Chọn SQLite driver chạy được trên Windows; thử DB tạm và migration tối thiểu.
+- [x] P00.4. Chọn SQLite driver chạy được trên Windows; thử DB tạm và migration tối thiểu. *(`node:sqlite` tích hợp sẵn, WAL, migration có checksum — ADR 0002.)*
 - [ ] P00.5. Dựng API health, UI bốn mục; hành động chưa có ghi chưa triển khai.
 - [ ] P00.6. Cấu hình dev/test/local và adapter giả mặc định; không tự đăng Facebook khi mở app.
 - [ ] P00.7. Thiết lập typecheck, lint, build và kiểm tra nghiệp vụ; log có lọc bí mật từ đầu.
@@ -480,6 +480,7 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | --- | --- | --- | --- | --- |
 | 26/10/2026 | Tài liệu | Lập kế hoạch theo README | Rà soát phạm vi/phụ thuộc; chưa thử ứng dụng | Bắt đầu P00 |
 | 26/10/2026 | P00.1–P00.3 | Git, cấu trúc thư mục, khung TS, ADR 0001, CLAUDE.md | typecheck, chạy server/worker, build web đạt | P00.4 SQLite |
+| 26/10/2026 | P00.4 | `node:sqlite`, WAL, transaction, migration runner, `npm test`, ADR 0002 | 13/13 test ×3 lần, gồm 4 tiến trình nhận 2.000 job không trùng | P00.5 Fastify health + UI 4 mục |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 

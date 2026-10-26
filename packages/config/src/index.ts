@@ -16,3 +16,8 @@ export function getDataDir(): string {
   if (!localAppData) throw new Error('Không xác định được LOCALAPPDATA; đặt APM_DATA_DIR.');
   return join(localAppData, 'AutoPostMKT');
 }
+
+/** Mỗi môi trường một file DB để dữ liệu dev/test không lẫn với vận hành. */
+export function getDatabasePath(): string {
+  return join(getDataDir(), 'db', `${getAppEnv()}.sqlite`);
+}

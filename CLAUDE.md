@@ -22,6 +22,8 @@ Cập nhật checkbox/trạng thái tương ứng trong `plan.md` khi đạt ti�
 ## Lệnh
 
 - `npm run typecheck` — kiểm tra kiểu cả phía Node và web.
+- `npm test` — chạy `node:test` cho `{apps,packages,tests}/**/*.test.ts`.
+- `npm run db:migrate` — áp dụng migration cho DB môi trường hiện tại (`APM_ENV`, `APM_DATA_DIR`). Migration mới: thêm file `packages/storage/migrations/NNNN_ten.sql`, **không sửa file đã có** (ADR 0002).
 - `npm run dev:server` / `npm run dev:worker` / `npm run dev:web`
 - `npm run build:web`
 

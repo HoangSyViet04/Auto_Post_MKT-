@@ -1,2 +1,3 @@
-/** Storage (P02): SQLite, migration, repository, MediaStore, bảo vệ secrets. */
-export {};
+/** Storage: SQLite, migration, repository (P02), MediaStore (P02), bảo vệ secrets (P02). */
+export * from './db.ts';
+export * from './migrate.ts';
