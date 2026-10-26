@@ -2,15 +2,16 @@
  * Server cục bộ (Fastify, chỉ 127.0.0.1): API dữ liệu, file và lệnh nghiệp vụ.
  * Không điều khiển Playwright — gửi lệnh cho worker qua DB.
  */
-import { getAppEnv, getDatabasePath, getServerPort } from '#config';
+import { getAppEnv, getDatabasePath, getIntegrationMode, getServerPort } from '#config';
 import { migrate, openDatabase } from '#storage';
 import { buildApp } from './app.ts';
 
 const env = getAppEnv();
+const integrations = getIntegrationMode();
 const db = openDatabase(getDatabasePath());
 migrate(db);
 
-const app = buildApp({ db, env });
+const app = buildApp({ db, env, integrations });
 
 const shutdown = async (signal: string) => {
   app.log.info(`Nhận ${signal}, đang dừng server`);

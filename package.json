@@ -18,13 +18,13 @@
     "#fb-page": "./packages/integrations/facebook-page/src/index.ts"
   },
   "scripts": {
-    "dev:server": "node --watch apps/server/src/index.ts",
-    "dev:worker": "node --watch apps/worker/src/index.ts",
+    "dev:server": "node --env-file-if-exists=.env --watch apps/server/src/index.ts",
+    "dev:worker": "node --env-file-if-exists=.env --watch apps/worker/src/index.ts",
     "dev:web": "vite --config apps/web/vite.config.ts",
     "build:web": "vite build --config apps/web/vite.config.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p apps/web/tsconfig.json",
-    "test": "node --test \"{apps,packages,tests}/**/*.test.ts\"",
-    "db:migrate": "node scripts/db-migrate.ts"
+    "test": "node --env-file=tests/test.env --test \"{apps,packages,tests}/**/*.test.ts\"",
+    "db:migrate": "node --env-file-if-exists=.env scripts/db-migrate.ts"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

@@ -8,7 +8,7 @@ let app: ReturnType<typeof buildApp>;
 before(() => {
   db = openDatabase(':memory:');
   migrate(db);
-  app = buildApp({ db, env: 'test', logger: false });
+  app = buildApp({ db, env: 'test', integrations: 'fake', logger: false });
 });
 after(async () => {
   await app.close();
@@ -23,6 +23,7 @@ describe('server API', () => {
     assert.equal(body.status, 'ok');
     assert.equal(body.env, 'test');
     assert.equal(body.schemaVersion, 1);
+    assert.equal(body.integrations, 'fake');
     assert.ok(!Number.isNaN(Date.parse(body.startedAt)));
   });
 

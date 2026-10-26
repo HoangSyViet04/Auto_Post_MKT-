@@ -146,3 +146,12 @@ nav {
   border-left: 3px solid var(--border);
   padding-left: 10px;
 }
+
+.sim-banner {
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 14px;
+}

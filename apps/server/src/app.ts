@@ -1,17 +1,18 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { AppEnv } from '#config';
-import type { ApiError, HealthResponse } from '#domain';
+import type { ApiError, HealthResponse, IntegrationMode } from '#domain';
 import type { Database } from '#storage';
 
 export interface AppDeps {
   db: Database;
   env: AppEnv;
+  integrations: IntegrationMode;
   /** false trong test để không in log. */
   logger?: boolean;
 }
 
 /** Tạo Fastify app (chưa listen) để server và test dùng chung. */
-export function buildApp({ db, env, logger = true }: AppDeps): FastifyInstance {
+export function buildApp({ db, env, integrations, logger = true }: AppDeps): FastifyInstance {
   const app = Fastify({
     logger: logger && {
       level: env === 'production' ? 'info' : 'debug',
@@ -26,6 +27,7 @@ export function buildApp({ db, env, logger = true }: AppDeps): FastifyInstance {
     status: 'ok',
     env,
     schemaVersion: Number(schemaVersion.get()?.v),
+    integrations,
     startedAt,
   }));
 

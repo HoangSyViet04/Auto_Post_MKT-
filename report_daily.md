@@ -144,3 +144,24 @@ Mẫu một mục:
 - **Kiểm tra:** push thành công, 3 commit (c543dfa, 7ce8f23, f04e525). Commit này được push ngay sau đó.
 - **Máy thứ hai:** `git clone https://github.com/HoangSyViet04/Auto_Post_MKT-.git D:\Project\Auto_Post_MKT` → cài Node 24 → `npm ci` → `npm test`.
 - **Tiếp theo:** P00.6 — cấu hình dev/test/local, adapter giả mặc định, không tự đăng Facebook khi mở app.
+
+## 2026-10-26 23:33 — P00.6: cấu hình dev/test/local, adapter giả mặc định
+
+- **Đã làm:**
+  - Đầu phiên: `git pull` (đã mới nhất), `node_modules` có sẵn, lockfile không đổi nên không chạy `npm ci`. `npm run typecheck` đạt, `npm test` 15/15 trước khi sửa.
+  - `#domain`: thêm `channels.ts` (`CHANNELS` profile/group/page, `IntegrationMode` fake/live); `HealthResponse` có thêm `integrations`.
+  - `#config`: `getIntegrationMode()` đọc `APM_INTEGRATIONS`, mặc định `fake`, `live` bị cấm khi `APM_ENV=test`. `APM_ENV=test` không có `APM_DATA_DIR` thì dùng `<tmpdir>/AutoPostMKT-test`, không đụng `%LOCALAPPDATA%`. Giá trị rỗng coi như chưa đặt.
+  - `#contracts`: giao ước `Publisher` bản phác thảo (capabilities/prepare/submit/verify/stop; kết quả published/pending_approval/unknown/failed) và `createFakePublisher()` chạy trong bộ nhớ, có kịch bản kết quả tùy chọn. P02.6 sẽ hoàn thiện cùng schema job và thêm scanner.
+  - Worker: `apps/worker/src/publishers.ts` chọn adapter theo chế độ; `live` báo "Chưa có adapter Facebook thật" thay vì lặng lẽ dùng adapter giả. Worker in rõ chế độ và "chưa có scheduler, không tự đăng bài".
+  - Server: health trả `integrations`. Web: dải vàng "Chế độ mô phỏng…" và nhãn ở góc health.
+  - npm scripts: `dev:server`, `dev:worker`, `db:migrate` thêm `--env-file-if-exists=.env`; `test` thêm `--env-file=tests/test.env` (APM_ENV=test, APM_INTEGRATIONS=fake).
+  - Tài liệu: `docs/environment.md` (bảng biến, cách bảo đảm không tự đăng), `.env.example` viết lại đủ biến.
+- **Kiểm tra:**
+  - `npm run typecheck` → đạt. `npm test` → 27/27 đạt (thêm test config, adapter giả với `fetch` bị thay bằng hàm ném lỗi, worker chọn adapter, spawn tiến trình worker thật ở chế độ mặc định và với `live` trong test).
+  - `npm run build:web` → đạt.
+  - Chạy thật với `APM_DATA_DIR` ở scratchpad: worker mặc định in `integrations=fake (mô phỏng…)`, exit 0; `APM_INTEGRATIONS=live` → worker lỗi "Chưa có adapter Facebook thật"; server với `APM_ENV=test APM_INTEGRATIONS=live` → lỗi "bị cấm". Server mặc định: `GET /api/health` → `{"status":"ok","env":"development","schemaVersion":1,"integrations":"fake",...}`. `npm run db:migrate` → "Không có migration mới". Tạo `.env` tạm (`APM_ENV=test`) → worker nhận `env=test`, đã xóa file sau đó. Đã tắt server.
+  - Chưa xem dải "Chế độ mô phỏng" trên trình duyệt thật (chưa có Playwright, P01); mới kiểm qua typecheck/build.
+- **Tồn đọng / lưu ý:**
+  - Khi không có `.env`, Node in dòng ".env not found. Continuing without it." — vô hại.
+  - Giao ước publisher chỉ là phác thảo; chưa có scanner contract, chưa nối với DB/job (P02.6, P07).
+- **Tiếp theo:** P00.7 — typecheck/lint/build và kiểm tra nghiệp vụ; log có lọc bí mật từ đầu (định dạng log dễ đọc, redact đầy đủ).

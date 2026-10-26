@@ -66,6 +66,11 @@ export function App() {
         <HealthBadge health={health} />
       </aside>
       <main className="content">
+        {health.kind === 'ok' && health.data.integrations === 'fake' && (
+          <div className="sim-banner" role="status">
+            Chế độ mô phỏng: dùng adapter giả, không gửi gì tới Facebook.
+          </div>
+        )}
         <PlaceholderPage page={page} />
       </main>
     </div>
@@ -99,7 +104,8 @@ function HealthBadge({ health }: { health: HealthState }) {
   }
   return (
     <div className="health ok">
-      Server: {health.data.env} · DB v{health.data.schemaVersion}
+      Server: {health.data.env} · DB v{health.data.schemaVersion} ·{' '}
+      {health.data.integrations === 'fake' ? 'mô phỏng' : 'tích hợp thật'}
     </div>
   );
 }
