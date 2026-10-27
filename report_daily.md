@@ -277,3 +277,15 @@ Mẫu một mục:
 - **Quyết định:** [ADR0010](docs/adr/0010-data-api-validation.md), bổ sung note ADR0004. Raw upload tránh thêm multipart parser, 20MiB technical bound; pageSize1..100. Chưa API edit/delete hoặc UI/thumbnail; không tự retry upload khi mạng lỗi.
 - **Tồn đọng / lưu ý:** Đây là backend nền, chưa hoàn tất P05 UI. Không endpointsecret reveal/đăng Facebook, chế độ fake giữ nguyên. Test dữ liệu ảnh/DBtạm. Commit/push ngay sau mục này.
 - **Tiếp theo:** P02.8 ép test env/fake, thư mục DB/media tạm và fixture dùng lại; chạy cổng tổng một lần cuối3mục.
+
+## 2026-10-27 09:32 — P02.8: runner test an toàn và fixture dùng lại
+
+- **Đã làm:** Chốt P02.8 (phần code do agent trước viết, người dùng đã chạy cổng tổng). Runner `npm test` đi qua `scripts/test.ts`: ép `APM_ENV=test`, `APM_INTEGRATIONS=fake`, `APM_DATA_DIR` là thư mục tạm riêng cho mỗi lần chạy (xóa sau khi xong), kể cả khi shell đang đặt production/live/dữ liệu thật. Thêm `#test-support` (`tests/helpers`: `createTestWorkspace` DB+media riêng từng workspace, `seedOfflineScenario`) và `tests/fixtures`; fixture không tự seed, không chạy ở production. Chuyển fixture publishing cũ ra khỏi `packages/storage`.
+- **Cách làm / file chính:** `scripts/test.ts`, `package.json` (script `test`, alias `#test-support`), `tests/helpers/{index,workspace}.ts`, `tests/fixtures/*`, `tests/runner-safety.test.ts`; sửa `data-api.test.ts`, `repository.test.ts`, `secret-store.test.ts` dùng helper chung.
+- **Kiểm tra:**
+  - Người dùng báo đã chạy cổng tổng: **125/125 test đạt**, gồm DPAPI thật với đường dẫn Unicode; typecheck/lint sạch. Tôi **không** chạy lại 125 test này.
+  - Lượt này tôi chạy: `npm.cmd run typecheck` → đạt; `npm.cmd run lint` → 69 file sạch.
+  - `npm.cmd run build:web` → **lỗi** `EPERM` khi `vite:prepare-out-dir` xóa `apps/web/dist/assets`. Nguyên nhân: file trong `dist` do tài khoản sandbox của Codex tạo, tài khoản hiện tại không xóa được (`Remove-Item`, cấp quyền bằng `icacls` đều bị từ chối; không leo thang quyền quản trị). Code build vẫn đúng: `vite build --outDir <thư mục tạm>` → đạt (JS 226.19 kB).
+- **Quyết định:** không đổi ACL hệ thống. `dist` đã nằm trong `.gitignore`.
+- **Tồn đọng / lưu ý:** `apps/web/dist` cần được xóa bằng quyền quản trị (hoặc takeown) một lần; sau đó `npm run build:web` chạy bình thường. Mục P02 còn lại không có việc mở: P02.1–P02.8 xong ở phạm vi offline, tích hợp Facebook thật vẫn chưa kiểm chứng.
+- **Tiếp theo:** phần độc lập khi chờ đầu vào P01 thật: P03 (quản lý tài khoản, offline) hoặc P05 (nhập máy/soạn bài). P01 thật cần tài khoản/đích/phạm vi do người dùng chọn.

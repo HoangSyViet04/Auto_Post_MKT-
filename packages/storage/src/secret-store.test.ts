@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, readdir, rm, unlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { readFile, readdir, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { afterEach, beforeEach, test } from 'node:test';
 import { BusinessError } from '#domain';
-import { createSecretStore, type Database, migrate, openDatabase } from '#storage';
+import { createSecretStore, type Database } from '#storage';
+import { createTestWorkspace } from '#test-support';
 
 let dir: string; let db: Database;
-beforeEach(async () => { dir = await mkdtemp(join(tmpdir(), 'apm secrets ')); db = openDatabase(':memory:'); migrate(db); });
-afterEach(async () => { db.close(); assert.equal(dirname(dir), tmpdir()); await rm(dir, { recursive: true, force: true }); });
+let workspace: ReturnType<typeof createTestWorkspace>;
+beforeEach(() => { workspace = createTestWorkspace(); dir = workspace.dataDir; db = workspace.db; });
+afterEach(() => { workspace.dispose(); });
 const lost = (error: unknown) => error instanceof BusinessError && error.code === 'secret_lost' && error.message.includes('kết nối lại');
 
 test('Windows DPAPI thật: lưu/đọc Unicode, thư mục ACL riêng, disk/DB không chứa plaintext', { skip: process.platform !== 'win32' }, async () => {

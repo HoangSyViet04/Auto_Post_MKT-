@@ -16,7 +16,8 @@
     "#fb-profile": "./packages/integrations/facebook-profile/src/index.ts",
     "#fb-group": "./packages/integrations/facebook-group/src/index.ts",
     "#fb-page": "./packages/integrations/facebook-page/src/index.ts",
-    "#logging": "./packages/logging/src/index.ts"
+    "#logging": "./packages/logging/src/index.ts",
+    "#test-support": "./tests/helpers/index.ts"
   },
   "scripts": {
     "dev:server": "node --env-file-if-exists=.env --watch apps/server/src/index.ts",
@@ -24,7 +25,7 @@
     "dev:web": "vite --config apps/web/vite.config.ts",
     "build:web": "vite build --config apps/web/vite.config.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p apps/web/tsconfig.json",
-    "test": "node --env-file=tests/test.env --test \"{apps,packages,tests}/**/*.test.ts\"",
+    "test": "node scripts/test.ts",
     "db:migrate": "node --env-file-if-exists=.env scripts/db-migrate.ts",
     "lint": "biome lint --error-on-warnings .",
     "check": "npm run typecheck && npm run lint && npm test && npm run build:web",

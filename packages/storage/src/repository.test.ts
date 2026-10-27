@@ -8,7 +8,7 @@ import { afterEach, describe, test } from 'node:test';
 import { BusinessError, type BusinessErrorCode } from '#domain';
 import { assertApprovedPublishRequest, createFakePublisher } from '#contracts';
 import { type Database, migrate, openDatabase } from '#storage';
-import { publishingFixture } from './test-fixtures/publishing-data.ts';
+import { publishingFixture } from '#test-support';
 
 const connections: Database[] = [];
 afterEach(() => { for (const db of connections.splice(0)) db.close(); });

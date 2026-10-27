@@ -156,7 +156,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | --- | --- | --- | --- |
 | P00 | Nền dự án, môi trường Windows | README/plan | Hoàn thành (P00.1–P00.8) |
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Đang chuẩn bị offline; chưa kiểm chứng thật |
-| P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Đang làm offline (P02.1–P02.7 xong); còn P02.8 |
+| P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Offline xong (P02.1–P02.8); tích hợp thật chờ P01 |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
 | P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Chuẩn bị quy tắc caption offline; chưa UI/media/phiên bản |
@@ -220,7 +220,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [x] P02.5. Chọn cách bảo vệ secrets trên Windows/quyền thư mục; khóa không nằm cạnh ciphertext trong mã nguồn. Mất khóa thì báo cần kết nối lại. *(DPAPI CurrentUser qua PowerShell stdin, ciphertext UUID ngoài repo, ACL secrets chỉ user/SYSTEM, lost/revoke;2test Windows thật đạt ngoài sandbox, ADR0009. Chưa UI kết nối/profile ACL.)*
 - [x] P02.6. Giao ước publisher/scanner, trạng thái, adapter giả; phân biệt published/pending/unknown. *(Approved context + runtime validation, fake snapshot/evidence/verify/stop; scanner joined/keyword nguồn/thời điểm/account/unknown/partial/limit; ADR0006. 18/18 contract tests đạt. DB wiring/scheduler/P06 và adapter thật chưa triển khai.)*
 - [x] P02.7. Validation, phân trang, giới hạn upload, bảo vệ đường dẫn; metadata client không được dẫn tới đọc/xóa file ngoài kho. *(Strict Fastify schemas, ảnh raw20MiB + UUID read/verify, product create/list phân trang1..100; không client filepath, không delete API;3test API chính đạt, ADR0010. Chưa UI/thumbnail.)*
-- [ ] P02.8. Dữ liệu fixture giả và DB test tách khỏi dữ liệu vận hành.
+- [x] P02.8. Dữ liệu fixture giả và DB test tách khỏi dữ liệu vận hành. *(Runner `scripts/test.ts` ép test/fake + dataDir tạm; `#test-support` workspace/fixture dùng lại; 125/125 test theo người dùng. build:web vướng quyền `dist` do sandbox Codex, build ra thư mục tạm đạt.)*
 
 **Đầu ra:** schema, migration, storage, API nền và adapter giả.
 

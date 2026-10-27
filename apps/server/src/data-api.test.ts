@@ -1,23 +1,23 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, unlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { afterEach, beforeEach, test } from 'node:test';
 import sharp from 'sharp';
-import { createMediaStore, type Database, migrate, openDatabase } from '#storage';
+import type { createMediaStore, Database } from '#storage';
+import { createTestWorkspace } from '#test-support';
 import { buildApp } from './app.ts';
 
 let dir: string; let db: Database; let media: ReturnType<typeof createMediaStore>;
 let app: ReturnType<typeof buildApp>; let headers: Record<string, string>; let image: Buffer;
+let workspace: ReturnType<typeof createTestWorkspace>;
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'apm data api ')); db = openDatabase(':memory:'); migrate(db);
-  media = createMediaStore(db, { dataDir: dir });
+  workspace = createTestWorkspace(); dir = workspace.dataDir; db = workspace.db; media = workspace.media;
   app = buildApp({ db, env: 'test', integrations: 'fake', logger: false, mediaStore: media, uploadLimitBytes: 1024 });
   const session = await app.inject({ method: 'GET', url: '/api/session', headers: { host: '127.0.0.1:4317' } });
   headers = { host: '127.0.0.1:4317', origin: 'http://127.0.0.1:4317', 'x-apm-token': session.json().token, 'content-type': 'application/json' };
   image = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#336699' } }).png().toBuffer();
 });
-afterEach(async () => { await app.close(); db.close(); assert.equal(dirname(dir), tmpdir()); await rm(dir, { recursive: true, force: true }); });
+afterEach(async () => { await app.close(); workspace.dispose(); });
 
 test('upload bytes → đọc đúng ảnh → tạo/liệt kê product phân trang, không lộ đường dẫn; ảnh mất trả lỗi rõ', async () => {
   const upload = await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' }, payload: image });
