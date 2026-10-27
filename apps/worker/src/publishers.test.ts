@@ -8,7 +8,7 @@ import { createPublishers } from './publishers.ts';
 const workerEntry = fileURLToPath(new URL('./index.ts', import.meta.url));
 
 function runWorker(env: Record<string, string>) {
-  return spawnSync(process.execPath, [workerEntry], { env: { ...process.env, ...env }, encoding: 'utf8' });
+  return spawnSync(process.execPath, [workerEntry, '--once'], { env: { ...process.env, ...env }, encoding: 'utf8' });
 }
 
 describe('worker publishers', () => {

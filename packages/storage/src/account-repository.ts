@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { type AccountSummary, BusinessError } from '#domain';
+import { createBrowserCommandRepository } from './browser-command-repository.ts';
 import type { Database } from './db.ts';
 import { atomic, identifier, one, type RepositoryOptions, text, timestamp } from './repository-common.ts';
 
@@ -11,6 +12,7 @@ const APPROVALS_OF = (accountId: string) => `SELECT id FROM approvals WHERE acco
 
 export function createAccountRepository(db: Database, options: RepositoryOptions = {}) {
   const clock = () => timestamp((options.clock ?? Date.now)());
+  const commands = createBrowserCommandRepository(db, options);
 
   function label(value: unknown, exceptId?: string): string {
     text(value, MAX_LABEL);
@@ -52,6 +54,7 @@ export function createAccountRepository(db: Database, options: RepositoryOptions
         displayName: row.displayName == null ? null : String(row.displayName), confirmedAt: Number(row.confirmedAt) },
       proxy: row.proxyId == null ? null : { id: String(row.proxyId), label: String(row.proxyLabel) },
       queuedJobs: Number(row.queuedJobs), runningJobs: Number(row.runningJobs),
+      browser: commands.latestFor(String(row.id)),
     };
   }
 
@@ -85,6 +88,47 @@ export function createAccountRepository(db: Database, options: RepositoryOptions
         return accountId;
       });
       return repository.get(id);
+    },
+
+    /** Thư mục hồ sơ trình duyệt riêng của tài khoản (khóa ngẫu nhiên, không chứa nhãn hay danh tính). */
+    profileKey(accountId: string): string {
+      identifier(accountId);
+      const row = one<{ directory_key: string }>(db, 'SELECT directory_key FROM browser_profiles WHERE account_id=?', accountId);
+      if (!row) throw new BusinessError('not_found');
+      return row.directory_key;
+    },
+
+    /** Tham chiếu danh tính Facebook đã xác nhận (id:… hoặc vanity:…); null nếu chưa xác nhận. */
+    identityRef(accountId: string): string | null {
+      identifier(accountId);
+      return one<{ remote_identity_id: string }>(db, `SELECT i.remote_identity_id FROM accounts a JOIN account_identities i
+        ON i.id=a.current_identity_id AND i.account_id=a.id WHERE a.id=?`, accountId)?.remote_identity_id ?? null;
+    },
+
+    /**
+     * Ghi danh tính quan sát được sau khi người dùng đăng nhập tay. Chưa có danh tính → tạo phiên bản 1; đã có → chỉ so sánh
+     * (`same`/`different`), KHÔNG tự đổi: đổi sang nick khác phải là việc có chủ ý (gỡ và thêm lại tài khoản).
+     */
+    recordIdentity(accountId: string, remoteRef: string): 'created' | 'same' | 'different' {
+      text(remoteRef, 200);
+      return atomic(db, () => {
+        active(accountId);
+        const current = repository.identityRef(accountId);
+        if (current !== null) return current === remoteRef ? 'same' : 'different';
+        const identityId = randomUUID();
+        const now = clock();
+        db.prepare('INSERT INTO account_identities(id,account_id,version,remote_identity_id,confirmed_at) VALUES(?,?,1,?,?)').run(identityId, accountId, remoteRef, now);
+        db.prepare('UPDATE accounts SET current_identity_id=? WHERE id=?').run(identityId, accountId);
+        return 'created';
+      });
+    },
+
+    recordSession(accountId: string, status: AccountSummary['sessionStatus']): void {
+      if (!['unknown', 'logged_in', 'login_required', 'verification_required', 'network_error'].includes(status)) throw new BusinessError('invalid_input');
+      atomic(db, () => {
+        active(accountId);
+        db.prepare('UPDATE accounts SET session_status=? WHERE id=?').run(status, accountId);
+      });
     },
 
     rename(accountId: string, newLabel: string): AccountSummary {
@@ -134,6 +178,9 @@ export function createAccountRepository(db: Database, options: RepositoryOptions
         db.prepare(`UPDATE publish_jobs SET status='cancelled' WHERE approval_id IN (${APPROVALS_OF('?')})
           AND status IN ('queued','paused','blocked','needs_review')`).run(accountId);
         requestStopRunning(accountId, now);
+        // Lệnh trình duyệt: chưa chạy thì hủy ngay, đang chạy thì yêu cầu dừng (worker dừng ở lần kiểm tra tiếp theo).
+        db.prepare("UPDATE browser_commands SET status='cancelled',result_code='account_removed',cancel_requested_at=?,finished_at=? WHERE account_id=? AND status='queued'").run(now, now, accountId);
+        db.prepare("UPDATE browser_commands SET cancel_requested_at=COALESCE(cancel_requested_at,?) WHERE account_id=? AND status='running'").run(now, accountId);
         db.prepare('UPDATE accounts SET archived_at=?,paused=1 WHERE id=?').run(now, accountId);
       });
     },

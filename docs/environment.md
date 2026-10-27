@@ -8,6 +8,7 @@ Cấu hình đọc từ biến môi trường (`packages/config`). `npm run dev:
 | `APM_DATA_DIR` | `%LOCALAPPDATA%\AutoPostMKT`; riêng `test` là `<thư mục tạm>\AutoPostMKT-test` | DB, media, log, browser profiles. Không bao giờ đặt trong repo. |
 | `APM_SERVER_PORT` | `4317` | Server chỉ nghe `127.0.0.1`; Vite proxy `/api` dùng cùng cổng. |
 | `APM_INTEGRATIONS` | `fake` | `fake`: adapter giả, không gọi Facebook/LLM. `live`: adapter thật — chưa có (P08/P09), worker từ chối chạy. `live` bị cấm khi `APM_ENV=test`. |
+| `APM_BROWSER` | `off` | `off`: worker không mở trình duyệt. `real`: worker được mở Edge (hồ sơ riêng từng tài khoản, ngoài repo) để **người dùng tự đăng nhập** và kiểm tra phiên khi bấm nút ở trang Quản lý tài khoản. Không đăng bài. Bị cấm khi `APM_ENV=test`. Cần chạy cả `npm run dev:server`, `npm run dev:worker` (với `APM_BROWSER=real`) và `npm run dev:web`. |
 
 ## Bảo đảm "mở app không tự đăng Facebook"
 

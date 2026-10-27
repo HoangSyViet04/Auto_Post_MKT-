@@ -40,6 +40,17 @@ export function getDatabasePath(): string {
 }
 
 /**
+ * Điều khiển trình duyệt thật của worker (APM_BROWSER): off (mặc định) hoặc real. Khác APM_INTEGRATIONS: real chỉ cho phép worker
+ * mở trình duyệt để người dùng đăng nhập/kiểm tra phiên khi họ bấm nút; không tự đăng bài. Bị cấm khi APM_ENV=test.
+ */
+export function getBrowserMode(): 'off' | 'real' {
+  const value = process.env.APM_BROWSER || 'off';
+  if (value !== 'off' && value !== 'real') throw new Error(`APM_BROWSER không hợp lệ: ${value}`);
+  if (value === 'real' && getAppEnv() === 'test') throw new Error('APM_BROWSER=real bị cấm khi APM_ENV=test');
+  return value;
+}
+
+/**
  * Chế độ adapter (APM_INTEGRATIONS). Mặc định fake ở mọi môi trường: mở app không bao giờ tự gọi Facebook.
  * live phải bật rõ ràng và bị cấm trong test.
  */

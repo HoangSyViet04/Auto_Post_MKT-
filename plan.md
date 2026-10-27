@@ -157,7 +157,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P00 | Nền dự án, môi trường Windows | README/plan | Hoàn thành (P00.1–P00.8) |
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Đang làm (nick phụ `phu1`, 1 nhóm quản trị): P01.2 đăng nhập/danh tính đạt một profile; P01.5 đăng chữ + 2 ảnh đạt với quản trị (chưa thử chờ duyệt/từ chối); P01.6 đọc 130 nhóm đã tham gia (một phần). Chưa làm: P01.3 proxy (hoãn), P01.4 TCN, P01.7 Page API, nửa sau P01.6 (từ khóa), P01.8 |
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Offline xong (P02.1–P02.8); tích hợp thật chờ P01 |
-| P03 | Quản lý tài khoản | P01, P02 | Offline: P03.1/P03.2/P03.6 làm một phần (bảng, thêm/đổi nhãn/tạm dừng/gỡ); P03.3–P03.5, P03.7 cần trình duyệt/P01 |
+| P03 | Quản lý tài khoản | P01, P02 | P03.3 xong (đăng nhập tay + kiểm tra phiên qua worker, đã chạy thật); P03.1/P03.2/P03.4/P03.5/P03.6/P03.7 làm một phần; cũ: Offline: P03.1/P03.2/P03.6 (bảng, thêm/đổi nhãn/tạm dừng/gỡ); từng cần trình duyệt/P01 |
 | P04 | Quản lý proxy | P02, P03 | **Hoãn có chủ đích (27/10/2026)** — chưa cần với 1–2 nick dùng mạng nhà; làm khi mở rộng quy mô. Không xóa. |
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Offline xong phần làm được: P05.1–P05.4, P05.8; P05.5/P05.6/P05.7 làm một phần (chờ tài khoản/đích/lịch từ P03/P06/P07) |
 | P06 | Quét nhóm và danh sách đích | P01–P03 (P04 hoãn: kết nối trực tiếp) | Offline: P06.1, P06.6, P06.7 xong (nhập tay); P06.2–P06.4, P06.8 chờ P01; P06.5 một phần |
@@ -230,13 +230,13 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Mục tiêu:** quản lý hai phiên Facebook đúng danh tính.
 
-- [ ] P03.1. Bảng nhãn, UID/link khi quan sát được, tên/avatar, trạng thái, proxy, lần kiểm tra, tác vụ hiện tại; thống kê có căn cứ. *(Đã có bảng: nhãn/chỗ, danh tính (hiện "Chưa xác nhận" tới khi có P03.3–P03.4), trạng thái phiên, proxy, số tác vụ đang chạy/chờ đếm từ DB, tạm dừng. Chưa có: avatar và "lần kiểm tra phiên" — chưa có nguồn dữ liệu.)*
-- [ ] P03.2. Thêm/sửa nhãn/mở/đóng phiên/gỡ; ngăn vượt phạm vi hai tài khoản. *(Đã có: thêm, đổi nhãn (không trùng, không phân biệt hoa/thường), gỡ có xác nhận, tối đa hai tài khoản kèm hồ sơ trình duyệt riêng. Chưa có: mở/đóng phiên — cần trình duyệt, P03.3.)*
-- [ ] P03.3. Tích hợp đăng nhập thủ công và mở lại profile P01; không lưu mật khẩu/2FA vào bảng.
-- [ ] P03.4. Kiểm tra danh tính trước tác vụ; không xác nhận được hoặc khác mong đợi thì dừng.
-- [ ] P03.5. Khóa profile đang dùng; mở thủ công phải tạm dừng/nhường quyền, không tranh điều khiển worker.
+- [ ] P03.1. Bảng nhãn, UID/link khi quan sát được, tên/avatar, trạng thái, proxy, lần kiểm tra, tác vụ hiện tại; thống kê có căn cứ. *(Đã có bảng: nhãn/chỗ, danh tính (hiện "Chưa xác nhận" tới khi có P03.3–P03.4), trạng thái phiên, proxy, số tác vụ đang chạy/chờ đếm từ DB, tạm dừng. Đã có thêm "kiểm tra lúc …" từ lệnh trình duyệt gần nhất. Chưa có avatar.)*
+- [ ] P03.2. Thêm/sửa nhãn/mở/đóng phiên/gỡ; ngăn vượt phạm vi hai tài khoản. *(Đã có: thêm, đổi nhãn (không trùng, không phân biệt hoa/thường), gỡ có xác nhận, tối đa hai tài khoản kèm hồ sơ trình duyệt riêng. Đã có "Đăng nhập" và "Kiểm tra phiên" (P03.3); chưa có "đóng phiên" riêng.)*
+- [x] P03.3. Tích hợp đăng nhập thủ công và mở lại profile P01; không lưu mật khẩu/2FA vào bảng. *(Nút "Đăng nhập"/"Kiểm tra phiên" ở trang tài khoản → server ghi lệnh vào `browser_commands` → worker (`APM_BROWSER=real`) mở Edge với hồ sơ riêng `<dataDir>/profiles/<khóa ngẫu nhiên>`; người dùng tự đăng nhập; chỉ lưu tham chiếu danh tính (không lưu mật khẩu/cookie). Đã chạy thật trên nick phụ `phu1`: đăng nhập → `identity_saved`, kiểm tra phiên → `match`. Mới 1 tài khoản, 1 lần; hồ sơ app tách biệt với hồ sơ thử P01.)*
+- [ ] P03.4. Kiểm tra danh tính trước tác vụ; không xác nhận được hoặc khác mong đợi thì dừng. *(Đã có: lệnh "Kiểm tra phiên" đối chiếu danh tính đã lưu; khác nick → `identity_mismatch`, đặt phiên `unknown`, không đổi danh tính; đăng nhập nhầm nick bị từ chối. Test bằng driver giả; chạy thật chỉ mới trường hợp khớp. Chưa gắn vào bước trước mỗi job — P07/P08.)*
+- [ ] P03.5. Khóa profile đang dùng; mở thủ công phải tạm dừng/nhường quyền, không tranh điều khiển worker. *(Đã có: khóa trình duyệt theo tài khoản trong `resource_leases` (fence chỉ tăng, gia hạn theo nhịp, hết hạn thì nhường) + khóa tệp từng hồ sơ; lệnh gặp hồ sơ đang bận → `profile_in_use`; một tài khoản chỉ một lệnh đang hoạt động. Chưa xử lý trường hợp người dùng tự mở thư mục hồ sơ bằng Edge ngoài app.)*
 - [ ] P03.6. Tạm dừng từng tài khoản/toàn bộ; gỡ tài khoản thì dừng lịch phụ thuộc, không chuyển sang tài khoản còn lại. *(Đã có ở tầng dữ liệu + UI và đã test với tác vụ giả: tạm dừng chặn nhận/gửi (readiness) và yêu cầu dừng tác vụ đang chạy; gỡ thu hồi bản duyệt, hủy tác vụ chưa gửi. Chưa thử với worker/scheduler thật — P07.)*
-- [ ] P03.7. Phân biệt mất mạng, cần đăng nhập, cần xác minh, chưa rõ; không suy bị khóa từ một lần lỗi trang.
+- [ ] P03.7. Phân biệt mất mạng, cần đăng nhập, cần xác minh, chưa rõ; không suy bị khóa từ một lần lỗi trang. *(Đã có phân loại `login_required`/`verification_required`/`network_error`/`timeout`/`window_closed`; hết giờ hoặc đóng cửa sổ không đổi trạng thái phiên. Gặp thật: `verification_required` lúc đăng nhập. `network_error` mới được test bằng chuỗi lỗi, chưa thử ngắt mạng thật.)*
 
 **Đầu ra:** trang tài khoản và BrowserProfileManager.
 

@@ -1,6 +1,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
-import type { AccountSummary, SessionStatus } from '#domain';
+import type { AccountSummary, HealthResponse, SessionStatus } from '#domain';
 import { apiFetch } from './api.ts';
+import { describeCommand } from './browser-labels.ts';
 import { networkMessage, readError } from './http.ts';
 
 const SESSION_LABEL: Record<SessionStatus, string> = {
@@ -20,6 +21,7 @@ const formatTime = (ms: number) => new Date(ms).toLocaleString('vi-VN');
 
 export function AccountsPage() {
   const [data, setData] = useState<AccountList | null>(null);
+  const [worker, setWorker] = useState<HealthResponse['worker'] | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [newLabel, setNewLabel] = useState('');
@@ -30,11 +32,17 @@ export function AccountsPage() {
     const response = await apiFetch('/api/accounts');
     if (!response.ok) throw new Error(await readError(response));
     setData((await response.json()) as AccountList);
+    const health = await apiFetch('/api/health');
+    if (health.ok) setWorker(((await health.json()) as HealthResponse).worker);
   }, []);
 
+  const anyActive = (data?.items ?? []).some((account) => describeCommand(account.browser).active);
   useEffect(() => {
     load().catch((e) => setMessage(networkMessage(e)));
-  }, [load]);
+    // Tự cập nhật: nhanh khi có lệnh trình duyệt đang chạy, chậm khi rảnh.
+    const timer = setInterval(() => { load().catch(() => undefined); }, anyActive ? 2_000 : 10_000);
+    return () => clearInterval(timer);
+  }, [load, anyActive]);
 
   /** Mỗi thao tác gửi đúng một lần; lỗi thì báo, không tự gửi lại. */
   async function act(path: string, init: RequestInit, done: string): Promise<boolean> {
@@ -59,7 +67,7 @@ export function AccountsPage() {
 
   /** Báo rõ nhãn trùng (không phân biệt hoa/thường); server vẫn kiểm tra lại. */
   const labelTaken = (label: string, exceptId?: string) =>
-    (data?.items ?? []).some((account) => account.id !== exceptId && account.label.toLocaleLowerCase('vi') === label.trim().replace(/s+/gu, ' ').toLocaleLowerCase('vi'));
+    (data?.items ?? []).some((account) => account.id !== exceptId && account.label.toLocaleLowerCase('vi') === label.trim().replace(/\s+/gu, ' ').toLocaleLowerCase('vi'));
 
   async function add(event: FormEvent) {
     event.preventDefault();
@@ -97,12 +105,19 @@ export function AccountsPage() {
     <section>
       <header className="page-header">
         <h1>Quản lý tài khoản</h1>
-        <span className="tag">P03 · chưa đăng nhập Facebook</span>
+        <span className="tag">P03 · đăng nhập tay qua worker</span>
       </header>
       <p className="muted">
-        Tối đa {limit} tài khoản. Đăng nhập, mở phiên và xác nhận danh tính cần trình duyệt (P03.3–P03.4) nên chưa dùng
-        được; ứng dụng không lưu mật khẩu hay mã 2FA.
+        Tối đa {limit} tài khoản. Bấm "Đăng nhập" để mở cửa sổ trình duyệt riêng của tài khoản và <strong>tự đăng nhập</strong> (kể cả
+        2FA); ứng dụng không thấy và không lưu mật khẩu hay mã 2FA. Danh tính được so khớp mỗi lần "Kiểm tra phiên".
       </p>
+      {worker && (!worker.alive || worker.browser !== 'real') && (
+        <p className="notice" role="status">
+          {!worker.alive
+            ? 'Worker chưa chạy nên chưa đăng nhập/kiểm tra phiên được. Chạy "npm run dev:worker" với APM_BROWSER=real.'
+            : 'Worker đang chạy nhưng chưa được phép mở trình duyệt. Đặt APM_BROWSER=real trong .env rồi khởi động lại worker.'}
+        </p>
+      )}
 
       <form className="actions" onSubmit={add}>
         <input
@@ -115,8 +130,6 @@ export function AccountsPage() {
           aria-label="Nhãn tài khoản mới"
         />
         <button type="submit" className="primary" disabled={full || busy}>Thêm tài khoản</button>
-        <button type="button" disabled title="Chưa triển khai · P03.3">Mở trình duyệt để đăng nhập</button>
-        <button type="button" disabled title="Chưa triển khai · P03.4">Kiểm tra phiên</button>
         {items.length > 0 && (
           <button
             type="button"
@@ -168,7 +181,16 @@ export function AccountsPage() {
                     <span className="muted">Chưa xác nhận</span>
                   )}
                 </td>
-                <td>{SESSION_LABEL[account.sessionStatus]}</td>
+                <td>
+                  {SESSION_LABEL[account.sessionStatus]}
+                  {account.browser?.finishedAt != null && (
+                    <div className="muted">kiểm tra lúc {formatTime(account.browser.finishedAt)}</div>
+                  )}
+                  {(() => {
+                    const view = describeCommand(account.browser);
+                    return view.text ? <div className={view.tone === 'warn' ? 'field-error' : view.tone === 'ok' ? 'ok-text' : 'muted'}>{view.text}</div> : null;
+                  })()}
+                </td>
                 <td>{account.proxy ? account.proxy.label : <span className="muted">Không dùng</span>}</td>
                 <td>
                   {account.runningJobs + account.queuedJobs === 0
@@ -195,6 +217,24 @@ export function AccountsPage() {
                     </>
                   ) : (
                     <>
+                      {describeCommand(account.browser).active ? (
+                        <button
+                          type="button"
+                          disabled={busy || account.browser?.cancelRequestedAt != null}
+                          onClick={() => account.browser && act(`/api/browser-commands/${account.browser.id}/cancel`, { method: 'POST', body: '{}' }, 'Đã gửi yêu cầu hủy.')}
+                        >
+                          Hủy lệnh
+                        </button>
+                      ) : (
+                        <>
+                          <button type="button" disabled={busy} onClick={() => act(`/api/accounts/${account.id}/browser`, { method: 'POST', body: JSON.stringify({ kind: 'login' }) }, 'Đã gửi lệnh đăng nhập. Cửa sổ trình duyệt sẽ mở ra.')}>
+                            Đăng nhập
+                          </button>
+                          <button type="button" disabled={busy || !account.identity} title={account.identity ? '' : 'Cần đăng nhập ít nhất một lần'} onClick={() => act(`/api/accounts/${account.id}/browser`, { method: 'POST', body: JSON.stringify({ kind: 'verify' }) }, 'Đã gửi lệnh kiểm tra phiên.')}>
+                            Kiểm tra phiên
+                          </button>
+                        </>
+                      )}
                       <button type="button" disabled={busy} onClick={() => setEditing({ id: account.id, label: account.label })}>Đổi nhãn</button>
                       <button
                         type="button"

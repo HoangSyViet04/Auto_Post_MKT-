@@ -175,3 +175,27 @@ test('P06: API nhóm — nhập link/ID, dùng chung một nhóm cho hai tài kh
   const { 'x-apm-token': _token, ...noToken } = headers;
   assert.equal((await app.inject({ method: 'POST', url: '/api/groups', headers: noToken, payload: { reference: '123456789012', accountId: a } })).statusCode, 403);
 });
+
+test('P03.3: API lệnh trình duyệt — từ chối khi worker chưa chạy/tắt trình duyệt, ghi lệnh khi bật, một lệnh mỗi tài khoản, hủy', async () => {
+  const call = (method: string, url: string, payload?: object) => app.inject({ method: method as 'GET', url, headers, ...(payload ? { payload } : {}) });
+  const account = (await call('POST', '/api/accounts', { label: 'Nick A' })).json().id as string;
+  assert.equal((await call('GET', '/api/health')).json().worker.alive, false);
+  assert.equal((await call('POST', `/api/accounts/${account}/browser`, { kind: 'login' })).statusCode, 503); // chưa có worker
+
+  const { writeWorkerHeartbeat } = await import('#storage');
+  writeWorkerHeartbeat(db, 'off');
+  assert.equal((await call('POST', `/api/accounts/${account}/browser`, { kind: 'login' })).statusCode, 503); // có worker nhưng tắt trình duyệt
+  writeWorkerHeartbeat(db, 'real');
+  assert.deepEqual((await call('GET', '/api/health')).json().worker, { alive: true, browser: 'real' });
+
+  assert.equal((await call('POST', `/api/accounts/${account}/browser`, { kind: 'delete' })).statusCode, 400);
+  const queued = await call('POST', `/api/accounts/${account}/browser`, { kind: 'login' });
+  assert.equal(queued.statusCode, 202);
+  assert.equal((await call('POST', `/api/accounts/${account}/browser`, { kind: 'verify' })).statusCode, 409); // đã có lệnh đang chờ
+  assert.equal((await call('GET', '/api/accounts')).json().items[0].browser.status, 'queued');
+  assert.deepEqual((await call('POST', `/api/browser-commands/${queued.json().id}/cancel`, {})).json(), { state: 'cancelled' });
+  assert.equal((await call('GET', '/api/accounts')).json().items[0].browser.resultCode, 'cancelled_before_start');
+  assert.equal((await call('POST', `/api/accounts/00000000-0000-4000-8000-000000000000/browser`, { kind: 'login' })).statusCode, 404);
+  const { 'x-apm-token': _token, ...noToken } = headers;
+  assert.equal((await app.inject({ method: 'POST', url: `/api/accounts/${account}/browser`, headers: noToken, payload: { kind: 'login' } })).statusCode, 403);
+});

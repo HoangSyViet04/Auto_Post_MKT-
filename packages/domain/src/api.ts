@@ -9,6 +9,8 @@ export interface HealthResponse {
   schemaVersion: number;
   /** fake: mô phỏng, UI phải hiển thị rõ. */
   integrations: IntegrationMode;
+  /** Worker có đang chạy không và có được phép mở trình duyệt không. */
+  worker: { alive: boolean; browser: 'off' | 'real' | 'unknown' };
   startedAt: string;
 }
 
@@ -51,6 +53,20 @@ export interface ProductListResponse {
 
 export type SessionStatus = 'unknown' | 'logged_in' | 'login_required' | 'verification_required' | 'network_error';
 
+export type BrowserCommandKind = 'login' | 'verify';
+export type BrowserCommandStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+
+export interface BrowserCommandSummary {
+  id: string;
+  kind: BrowserCommandKind;
+  status: BrowserCommandStatus;
+  /** Mã kết quả cố định (ví dụ identity_saved, match, login_required, verification_required, network_error, identity_mismatch). */
+  resultCode: string | null;
+  requestedAt: number;
+  finishedAt: number | null;
+  cancelRequestedAt: number | null;
+}
+
 export interface AccountSummary {
   id: string;
   label: string;
@@ -64,6 +80,8 @@ export interface AccountSummary {
   /** Đếm từ các tác vụ đã lưu, không ước lượng. */
   queuedJobs: number;
   runningJobs: number;
+  /** Lệnh trình duyệt gần nhất (đăng nhập/kiểm tra phiên); null nếu chưa có. */
+  browser: BrowserCommandSummary | null;
 }
 
 export type GroupMembership = 'unknown' | 'joined' | 'not_joined';

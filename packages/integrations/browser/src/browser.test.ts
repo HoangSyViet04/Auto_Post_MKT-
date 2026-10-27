@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { acquireProfileLock, classifySession, identityRefFromUrl, maskRef, refDigest } from './index.ts';
+import { acquireProfileLock, classifyNavigationError, classifySession, identityRefFromUrl, maskRef, refDigest } from './index.ts';
 
 test('danh tính từ URL trang cá nhân; bỏ trang không phải hồ sơ và domain giả', () => {
   assert.equal(identityRefFromUrl('https://www.facebook.com/profile.php?id=100012345678901&sk=about'), 'id:100012345678901');
@@ -48,4 +48,13 @@ test('khóa profile: tiến trình thứ hai bị từ chối khi tiến trình 
     second.release();
     assert.equal(existsSync(lockPath), false);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('lỗi điều hướng: chỉ lỗi mạng mới là network_error; lỗi khác (kể cả timeout của trang) không bị coi là mất mạng', () => {
+  for (const message of ['page.goto: net::ERR_INTERNET_DISCONNECTED at https://x', 'net::ERR_NAME_NOT_RESOLVED', 'net::ERR_CONNECTION_REFUSED', 'net::ERR_PROXY_CONNECTION_FAILED', 'net::ERR_TIMED_OUT']) {
+    assert.equal(classifyNavigationError(message), 'network_error', message);
+  }
+  for (const message of ['Target page, context or browser has been closed', 'Timeout 30000ms exceeded', 'net::ERR_ABORTED', 'locator resolved to hidden element']) {
+    assert.equal(classifyNavigationError(message), 'unknown', message);
+  }
 });

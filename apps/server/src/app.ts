@@ -1,7 +1,7 @@
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import type { AppEnv } from '#config';
 import { BusinessError, type ApiError, type HealthResponse, type IntegrationMode } from '#domain';
-import { createMediaStore, type Database } from '#storage';
+import { createMediaStore, type Database, readWorkerStatus } from '#storage';
 import { createLogger } from '#logging';
 import { installLocalAccess, type LocalAccessOptions } from './local-access.ts';
 import { installAccountsApi } from './accounts-api.ts';
@@ -36,7 +36,7 @@ export function buildApp({ db, env, integrations, logger = true, security, media
     if (error instanceof BusinessError) {
       const status = error.code === 'not_found' ? 404 : error.code === 'invalid_input' ? 400
         : error.code === 'media_too_large' ? 413 : error.code === 'media_invalid' ? 422
-        : error.code === 'media_io' || error.code === 'secret_unavailable' ? 503 : 409;
+        : error.code === 'media_io' || error.code === 'secret_unavailable' || error.code === 'worker_unavailable' ? 503 : 409;
       return reply.code(status).send({ error: error.code, message: error.message });
     }
     const details = (typeof error === 'object' && error !== null ? error : {}) as { statusCode?: number; validation?: unknown };
@@ -55,6 +55,7 @@ export function buildApp({ db, env, integrations, logger = true, security, media
     env,
     schemaVersion: Number(schemaVersion.get()?.v),
     integrations,
+    worker: readWorkerStatus(db),
     startedAt,
   }));
 

@@ -97,8 +97,8 @@ describe('offline schema migration v2', () => {
   test('fresh DB, STRICT tables, no seed, noop and foreign keys valid', () => {
     const db = openDatabase(':memory:');
     try {
-      assert.deepEqual(migrate(db), { applied: [1, 2, 3], currentVersion: 3 });
-      assert.deepEqual(migrate(db), { applied: [], currentVersion: 3 });
+      assert.deepEqual(migrate(db), { applied: [1, 2, 3, 4], currentVersion: 4 });
+      assert.deepEqual(migrate(db), { applied: [], currentVersion: 4 });
       assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
       const tables = db.prepare("SELECT name, strict FROM pragma_table_list WHERE schema='main' AND name NOT LIKE 'sqlite_%'").all();
       assert.ok(tables.length >= 25);
@@ -122,7 +122,7 @@ describe('offline schema migration v2', () => {
       db.prepare('INSERT INTO app_meta(key,value) VALUES (?,?)').run('upgrade-sentinel', 'giữ dữ liệu');
       assert.ok(existsSync(`${livePath}-wal`));
       assert.ok(await backup(db, backupPath) > 0);
-      assert.deepEqual(migrate(db), { applied: [2, 3], currentVersion: 3 });
+      assert.deepEqual(migrate(db), { applied: [2, 3, 4], currentVersion: 4 });
       assert.equal(db.prepare("SELECT value FROM app_meta WHERE key='upgrade-sentinel'").get()?.value, 'giữ dữ liệu');
       copyFileSync(backupPath, restoredPath);
       const restored = openDatabase(restoredPath);
@@ -130,10 +130,10 @@ describe('offline schema migration v2', () => {
         assert.equal(restored.prepare('SELECT MAX(version) AS v FROM schema_migrations').get()?.v, 1);
         assert.equal(restored.prepare("SELECT value FROM app_meta WHERE key='upgrade-sentinel'").get()?.value, 'giữ dữ liệu');
         assert.equal(restored.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name='products'").get()?.n, 0);
-        assert.deepEqual(migrate(restored), { applied: [2, 3], currentVersion: 3 });
+        assert.deepEqual(migrate(restored), { applied: [2, 3, 4], currentVersion: 4 });
         assert.equal(restored.prepare("SELECT value FROM app_meta WHERE key='upgrade-sentinel'").get()?.value, 'giữ dữ liệu');
       } finally { restored.close(); }
-      assert.equal(db.prepare('SELECT MAX(version) AS v FROM schema_migrations').get()?.v, 3, 'restore never overwrites upgraded live database');
+      assert.equal(db.prepare('SELECT MAX(version) AS v FROM schema_migrations').get()?.v, 4, 'restore never overwrites upgraded live database');
     } finally { db.close(); rmSync(dir, { recursive: true, force: true }); }
   });
 
