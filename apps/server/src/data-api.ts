@@ -32,6 +32,8 @@ export function installDataApi(app: FastifyInstance, db: Database,
     return reply.code(201).send({ id: saved.id, mimeType: saved.mime_type, byteSize: saved.byte_size,
       sha256: saved.sha256, state: saved.state });
   });
+  // Ngưỡng cố định 24 giờ; client không chọn được đường dẫn hay ảnh cụ thể để xóa.
+  app.post('/api/media/cleanup', async () => media.purgeUnreferenced());
   app.get<{ Params: { id: string }; Querystring: { size?: 'thumb' } }>('/api/media/:id', {
     schema: {
       params: idParams,

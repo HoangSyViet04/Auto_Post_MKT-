@@ -193,6 +193,33 @@ export function createMediaStore(db: Database, options: MediaStoreOptions = {}) 
       } finally { await removeOwned(path, staging); }
     },
 
+    /**
+     * Giải phóng file của ảnh không còn máy/bản caption nào tham chiếu và đã tải lên ít nhất `minAgeMs` (mặc định 24 giờ,
+     * để không đụng form đang nhập). Dòng media được giữ (bảng cấm xóa) và chuyển thành 'missing'. Ảnh đã gắn với bất kỳ
+     * phiên bản máy hay bản caption nào — kể cả bản cũ — không bao giờ bị dọn.
+     */
+    async purgeUnreferenced(minAgeMs = 24 * 60 * 60 * 1000): Promise<{ purged: number }> {
+      if (!Number.isSafeInteger(minAgeMs) || minAgeMs < 0 || db.isTransaction) throw new BusinessError('invalid_input');
+      const cutoff = timestamp(Date.now() - minAgeMs);
+      const candidates = db.prepare(`SELECT id,storage_key FROM media m WHERE state='ready' AND created_at<=?
+        AND NOT EXISTS (SELECT 1 FROM product_revision_media r WHERE r.media_id=m.id)
+        AND NOT EXISTS (SELECT 1 FROM content_version_media c WHERE c.media_id=m.id)`).all(cutoff) as Array<{ id: string; storage_key: string }>;
+      let purged = 0;
+      for (const candidate of candidates) {
+        // Đổi trạng thái trước (kiểm tra lại không có tham chiếu trong chính câu lệnh) rồi mới xóa file:
+        // máy tạo đồng thời sẽ thấy ảnh không còn 'ready' và bị từ chối thay vì trỏ vào file đã mất.
+        const claimed = atomic(db, () => db.prepare(`UPDATE media SET state='missing' WHERE id=? AND state='ready'
+          AND NOT EXISTS (SELECT 1 FROM product_revision_media r WHERE r.media_id=media.id)
+          AND NOT EXISTS (SELECT 1 FROM content_version_media c WHERE c.media_id=media.id)`).run(candidate.id).changes === 1);
+        if (!claimed) continue;
+        identifier(candidate.storage_key);
+        const { objects } = await directories();
+        await removeOwned(join(objects, `${candidate.storage_key}.blob`), objects);
+        purged += 1;
+      }
+      return { purged };
+    },
+
     async resolveForPublish(mediaIds: readonly string[]): Promise<string[]> {
       validateMediaIds(mediaIds);
       const paths: string[] = [];

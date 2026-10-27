@@ -323,3 +323,16 @@ Mẫu một mục:
 - **Quyết định:** không dependency/migration. `source` do client gửi (template nếu caption bằng caption mẫu, ngược lại manual); server không tự kiểm chứng vì chỉ phục vụ nhãn hiển thị.
 - **Tồn đọng / lưu ý:** P05.5 chưa đóng vì chưa có duyệt (cần tài khoản/đích P03/P06); P05.6 chưa có phiên bản theo đích. Hai mục này mở lại khi có đích. `apps/web/dist` vẫn cần xóa bằng quyền admin.
 - **Tiếp theo:** P05.8 (xóa ảnh an toàn/dọn ảnh mồ côi, ưu tiên ẩn thay vì mất bằng chứng), P05.7 (hiển thị bài/lịch cần kiểm tra khi máy sửa sau duyệt — phụ thuộc job, có thể chỉ làm phần repository đã có). Sau đó chạy cổng tổng một lần khi hết phase P05 offline.
+
+## 2026-10-27 09:54 — P05.8 và cổng tổng cuối phase P05 (offline)
+
+- **Đã làm:**
+  - `createMediaStore().purgeUnreferenced(minAgeMs=24h)`: ảnh chưa gắn phiên bản máy hay bản caption nào (kể cả bản cũ) và đã tải lên đủ lâu thì được giải phóng file. Đổi `state` sang `missing` bằng câu lệnh có kiểm tra "không tham chiếu" **trước**, rồi mới xóa file, nên máy tạo đồng thời không thể trỏ vào file đã mất. Dòng media được giữ vì bảng có trigger cấm xóa (không cần migration).
+  - `POST /api/media/cleanup` (ngưỡng cố định, không nhận ID/đường dẫn) và nút "Dọn ảnh chưa dùng" ở danh sách máy. UI không có thao tác xóa ảnh khỏi kho: "Bỏ" chỉ gỡ khỏi phiên bản máy mới.
+- **Kiểm tra:**
+  - Theo yêu cầu, chỉ test phần mới: `node scripts/test.ts packages/storage/src/media-store.test.ts` → 5/5 đạt (test mới: quá mới không dọn; ảnh gắn máy và ảnh chỉ còn ở bản cũ được giữ; ảnh mồ côi mất file → `media_missing`; chạy lại không đổi; tạo máy với ảnh đã dọn bị từ chối). `node scripts/test.ts apps/server/src/data-api.test.ts` → 6/6 đạt (thêm test cleanup: thiếu token 403, ảnh mới không bị dọn).
+  - **Cổng tổng một lần ở cuối phase:** `npm.cmd test` → **139/139 đạt**; `npm.cmd run lint` (74 file) sạch; typecheck không báo lỗi; `vite build --outDir <tạm>` đạt. `npm run build:web` mặc định vẫn vướng `apps/web/dist` cũ (xem mục P02.8).
+  - Chưa thử nút "Dọn ảnh chưa dùng" trên UI thật; chưa thử dọn ảnh đã quá 24 giờ trên DB thật (test dùng ngưỡng 0).
+- **Quyết định:** không migration, không dependency. Chọn "giải phóng file + giữ dòng" thay vì thêm trạng thái `archived` cho media (cần dựng lại bảng, ADR 0002).
+- **Tồn đọng / lưu ý:** P05.5 (duyệt), P05.6 (bản theo đích), P05.7 (UI bài/lịch cần kiểm tra) mở vì phụ thuộc tài khoản/đích/lịch. File `.part` mồ côi trong `media/staging` sau crash vẫn chưa được quét. `apps/web/dist` vẫn cần xóa bằng quyền admin.
+- **Tiếp theo:** các phần còn làm được không cần Facebook thật: P03.1–P03.2 (bảng tài khoản, thêm/sửa/gỡ, giới hạn hai tài khoản) và P04.1 (form proxy, mật khẩu qua DPAPI) — hai phần này mở khóa duyệt/đích cho P05. P01 thật vẫn chờ người dùng chọn tài khoản/đích/phạm vi.

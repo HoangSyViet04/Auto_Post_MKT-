@@ -117,3 +117,12 @@ test('P05.5: lưu bản caption theo đúng phiên bản máy, giữ thứ tự 
   assert.equal((await save(current.revisionId)).statusCode, 409); // máy đã bán không tạo bản mới
   assert.equal((await app.inject({ method: 'GET', url: '/api/products/00000000-0000-4000-8000-000000000000/content-versions', headers })).statusCode, 404);
 });
+
+test('P05.8: POST /api/media/cleanup cần token, không dọn ảnh còn mới, không nhận tham số xóa', async () => {
+  const saved = (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' }, payload: image })).json();
+  const { 'x-apm-token': _token, ...noToken } = headers;
+  assert.equal((await app.inject({ method: 'POST', url: '/api/media/cleanup', headers: noToken, payload: '{}' })).statusCode, 403);
+  const done = await app.inject({ method: 'POST', url: '/api/media/cleanup', headers, payload: '{}' });
+  assert.equal(done.statusCode, 200); assert.deepEqual(done.json(), { purged: 0 }); // vừa tải lên, chưa đủ 24 giờ
+  assert.equal((await app.inject({ method: 'GET', url: `/api/media/${saved.id}`, headers })).statusCode, 200);
+});

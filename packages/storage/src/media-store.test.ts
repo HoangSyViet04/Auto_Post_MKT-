@@ -69,3 +69,22 @@ test('ảnh trong kho bị mất/hỏng: cập nhật missing/failed và chặn 
   assert.equal(db.prepare('SELECT state FROM media WHERE id=?').get(gone.id)?.state, 'missing');
   assert.throws(() => createContentRepository(db).createProduct({ name: 'iPhone', condition: 'Cũ', mediaIds: [gone.id] }), code('not_ready'));
 });
+
+test('P05.8: dọn ảnh mồ côi chỉ khi đủ tuổi và không còn tham chiếu; ảnh đã gắn máy (kể cả bản cũ) được giữ', async () => {
+  const media = store(); const products = createContentRepository(db);
+  const input = await source();
+  const [used, oldUsed, orphan] = [await media.importFile(input.path), await media.importFile(input.path), await media.importFile(input.path)];
+  const made = products.createProduct({ name: 'iPhone 13', condition: 'Đẹp', mediaIds: [used.id, oldUsed.id] });
+  products.reviseProduct(made.productId, made.revisionId, { name: 'iPhone 13', condition: 'Đẹp', mediaIds: [used.id] }); // oldUsed chỉ còn ở bản cũ
+
+  await assert.rejects(media.purgeUnreferenced(-1), code('invalid_input'));
+  assert.deepEqual(await media.purgeUnreferenced(), { purged: 0 }); // quá mới: chưa động tới ảnh nào
+  const orphanPath = (await media.verify(orphan.id)).path;
+  assert.deepEqual(await media.purgeUnreferenced(0), { purged: 1 });
+  assert.deepEqual(await media.purgeUnreferenced(0), { purged: 0 }); // chạy lại không đổi gì
+
+  await assert.rejects(media.verify(orphan.id), code('media_missing'));
+  await assert.rejects(readFile(orphanPath), { code: 'ENOENT' });
+  assert.equal((await media.resolveForPublish([used.id, oldUsed.id])).length, 2);
+  assert.throws(() => products.createProduct({ name: 'x', condition: 'y', mediaIds: [orphan.id] }), code('not_ready'));
+});

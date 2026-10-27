@@ -58,6 +58,19 @@ function ProductList({ onOpen }: { onOpen: (productId: string | null) => void })
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ProductListResponse | null>(null);
   const [error, setError] = useState('');
+  const [note, setNote] = useState('');
+
+  async function cleanup() {
+    setNote('');
+    try {
+      const response = await apiFetch('/api/media/cleanup', { method: 'POST', body: '{}' });
+      if (!response.ok) throw new Error(await readError(response));
+      const { purged } = (await response.json()) as { purged: number };
+      setNote(purged ? `Đã giải phóng ${purged} ảnh chưa dùng.` : 'Không có ảnh chưa dùng nào cần dọn.');
+    } catch (e) {
+      setNote(networkMessage(e));
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -86,7 +99,11 @@ function ProductList({ onOpen }: { onOpen: (productId: string | null) => void })
         <button type="button" className="primary" onClick={() => onOpen(null)}>
           Thêm máy
         </button>
+        <button type="button" onClick={cleanup} title="Chỉ dọn ảnh đã tải lên trên 24 giờ và chưa gắn với máy hay bản caption nào">
+          Dọn ảnh chưa dùng
+        </button>
       </div>
+      {note && <p className="notice" role="status">{note}</p>}
       {error && <p className="field-error" role="alert">{error}</p>}
       {data && data.items.length === 0 && <p className="muted">Chưa có máy nào. Bấm "Thêm máy" để nhập máy đầu tiên.</p>}
       {data && data.items.length > 0 && (

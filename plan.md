@@ -159,7 +159,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Offline xong (P02.1–P02.8); tích hợp thật chờ P01 |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
 | P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
-| P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Offline: P05.1–P05.4 xong; P05.5/P05.6 làm được một phần (chờ đích/tài khoản cho duyệt và bản theo đích); còn P05.7, P05.8 |
+| P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Offline xong phần làm được: P05.1–P05.4, P05.8; P05.5/P05.6/P05.7 làm một phần (chờ tài khoản/đích/lịch từ P03/P06/P07) |
 | P06 | Quét nhóm và danh sách đích | P01–P04 | Chưa bắt đầu |
 | P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Chưa bắt đầu |
 | P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Chưa bắt đầu |
@@ -268,8 +268,8 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [x] P05.4. Caption mẫu từ tên/tình trạng, bỏ dòng tùy chọn thiếu, xem trước/chỉnh tay. *(Hàm domain `generateProductCaption` nhận thêm dung lượng/pin/khu vực dạng chữ; UI xem trước và chỉnh tay đã có nhưng phần chỉnh tay **chưa được lưu** — lưu phiên bản ở P05.5.)*
 - [ ] P05.5. Lưu phiên bản máy, caption, ảnh có thứ tự; duyệt gắn đúng phiên bản. *(Đã có: phiên bản máy, lưu/liệt kê bản caption kèm ảnh theo thứ tự, từ chối phiên bản cũ/máy đã bán. Chưa có: duyệt — cần tài khoản và đích từ P03/P06; repository `approve` đã có nhưng chưa có API/UI.)*
 - [ ] P05.6. Phiên bản theo đích và cảnh báo giống nội dung; chưa cần semantic phức tạp hoặc AI. *(Đã có: cảnh báo giống nội dung (so khớp từ, ngưỡng 80%) giữa các bản của một máy. Chưa có: phiên bản theo đích — chờ đích từ P06.)*
-- [ ] P05.7. Máy sửa sau duyệt thì bài/lịch cần kiểm tra; máy đã bán/ngừng bán ngăn lịch mới và dừng lịch chờ.
-- [ ] P05.8. Chỉ xóa ảnh khi không còn tham chiếu cần giữ; ưu tiên ẩn/lưu trữ thay vì mất bằng chứng bài cũ.
+- [ ] P05.7. Máy sửa sau duyệt thì bài/lịch cần kiểm tra; máy đã bán/ngừng bán ngăn lịch mới và dừng lịch chờ. *(Quy tắc dữ liệu đã có và đã test từ P02.3 — sửa máy thu hồi duyệt/chuyển job cần xem lại, bán/ngừng bán chặn bản mới và dừng job; UI máy đã báo "không thể tạo bài/lịch mới". Chưa có UI bài/lịch để hiển thị "cần kiểm tra" — P07/P10.)*
+- [x] P05.8. Chỉ xóa ảnh khi không còn tham chiếu cần giữ; ưu tiên ẩn/lưu trữ thay vì mất bằng chứng bài cũ. *(UI không có thao tác xóa ảnh: "Bỏ" chỉ gỡ khỏi phiên bản mới, bản cũ giữ ảnh. `purgeUnreferenced` chỉ giải phóng file ảnh chưa gắn máy/bản caption nào và đã tải lên >24 giờ; dòng media giữ lại, chuyển `missing`. Nút "Dọn ảnh chưa dùng".)*
 
 **Đầu ra:** trang phụ quản lý máy, thư viện ảnh, soạn bài và phiên bản trong khu vực đăng.
 
@@ -494,6 +494,7 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 27/10/2026 | P02.5 | DPAPI CurrentUser + ACL kho secrets, put/get/revoke/lost, ADR0009 | 2/2 Windows tests thật ngoài sandbox; typecheck/lint đạt; không thêm dependency | P02.7 API/validation và P02.8 test fixtures |
 | 27/10/2026 | P02.7 | Upload/read media bằng bytes/ID, product create/list, strict schemas/body bounds/pagination, ADR0010 | 3/3 API tests; typecheck đạt; full gate cùng P02.8 | P02.8 test runner/fixtures, sau đó phần độc lập P03/P05 |
 | 27/10/2026 | P05.1–P05.4 | Trang Quản lý máy: form ảnh/thứ tự/thumbnail, sửa = revision mới, đã bán/ngừng bán, caption mẫu + chỉnh tay (chưa lưu) | 133/133 test, typecheck/lint đạt; chạy thật server+Vite+Edge headless; build:web vướng quyền dist cũ (build tạm đạt) | P05.5 lưu/duyệt phiên bản, P05.7, P05.8 |
+| 27/10/2026 | P05.5–P05.8 | Lưu bản caption theo phiên bản máy, cảnh báo giống nội dung, dọn ảnh mồ côi an toàn | Test theo phần mới; cổng tổng cuối phase: 139/139 test, typecheck/lint đạt, build web ra thư mục tạm đạt | P03/P04/P06 hoặc P01 thật khi có đầu vào |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 
