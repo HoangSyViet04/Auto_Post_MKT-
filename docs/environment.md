@@ -49,3 +49,11 @@ npm run spike:offline -- --scenario=unknown --channel=group
 ```
 
 Phải chọn rõ scenario; không có lựa chọn thì không chạy. Chỉ fake, không network/browser/profile/Graph API. Các kết quả đều gắn `simulated: true`, `realCapability: not_tested`; không dùng làm bằng chứng Facebook thật. Xem [spikes/README.md](../spikes/README.md) và [ma trận khả thi](feasibility.md).
+
+## Schema DB v2 — nền offline P02
+
+`db:migrate` hoặc server startup áp dụng migration0002 qua migration runner có checksum; không cần xóa DBv1. Không sửa file migration đã áp dụng. DBv2 không tự tạo tài khoản, secrets hay job thử. Xem [mô hình dữ liệu](data-model.md) và [ADR0005](adr/0005-offline-data-model.md).
+
+Mọi connection phải dùng `#storage.openDatabase`: WAL, foreign_keys và recursive_triggers đều bật; không tắt hai PRAGMA trong repository/migration. Recursive triggers bảo đảm SQLite REPLACE không xóa qua các ràng buộc giữ lịch sử. Các snapshot được duyệt không sửa tại chỗ; tạo phiên bản mới. Test đã backup/restore vào DBtạm riêng, chưa có công cụ phục hồi DBvận hành hoặc UI P11.
+
+Test tích hợp web hiện cần cổng5173 trống, mở server/Vite riêng với dữ liệu/cache tạm rồi tự đóng. Không chạy đồng thời một Vite dev khác trên5173 khi gọi `npm test`.

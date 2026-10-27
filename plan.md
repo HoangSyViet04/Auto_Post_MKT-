@@ -156,7 +156,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | --- | --- | --- | --- |
 | P00 | Nền dự án, môi trường Windows | README/plan | Hoàn thành (P00.1–P00.8) |
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Đang chuẩn bị offline; chưa kiểm chứng thật |
-| P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Chưa bắt đầu |
+| P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Đang làm offline (P02.1–P02.2 xong); chưa nghiệm thu toàn phần |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
 | P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Chuẩn bị quy tắc caption offline; chưa UI/media/phiên bản |
@@ -213,8 +213,8 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Mục tiêu:** các module dùng dữ liệu/quy tắc thống nhất; dữ liệu thật độc lập thư mục mã nguồn.
 
-- [ ] P02.1. Thiết kế schema mục 4: foreign key, index lịch, phiên bản, quan hệ tài khoản–nhóm, kết quả từng đích.
-- [ ] P02.2. Migration có phiên bản; kiểm tra nâng cấp và quay về bản sao lưu; không tự xóa DB để cập nhật.
+- [x] P02.1. Thiết kế schema mục 4: foreign key, index lịch, phiên bản, quan hệ tài khoản–nhóm, kết quả từng đích. *(Migration0002 có26 bảng STRICT, composite FK danh tính/đích/content, snapshot/media/approval bất biến, intent/attempt/observation/lease/scan/preset; docs/data-model.md, ADR0005.)*
+- [x] P02.2. Migration có phiên bản; kiểm tra nâng cấp và quay về bản sao lưu; không tự xóa DB để cập nhật. *(DB tạm v1→v2/noop/rollback, backup online với WAL rồi restore đường dẫn riêng và upgrade giữ dữ liệu. Không sửa0001; chưa có UI/restore vận hành P11.)*
 - [ ] P02.3. Repository/transaction cho nhận job, lưu phiên bản, đổi trạng thái; lỗi nghiệp vụ dùng chung.
 - [ ] P02.4. MediaStore: chép vào vùng tạm, kiểm tra file, đưa vào kho và hoàn tất metadata; xử lý lỗi giữa chừng, không coi máy có ảnh mất là hợp lệ.
 - [ ] P02.5. Chọn cách bảo vệ secrets trên Windows/quyền thư mục; khóa không nằm cạnh ciphertext trong mã nguồn. Mất khóa thì báo cần kết nối lại.
@@ -487,6 +487,7 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 27/10/2026 | P00.8 | Guard API cục bộ + client session trong bộ nhớ, ADR 0004 | 11 server tests + 7 client tests; real server/Vite proxy và raw Host trùng bị chặn | P01 tooling và kiểm chứng tích hợp |
 | 27/10/2026 | P01.1 chuẩn bị offline | CLI chủ động fake-only và ma trận khả thi P01 | 5/5 harness tests; unknown chỉ submit1 lần, stop/block không submit; chưa driver/kiểm chứng thật | Chuẩn bị driver và đầu vào thử thật; tiếp tục module offline độc lập |
 | 27/10/2026 | P05.4 chuẩn bị offline | Hàm domain sinh caption từ dữ kiện đã cung cấp, không LLM | 8/8 test T01/thiếu optional/validation/input bất biến | Nối media/schema và UI soạn/xem trước trước khi nghiệm thu P05 |
+| 27/10/2026 | P02.1–P02.2 | Migration0002 nền nghiệp vụ26 bảng, snapshot/identity/order/history/fence, ADR0005 | 29/29 storage tests; v1→v2, backup/restore WAL thật, FK/REPLACE/DO NOTHING/UPSERT; reviewer độc lập đạt | P02.3 repository/transaction và các phần media/secrets |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 

@@ -22,6 +22,8 @@ export function openDatabase(path: string, options: OpenDatabaseOptions = {}): D
   try {
     db.exec(`PRAGMA busy_timeout = ${Math.trunc(options.busyTimeoutMs ?? DEFAULT_BUSY_TIMEOUT_MS)}`);
     db.exec('PRAGMA foreign_keys = ON');
+    // REPLACE must run DELETE triggers, or it could erase immutable audit/fence rows.
+    db.exec('PRAGMA recursive_triggers = ON');
     if (path !== ':memory:') {
       const row = db.prepare('PRAGMA journal_mode = WAL').get();
       if (row?.journal_mode !== 'wal') throw new Error(`Không bật được WAL cho DB: ${String(row?.journal_mode)}`);

@@ -14,11 +14,12 @@ before(() => {
 after(() => rmSync(dir, { recursive: true, force: true }));
 
 describe('openDatabase', () => {
-  test('bật WAL, foreign_keys, busy_timeout và tạo thư mục cha', () => {
+  test('bật WAL, foreign_keys, recursive_triggers, busy_timeout và tạo thư mục cha', () => {
     const db = openDatabase(join(dir, 'nested', 'a.sqlite'), { busyTimeoutMs: 1234 });
     try {
       assert.equal(db.prepare('PRAGMA journal_mode').get()?.journal_mode, 'wal');
       assert.equal(db.prepare('PRAGMA foreign_keys').get()?.foreign_keys, 1);
+      assert.equal(db.prepare('PRAGMA recursive_triggers').get()?.recursive_triggers, 1);
       assert.equal(db.prepare('PRAGMA busy_timeout').get()?.timeout, 1234);
     } finally {
       db.close();

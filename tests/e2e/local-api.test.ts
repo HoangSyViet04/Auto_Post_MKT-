@@ -60,8 +60,9 @@ test('server thật + Vite proxy giữ Host: health/session hợp lệ, request 
     const direct = `http://127.0.0.1:${port}`;
     const health = await fetch(`${web}/api/health`);
     assert.equal(health.status, 200);
-    const healthBody = await health.json() as { integrations: string };
+    const healthBody = await health.json() as { integrations: string; schemaVersion: number };
     assert.equal(healthBody.integrations, 'fake');
+    assert.equal(healthBody.schemaVersion, 2);
     const session = await fetch(`${web}/api/session`, { headers: { Origin: web } });
     assert.equal(session.status, 200);
     assert.equal(session.headers.get('cache-control'), 'no-store');
