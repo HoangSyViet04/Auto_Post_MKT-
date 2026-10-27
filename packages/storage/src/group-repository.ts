@@ -19,6 +19,8 @@ const PERMISSIONS = ['unknown', 'allowed', 'denied'] as const;
 const APPROVALS = ['unknown', 'required', 'not_required'] as const;
 const CURATIONS = ['normal', 'preferred', 'unsuitable'] as const;
 
+export type GroupSource = 'manual' | 'joined_scan';
+
 export interface GroupProfileInput {
   name?: string | null;
   region?: string | null;
@@ -72,16 +74,16 @@ export function createGroupRepository(db: Database, options: RepositoryOptions =
     identifier(destinationId);
     if (!one(db, "SELECT id FROM destinations WHERE id=? AND channel='group'", destinationId)) throw new BusinessError('not_found');
   }
-  function upsertRelation(destinationId: string, accountId: string, membership: GroupMembership | undefined, permission: GroupPermission | undefined): void {
+  function upsertRelation(destinationId: string, accountId: string, membership: GroupMembership | undefined, permission: GroupPermission | undefined, source: GroupSource): void {
     const existing = one<{ membership_status: string; posting_permission: string }>(db,
       'SELECT membership_status,posting_permission FROM account_destinations WHERE account_id=? AND destination_id=?', accountId, destinationId);
     const nextMembership = membership ?? existing?.membership_status ?? 'unknown';
     const nextPermission = permission ?? existing?.posting_permission ?? 'unknown';
-    // Người dùng tự khai báo: nguồn 'manual', chưa phải kết quả đọc từ giao diện Facebook.
+    // 'manual': người dùng tự khai báo, chưa kiểm chứng. 'joined_scan': đọc từ trang nhóm đã tham gia (kết quả một phần).
     db.prepare(`INSERT INTO account_destinations(account_id,destination_id,channel,membership_status,posting_permission,source,checked_at)
-      VALUES(?,?,'group',?,?,'manual',?) ON CONFLICT(account_id,destination_id) DO UPDATE SET
-      membership_status=excluded.membership_status,posting_permission=excluded.posting_permission,source='manual',checked_at=excluded.checked_at`)
-      .run(accountId, destinationId, nextMembership, nextPermission, clock());
+      VALUES(?,?,'group',?,?,?,?) ON CONFLICT(account_id,destination_id) DO UPDATE SET
+      membership_status=excluded.membership_status,posting_permission=excluded.posting_permission,source=excluded.source,checked_at=excluded.checked_at`)
+      .run(accountId, destinationId, nextMembership, nextPermission, source, clock());
   }
 
   function blockers(row: { externalId: string | null; archived: boolean; curation: string }, relation: { membership: string; permission: string }, paused: boolean): GroupBlocker[] {
@@ -100,7 +102,7 @@ export function createGroupRepository(db: Database, options: RepositoryOptions =
      * Lưu nhóm từ link/ID người dùng nhập. Cùng nhóm (cùng ID, hoặc cùng link khi chưa có ID) chỉ có một bản ghi dù nhiều
      * tài khoản; quan hệ tham gia/quyền đăng lưu riêng từng tài khoản. Không ghi đè dữ liệu đã có của nhóm.
      */
-    add(input: AddGroupInput): { id: string; created: boolean } {
+    add(input: AddGroupInput, source: GroupSource = 'manual'): { id: string; created: boolean } {
       objectInput(input);
       activeAccount(input.accountId);
       const normalized = normalizeGroupReference(input.reference);
@@ -129,9 +131,25 @@ export function createGroupRepository(db: Database, options: RepositoryOptions =
             curation,user_note,created_at) VALUES(?,'group',?,?,?,?,?,?,?,?,?,?)`).run(id, normalized.externalId, normalized.canonicalUrl,
             profile.name, profile.topic, profile.region, profile.rulesNote, profile.approval, profile.curation, profile.userNote, clock());
         }
-        upsertRelation(id, input.accountId, membership, permission);
+        upsertRelation(id, input.accountId, membership, permission, source);
         return { id, created: !existing };
       });
+    },
+
+    /**
+     * Nhập danh sách nhóm đã đọc được từ trang "nhóm đã tham gia" của một tài khoản (kết quả một phần). Chỉ đặt trạng thái tham gia = joined
+     * và nguồn `joined_scan`; KHÔNG đụng tới quyền đăng và không ghi đè dữ liệu đã có. Chạy lại không tạo trùng. Mục không nhận ra thì bỏ qua và đếm.
+     */
+    importObserved(accountId: string, items: ReadonlyArray<{ reference: string; name?: string | null }>): { created: number; existing: number; skipped: number } {
+      activeAccount(accountId);
+      const counts = { created: 0, existing: 0, skipped: 0 };
+      for (const item of items) {
+        if (typeof item?.reference !== 'string' || !normalizeGroupReference(item.reference)) { counts.skipped += 1; continue; }
+        const name = typeof item.name === 'string' && item.name.length <= 500 ? item.name : null;
+        const result = repository.add({ reference: item.reference, accountId, name, membership: 'joined' }, 'joined_scan');
+        if (result.created) counts.created += 1; else counts.existing += 1;
+      }
+      return counts;
     },
 
     /** Sửa thông tin do người dùng ghi nhận. Không đổi được ID/link (danh tính bất biến). */
@@ -161,7 +179,7 @@ export function createGroupRepository(db: Database, options: RepositoryOptions =
       const membership = relation.membership === undefined ? undefined : member(relation.membership, MEMBERSHIPS);
       const permission = relation.permission === undefined ? undefined : member(relation.permission, PERMISSIONS);
       if (membership === undefined && permission === undefined) throw new BusinessError('invalid_input');
-      atomic(db, () => { upsertRelation(destinationId, accountId, membership, permission); });
+      atomic(db, () => { upsertRelation(destinationId, accountId, membership, permission, 'manual'); });
     },
 
     /** Ngừng dùng (lưu trữ) hoặc dùng lại. Không xóa: lịch sử bài đăng còn tham chiếu nhóm. */

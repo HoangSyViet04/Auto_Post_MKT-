@@ -90,3 +90,30 @@ test('lọc theo tài khoản không lẫn nhóm của tài khoản kia; tìm kh
   assert.throws(() => groups.update(hn, { curation: 'best' as never }), code('invalid_input'));
   assert.throws(() => groups.update('00000000-0000-4000-8000-000000000000', { name: 'x' }), code('not_found'));
 });
+
+test('nhập kết quả đọc nhóm đã tham gia: đặt joined + nguồn joined_scan, không đụng quyền đăng, chạy lại không trùng, mục lạ bị bỏ qua', () => {
+  const known = groups.add({ reference: ID, accountId: a, name: 'Tên người dùng đặt', membership: 'not_joined', permission: 'allowed' }).id;
+  const items = [
+    { reference: `https://www.facebook.com/groups/${ID}`, name: 'Tên đọc được' }, // đã có → giữ tên cũ, cập nhật tham gia
+    { reference: 'https://www.facebook.com/groups/222222222', name: 'Nhóm mới có ID' },
+    { reference: 'https://www.facebook.com/groups/muaban.iphone', name: 'Nhóm chỉ có tên rút gọn' },
+    { reference: 'https://example.com/groups/333333333', name: 'Không phải Facebook' },
+    { reference: 'không phải link', name: null },
+  ];
+  assert.deepEqual(groups.importObserved(a, items), { created: 2, existing: 1, skipped: 2 });
+  assert.deepEqual(groups.importObserved(a, items), { created: 0, existing: 3, skipped: 2 }); // chạy lại không tạo trùng
+  assert.equal(workspace.db.prepare("SELECT count(*) AS n FROM destinations WHERE channel='group'").get()?.n, 3);
+
+  const list = groups.list({ accountId: a, pageSize: 100 }).items;
+  const old = list.find((group) => group.id === known);
+  assert.equal(old?.name, 'Tên người dùng đặt');
+  assert.deepEqual([old?.accounts[0]?.membership, old?.accounts[0]?.permission, old?.accounts[0]?.source], ['joined', 'allowed', 'joined_scan']);
+  assert.equal(old?.accounts[0]?.eligible, true); // quyền đăng người dùng đã khai báo được giữ nguyên
+  const fresh = list.find((group) => group.name === 'Nhóm mới có ID');
+  assert.deepEqual([fresh?.accounts[0]?.membership, fresh?.accounts[0]?.permission], ['joined', 'unknown']); // quét không suy ra quyền đăng
+  assert.deepEqual(fresh?.accounts[0]?.blockedBy, ['no_permission']);
+  const slug = list.find((group) => group.name === 'Nhóm chỉ có tên rút gọn');
+  assert.deepEqual(slug?.accounts[0]?.blockedBy, ['no_external_id', 'no_permission']);
+  assert.equal(groups.list({ accountId: b }).total, 0); // không lẫn sang tài khoản khác
+  assert.throws(() => groups.importObserved('00000000-0000-4000-8000-000000000000', items), code('not_found'));
+});

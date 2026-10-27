@@ -151,8 +151,9 @@ export function GroupsPage() {
         <span className="tag">P06 · nhập tay</span>
       </header>
       <p className="notice">
-        Đọc danh sách nhóm tự động từ Facebook <strong>chưa hỗ trợ</strong> (cần kiểm chứng ở P01). Trang này lưu nhóm bạn nhập tay;
-        "đã tham gia" và "được đăng" là do bạn khai báo, chưa được ứng dụng kiểm chứng. Không có thao tác nào gửi tới Facebook.
+        Ứng dụng <strong>chưa tự đọc</strong> danh sách nhóm từ Facebook. Nhóm ở đây do bạn nhập tay hoặc nhập từ kết quả công cụ thử đọc nhóm
+        (chạy ngoài ứng dụng, chỉ là một phần danh sách, nhãn "đọc từ Facebook"). "Đã tham gia" có thể đến từ lần đọc đó; "được đăng" luôn do bạn
+        xác nhận. Không có thao tác nào ở trang này gửi tới Facebook.
       </p>
 
       <div className="actions">
@@ -208,7 +209,7 @@ export function GroupsPage() {
       {data && data.items.length === 0 && <p className="muted">Chưa có nhóm nào khớp. Bấm "Thêm nhóm" để nhập link hoặc ID.</p>}
       {data && data.items.length > 0 && (
         <table className="table">
-          <thead><tr><th /><th>Nhóm</th><th>Khu vực · nội quy</th><th>Ưu tiên</th><th>Theo tài khoản (bạn khai báo)</th><th /></tr></thead>
+          <thead><tr><th /><th>Nhóm</th><th>Khu vực · nội quy</th><th>Ưu tiên</th><th>Theo tài khoản</th><th /></tr></thead>
           <tbody>
             {data.items.map((group) => (
               <tr key={group.id} className={group.archived ? 'archived' : undefined}>
@@ -239,6 +240,7 @@ export function GroupsPage() {
                   {group.accounts.map((relation) => (
                     <div key={relation.accountId} className="relation">
                       <strong>{relation.accountLabel}</strong>
+                      {relation.source === 'joined_scan' && <span className="tag" title="Đọc từ trang nhóm đã tham gia của Facebook (kết quả một phần)">đọc từ Facebook</span>}
                       <select aria-label="Tham gia" value={relation.membership} disabled={busy}
                         onChange={(e) => act(`/api/groups/${group.id}/accounts/${relation.accountId}`, { method: 'PUT', body: JSON.stringify({ membership: e.target.value }) }, 'Đã cập nhật.')}>
                         {options(MEMBERSHIP)}

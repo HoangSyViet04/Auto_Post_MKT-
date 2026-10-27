@@ -470,3 +470,15 @@ Mẫu một mục:
 - **Kiểm tra:** `npm.cmd run typecheck`, `npm.cmd run lint` (93 file) đạt; chốt an toàn thiếu `--confirm-real` bị từ chối. Không chạy cổng tổng. Chưa lặp lại sau restart.
 - **Chưa làm:** tìm nhóm theo từ khóa (P01.6 nửa sau); làm giàu ID cho nhóm tên rút gọn; nhập kết quả vào DB/trang Nhóm.
 - **Tiếp theo:** người dùng cho biết số nhóm thật của `phu1` (khoảng bao nhiêu) để đối chiếu; sau đó thử tìm theo từ khóa hoặc làm giàu ID.
+
+## 2026-10-27 11:45 — P06.2 (đường nhập kết quả quét): nhập nhóm đã đọc vào trang Nhóm
+
+- **Đã làm:** `createGroupRepository().importObserved(accountId, items)`: nhập danh sách nhóm đọc được (chuẩn hóa link, không ghi đè dữ liệu đã có, chạy lại không trùng, mục lạ bị bỏ qua và đếm); đặt "đã tham gia" với nguồn `joined_scan`, **không đụng quyền đăng** (nhóm mới để "chưa rõ quyền đăng" nên chưa đủ điều kiện đăng). `scripts/import-joined-groups.ts` + `npm run groups:import -- --label --account [--apply]`: mặc định chạy thử, cần `--apply` mới ghi; tài khoản phải có sẵn trong app. Giao diện: nhãn "đọc từ Facebook" cho quan hệ nguồn `joined_scan`, sửa dòng giải thích cho đúng thực tế.
+- **Kiểm tra (chỉ phần mới):** `node scripts/test.ts packages/storage/src/group-repository.test.ts` → 4/4 đạt (test mới: nguồn `joined_scan`, quyền đăng người dùng khai báo được giữ nguyên, nhóm mới `unknown` quyền, nhóm tên rút gọn bị chặn `no_external_id`, không lẫn tài khoản khác, tài khoản không tồn tại → `not_found`). `npm.cmd run typecheck` đạt, `npm.cmd run lint` (94 file) đạt. Không chạy cổng tổng.
+- **Chạy thật trên DB tạm (không đụng DB vận hành):** tạo tài khoản `phu1`, chạy thử → 130 mục nhận được (81 có ID số, 49 tên rút gọn); `--apply` → created 130; chạy lại → existing 130, created 0; tài khoản sai nhãn → báo lỗi. API: tổng 130, 0 nhóm đủ điều kiện đăng, nguồn `joined_scan`. Đã xem ảnh chụp trang Nhóm với 130 nhóm có nhãn "đọc từ Facebook".
+- **Chưa làm / lưu ý:**
+  - **Chưa nhập vào DB thật của người dùng**; muốn dùng thật: tạo tài khoản `phu1` ở trang Quản lý tài khoản rồi chạy `npm run groups:import -- --label=phu1 --account=phu1 --apply`.
+  - Tên nhóm lấy từ chữ trên liên kết, có thể lẫn ký tự lạ; 49 nhóm tên rút gọn chưa đăng được (cần làm giàu ID).
+  - Hồ sơ trình duyệt của app (`browser_profiles`) chưa nối với hồ sơ thử P01 (`spikes/profiles/phu1`) — việc của P03.3.
+  - Kết quả đọc là một phần; chưa đối chiếu tổng số nhóm thật.
+- **Tiếp theo:** P03.3 (nối tài khoản trong app với hồ sơ trình duyệt đã đăng nhập, đăng nhập/mở lại trong worker) để app tự đọc/đăng thay vì công cụ thử; hoặc làm giàu ID cho 49 nhóm; hoặc tìm theo từ khóa.
