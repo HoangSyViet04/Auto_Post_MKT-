@@ -1,6 +1,6 @@
 # Mô hình dữ liệu nền offline — P02.1–P02.2
 
-Schema v2 được bổ sung bằng `0002_offline_core.sql`; `0001_init.sql` giữ nguyên. Đã có repository product/content/job P02.3; **chưa có scheduler, MediaStore, kho bí mật hoặc adapter Facebook thật**. Không có tài khoản/job/credential/capability được seed vào DB vận hành. Hành vi transaction/recovery được chốt trong [ADR0007](adr/0007-publishing-repositories.md).
+Schema v2 được bổ sung bằng `0002_offline_core.sql`; `0001_init.sql` giữ nguyên. Đã có repository product/content/job P02.3 và MediaStore P02.4; **chưa có scheduler, kho bí mật hoặc adapter Facebook thật**. Không có tài khoản/job/credential/capability được seed vào DB vận hành. Hành vi transaction/recovery được chốt trong [ADR0007](adr/0007-publishing-repositories.md), file ảnh trong [ADR0008](adr/0008-managed-media-store.md).
 
 ## Quy ước chung
 
@@ -58,7 +58,7 @@ Destination identity (channel/external ID/canonical URL) và Page binding hiện
 
 Repository P02.3 đã kiểm tra current revision/selling/paused/archive/quyền lưu trong DB/revocation/media ready trước enqueue/claim và marker; sửa product và invalidate/stop job cùng transaction. File vật lý P02.4 và quyền/danh tính phiên thật P01/P03/P08/P09 vẫn phải kiểm chứng ở adapter; metadata DB không thay thế được các bước này.
 
-P02.4/P02.7 còn phải bảo vệ path thực, kiểm MIME/hash/bytes và ghi file atomic; DB chỉ lưu managed UUID, không đọc được ổ đĩa để xác minh. P02.5 còn phải chọn kho bí mật/quyền file; secret reference row không phải mã hóa. P03/P07 còn phải có khóa profile thực và holder abort khi mất lease; fence DB không ngăn một browser process cũ tiếp tục chạy.
+MediaStore P02.4 đã chép qua staging, giải mã ảnh, lưu MIME/hash/bytes, chuyển ready và verify file thực theo UUID; consumer phải gọi resolveForPublish để chặn ảnh mất/hỏng, không chỉ tin state DB. Upload API/path validation/pagination P02.7 còn riêng. P02.5 còn phải chọn kho bí mật/quyền file; secret reference row không phải mã hóa. P03/P07 còn phải có khóa profile thực và holder abort khi mất lease; fence DB không ngăn một browser process cũ tiếp tục chạy.
 
 ## Bằng chứng migration đã chạy
 

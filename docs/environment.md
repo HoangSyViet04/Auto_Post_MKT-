@@ -63,3 +63,9 @@ Test tích hợp web hiện cần cổng5173 trống, mở server/Vite riêng v�
 `#contracts` cung cấp `createFakePublisher`/`createFakeScanner`, chỉ bộ nhớ và luôn gắn nguồn mô phỏng. Consumer scheduler/live tương lai phải dùng `ApprovedPublishRequest` qua runtime validator; request cũ thiếu context chỉ phục vụ fixture fake. TCN/Page phải đúng identity đích. Verify sai snapshot trả unknown, không cấp quyền retry; stop không thu hồi bài đã gửi.
 
 Scanner phân biệt joined/keyword, giới hạn1..1000 kết quả, nguồn/thời điểm/account, trạng thái unknown/partial và stop. Không suy đã tham gia/quyền đăng/không kiểm duyệt từ kết quả tìm kiếm. Chưa nối DB hoặc UI, chưa có driver thật; xem [ADR0006](adr/0006-integration-contracts.md).
+
+## MediaStore (P02.4)
+
+Sau pull lockfile mới, chạy `npm ci` để cài `sharp@0.35.5` và binary phù hợp máy. Thư viện `#storage.createMediaStore` dùng dataDir cấu hình, lưu file trong `media/staging` và `media/objects` ngoài repo. Nhập JPEG/PNG/WebP tĩnh, mặc định20MiB/25MP, giữ nguyên bytes và SHA256. Chưa có màn hình/upload API hoặc thumbnail.
+
+Caller nội bộ dùng `importFile(pathĐãChọn)` lấy media ID; trước sử dụng gọi `resolveForPublish(idsTheoThứTự)`. Không nhận đường dẫn hệ thống tùy ý từ web, không tự bỏ qua ảnh lỗi. Mất/hỏng file chuyển missing/failed và chặn thao tác. Crash có thể còn staging/orphan không được coi ready; chưa tự quét/dọn khi có tiến trình khác có thể đang import. Xem [ADR0008](adr/0008-managed-media-store.md).

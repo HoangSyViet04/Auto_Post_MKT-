@@ -8,6 +8,10 @@ const MESSAGES = {
   claim_lost: 'Quyền xử lý tác vụ đã hết hạn hoặc thay đổi.',
   invalid_transition: 'Không thể chuyển trạng thái tác vụ theo yêu cầu.',
   mode_mismatch: 'Chế độ tác vụ không khớp chế độ đang xử lý.',
+  media_invalid: 'Ảnh không hợp lệ, bị hỏng hoặc có định dạng chưa hỗ trợ.',
+  media_too_large: 'Ảnh vượt giới hạn dung lượng hoặc số điểm ảnh.',
+  media_missing: 'Ảnh trong kho không còn tồn tại.',
+  media_io: 'Không thể đọc hoặc ghi ảnh trong kho.',
 } as const;
 
 export type BusinessErrorCode = keyof typeof MESSAGES;
