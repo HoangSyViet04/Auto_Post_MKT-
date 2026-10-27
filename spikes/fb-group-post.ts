@@ -130,8 +130,9 @@ async function findPost(page: Page, marker: string): Promise<{ found: boolean; p
     let node = element as unknown as Walk | null;
     for (let level = 0; node && level < 14; level += 1) {
       const found = new Set<string>();
-      for (const link of Array.from(node.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"]'))) {
-        const hit = /\/(?:posts|permalink)\/(\d{6,25})/.exec(link.getAttribute('href') ?? '');
+      for (const link of Array.from(node.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"], a[href*="multi_permalinks="], a[href*="story_fbid="], a[href*="/post_insights/"], a[href*="set=pcb."]'))) {
+        // Không dùng fbid= (đó là ID ảnh, không phải ID bài). /post_insights/ chỉ có với quản trị; set=pcb. chỉ có với bài có ảnh.
+        const hit = /(?:\/posts\/|\/permalink\/|multi_permalinks=|story_fbid=|\/post_insights\/|set=pcb\.)(\d{6,25})/.exec(link.getAttribute('href') ?? '');
         if (hit?.[1]) found.add(hit[1]);
       }
       if (found.size > 0) return Array.from(found);
@@ -144,7 +145,10 @@ async function findPost(page: Page, marker: string): Promise<{ found: boolean; p
   // Đếm ảnh trên trang riêng của bài (khối trong feed bao quanh quá rộng nên đếm sai).
   await page.goto(`https://www.facebook.com/groups/${groupId}/posts/${match}`, { waitUntil: 'load', timeout: 45_000 });
   await page.waitForTimeout(5_000);
-  return { found: true, postId: match, images: await bigImages(page.locator('[role="main"]').first()), scrolls };
+  // Trang riêng của bài mở dạng hộp thoại: đếm trong đó để không lẫn ảnh bìa/nền của nhóm.
+  const dialog = page.getByRole('dialog');
+  const scope = (await dialog.count()) > 0 ? dialog.first() : page.locator('[role="main"]').first();
+  return { found: true, postId: match, images: await bigImages(scope), scrolls };
 }
 
 const context = await chromium.launchPersistentContext(join(base, 'profiles', label), { channel: 'msedge', headless: false, viewport: null });

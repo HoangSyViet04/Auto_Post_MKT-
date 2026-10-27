@@ -448,3 +448,13 @@ Mẫu một mục:
 - **Giới hạn:** 1 nhóm, 1 nick quản trị, giao diện tiếng Việt, 2 bài, chưa lặp lại sau khởi động lại; chưa thử nick thường (pending/từ chối), chưa thử TCN (P01.4: người dùng chưa xác nhận đối tượng "Chỉ mình tôi").
 - **Tồn đọng:** người dùng tự xóa bài thử thứ hai (marker `APM-TEST-20261027041940`). Cần cách đọc ID bài và đếm ảnh đáng tin (P01.9), cách nhận diện chờ duyệt/từ chối, thử lại sau restart.
 - **Tiếp theo:** (1) người dùng xác nhận bài 2 hiện đủ 2 ảnh rồi xóa; (2) quyết định có thử TCN không (cần đặt đối tượng mặc định "Chỉ mình tôi"); (3) thử nick không phải quản trị nếu muốn kiểm chứng pending/từ chối.
+
+## 2026-10-27 11:30 — P01.5 (một phần, kết thúc đợt thử với nick quản trị): đối chiếu đáp án thật
+
+- **Người dùng cung cấp đáp án thật:** bài `APM-TEST-20261027041940` hiện **đủ 2 ảnh**; link thật `.../groups/1357510931662685/permalink/2306124406801328/`. ID công cụ đọc lúc trước (`1690702521676856`) là **sai** (xác nhận lại nhận định ở mục trước).
+- **Chẩn đoán (2 lần chạy chỉ đọc tạm, file chẩn đoán đã xóa):** ID bài thật không nằm ở liên kết `/permalink/` hay `/posts/` trong trang nhóm (liên kết dòng thời gian không có sẵn); nó nằm ở `.../post_insights/<ID>/` (chỉ quản trị) và `set=pcb.<ID>` (liên kết ảnh của bài có ảnh). Trang riêng của bài mở dạng hộp thoại nên đếm ảnh trong hộp thoại (ban đầu đếm cả khung trang ra 3).
+- **Đã sửa (`spikes/fb-group-post.ts`):** nhận diện ID ở các dạng trên, chỉ tin khi tầng gần nhất có đúng một ID; đếm ảnh trong hộp thoại bài.
+- **Kết quả thật sau sửa:** `find --marker=APM-TEST-20261027041940` → `published`, `postId=2306124406801328` (khớp đáp án), `anhTrongBai=2` (khớp). Typecheck/lint (91 file) đạt; không chạy cổng tổng.
+- **Giới hạn (không được khái quát):** chỉ 1 nhóm, 1 nick quản trị, 1 bài có ảnh được đối chiếu; ID bài chữ của nick thường chưa có cách đọc; chờ duyệt/từ chối chưa nhận diện; chưa lặp lại sau restart; chưa thử TCN (P01.4). Cách đọc ID phụ thuộc cấu trúc trang hiện tại của Facebook và có thể hỏng khi giao diện đổi.
+- **Quyết định:** theo yêu cầu người dùng chuyển sang phần tiếp theo; P01.4 và các phần còn thiếu của P01.5 để mở, ghi rõ ở `plan.md` và `docs/feasibility.md`.
+- **Tiếp theo:** P01.6 đọc nhóm đã tham gia của nick `phu1` (chỉ đọc, có giới hạn và điều kiện dừng).
