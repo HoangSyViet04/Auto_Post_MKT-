@@ -411,3 +411,13 @@ Mẫu một mục:
 - **Bằng chứng:** nằm ngoài repo ở `%LOCALAPPDATA%\AutoPostMKT\spikes\` (profile, `evidence/phu1-identity.json` chỉ chứa băm và bản che). Không có cookie/mật khẩu/ảnh chụp trong repo hay log.
 - **Cập nhật tài liệu:** `docs/feasibility.md` (P01.2 đạt một phần), `plan.md` (ghi chú P01.2, chưa tick).
 - **Tiếp theo:** người dùng nêu rõ đích (TCN hoặc 1 group, nội dung thử) để làm P01.4/P01.5; hoặc chỉ làm P01.6 đọc nhóm đã tham gia (chỉ đọc) nếu người dùng đồng ý. Có thể lặp lại `verify` sau khi khởi động lại máy để tăng bằng chứng P01.2.
+
+## 2026-10-27 11:10 — P01.5 (đang làm): bước A chỉ đọc trên group do người dùng chỉ định
+
+- **Người dùng chọn:** group ID `1357510931662685` (người dùng là quản trị), nick `phu1` cũng là quản trị. Chưa trả lời có đăng thử TCN hay không nên **không** thử TCN (P01.4 chưa làm).
+- **Đã làm:** `spikes/fb-group-post.ts prepare --label=phu1 --group=<ID> --confirm-real`: chỉ đọc. Kiểm tra phiên, so băm danh tính với bản đã lưu, vào trang nhóm, tìm ô soạn bài bằng tên truy cập (không theo class CSS). Không gõ, không bấm gửi.
+- **Kết quả thật:** danh tính `match`; vào được trang nhóm; `soLuongKhop: 1`, `composer_found`, nhìn thấy được. Tiêu đề trang nhóm hiện là "Highlands Coffee- Nhận Voucher Ưu Đãi" — **chưa được người dùng xác nhận đúng là nhóm của họ**; vì vậy chưa đăng.
+- **Lỗi gặp và đã sửa trong công cụ:** (1) regex tên ô soạn bài dùng cờ `u` bị Playwright từ chối khi dựng selector → bỏ cờ; (2) thêm dòng đầu thông báo lỗi đã thay URL để chẩn đoán. Chạy 4 lần mới đạt, lần cuối `composer_found`.
+- **Kiểm tra:** `npm.cmd run typecheck`, `npm.cmd run lint` (91 file) đạt; chốt an toàn: `--group=abc` bị từ chối. Không chạy cổng tổng.
+- **Giới hạn:** mới 1 nhóm, 1 lần đạt, giao diện tiếng Việt; chưa biết hành vi khi UI/ngôn ngữ đổi; `onGroupPage` mới kiểm tra đường dẫn có `/groups/`, chưa so ID/slug với nhóm mong đợi nên bước đăng phải bắt buộc đối chiếu tên nhóm do người dùng cung cấp.
+- **Tiếp theo (bước B, đăng thật):** cần người dùng xác nhận tên nhóm đúng; sau đó thêm lệnh `post` với `--confirm-post` và `--expect-title` bắt buộc, đăng chữ rồi chữ + 2 ảnh tự tạo, phân biệt published/pending/unknown, không tự thử lại.
