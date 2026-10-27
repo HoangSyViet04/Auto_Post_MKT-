@@ -360,3 +360,24 @@ Mẫu một mục:
 - **Trong lúc hoãn:** mọi tài khoản dùng kết nối trực tiếp; cột Proxy ở trang tài khoản hiển thị "Không dùng". Schema (`proxies`, `browser_profiles.proxy_id`) giữ nguyên, nên bật lại P04 không cần migration nền. Khi làm lại: lưu ý SOCKS5 có user/password của Chromium và mật khẩu proxy qua DPAPI.
 - **Khi nào làm lại:** khi tăng số nick, cần tách IP, hoặc P01 thật cho thấy mạng là điểm nghẽn.
 - **Tiếp theo:** chuẩn bị P01 thử thật — cần người dùng chọn rõ 1 nick, 1 group thử và phạm vi (không gửi mật khẩu/cookie vào chat hay Git); hoặc làm P06 offline (danh sách đích, nội quy group) để mở khóa duyệt/bản theo đích của P05.
+
+## 2026-10-27 10:21 — P06 (phần nhập tay): Nhóm đã tham gia, danh sách đích
+
+- **Đã làm:**
+  - Domain: `normalizeGroupReference` (link nhiều dạng m./web./www., bỏ query/hash/đường dẫn phụ → ID số + link chuẩn; link chỉ có tên rút gọn → `externalId=null`; từ chối domain giả như `facebook.com.evil.com`, `/groups/feed`, URL có user:pass).
+  - Migration `0003_group_curation.sql` (`destinations.curation`, `user_note`) + ADR 0011. Cập nhật 5 chỗ trong test đang ghim schema v2 → v3.
+  - `createGroupRepository`: `add/update/setRelation/setArchived/list`. Một nhóm một bản ghi dù nhiều tài khoản, không ghi đè dữ liệu đã có; quan hệ tham gia/quyền riêng từng tài khoản (nguồn `manual`); `list` lọc theo tài khoản (không lẫn), tìm không dấu, khu vực, tham gia, ưu tiên, lưu trữ, phân trang; mỗi cặp tài khoản–nhóm có `eligible` và danh sách lý do chặn.
+  - API `apps/server/src/groups-api.ts` (`/api/groups`, `/:id`, `/:id/accounts/:accountId`, `/:id/archive`).
+  - Web: `GroupsPage.tsx` (trang "Nhóm đã tham gia"): thêm nhóm, lọc, đổi ưu tiên/quan hệ ngay trên bảng, sửa nội quy/ghi chú, ngừng dùng/dùng lại, chuyển sang Đăng nhóm (`handoff.ts`, chỉ giữ trong bộ nhớ). Banner ghi rõ **đọc tự động chưa hỗ trợ** và dữ liệu là do người dùng khai báo.
+- **Kiểm tra (chỉ test phần mới):**
+  - `group-link.test.ts` 3/3, `group-repository.test.ts` 3/3 (lần đầu 1 test sai kỳ vọng của chính tôi về tìm không dấu, đã sửa test), `data-api.test.ts` 8/8 (thêm test API nhóm); `migrate/schema/app.test.ts` đạt sau khi cập nhật phiên bản.
+  - `npm.cmd run typecheck`, `npm.cmd run lint` (86 file) → đạt. **Không** chạy cổng tổng lượt này (`tests/e2e/local-api.test.ts` đã sửa kỳ vọng schema v3 nhưng chưa chạy lại).
+  - Chạy thật (server + Vite + Edge headless, dữ liệu tạm): thêm 2 tài khoản; thêm nhóm có ID và nhóm chỉ có tên rút gọn; nhóm rút gọn bị khóa ("chưa có ID số của nhóm", checkbox tắt); chọn tài khoản, chọn nhóm đủ điều kiện, bấm chuyển → sang `#/post-group` hiện đúng tài khoản và 1 nhóm; link giả (example.com) bị từ chối. Phát hiện bảng tràn ngang ở 1200px, đã sửa CSS và chụp lại. Đã tắt server/Vite.
+  - Chưa thử trên UI: thông báo link sai mới thêm ở form (typecheck/lint đạt; server vẫn từ chối), sửa nội quy/ghi chú, ngừng dùng/dùng lại, phân trang >20 nhóm.
+- **Quyết định:** ADR 0011. "Đã tham gia/được đăng" là khai báo `manual`, không tuyên bố đã kiểm chứng.
+- **Tồn đọng / lưu ý:**
+  - P06.2–P06.4, P06.8 (đọc nhóm đã tham gia, tìm từ khóa, ScanRun, khóa phiên) **chưa hỗ trợ**, cần P01; trang "Tìm nhóm theo từ khóa" vẫn là khung.
+  - `unsuitable` mới chặn ở bước chuyển sang Đăng nhóm, chưa nằm trong `readiness` — thêm khi làm duyệt/P10.
+  - Link tên rút gọn không đăng được và không điền ID sau được (trigger danh tính); cùng nhóm nhập bằng hai cách thành hai bản ghi.
+  - Trang Đăng nhóm mới nhận và hiển thị lựa chọn; hàng chờ là P10.
+- **Tiếp theo:** P05.5/P05.6 nay đã có tài khoản + đích; duyệt cần danh tính tài khoản (hiện `account_identities` rỗng nên duyệt thật phải chờ P03.3–P03.4/P01). Hoặc P01 thử thật (cần người dùng chọn 1 nick, 1 group, phạm vi).

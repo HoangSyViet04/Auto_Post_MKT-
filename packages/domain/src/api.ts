@@ -66,6 +66,49 @@ export interface AccountSummary {
   runningJobs: number;
 }
 
+export type GroupMembership = 'unknown' | 'joined' | 'not_joined';
+export type GroupPermission = 'unknown' | 'allowed' | 'denied';
+export type GroupApproval = 'unknown' | 'required' | 'not_required';
+export type GroupCuration = 'normal' | 'preferred' | 'unsuitable';
+/** Lý do một cặp tài khoản–nhóm chưa được đưa sang đăng. */
+export type GroupBlocker = 'no_external_id' | 'not_joined' | 'no_permission' | 'unsuitable' | 'archived' | 'account_paused';
+
+export interface GroupAccountRelation {
+  accountId: string;
+  accountLabel: string;
+  membership: GroupMembership;
+  permission: GroupPermission;
+  /** manual: người dùng tự khai báo, chưa được kiểm chứng. */
+  source: 'manual' | 'joined_scan' | 'keyword_scan' | 'verified_ui' | 'fixture';
+  checkedAt: number | null;
+  eligible: boolean;
+  blockedBy: GroupBlocker[];
+}
+
+export interface GroupItem {
+  id: string;
+  /** null: mới biết tên rút gọn trong link, chưa có ID số nên chưa đăng được. */
+  externalId: string | null;
+  canonicalUrl: string | null;
+  name: string | null;
+  region: string | null;
+  topic: string | null;
+  rulesNote: string | null;
+  approvalRequired: GroupApproval;
+  curation: GroupCuration;
+  userNote: string | null;
+  archived: boolean;
+  createdAt: number;
+  accounts: GroupAccountRelation[];
+}
+
+export interface GroupListResponse {
+  items: GroupItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface ContentVersionItem {
   id: string;
   revisionId: string;

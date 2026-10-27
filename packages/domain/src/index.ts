@@ -5,6 +5,7 @@
 export * from './job-status.ts';
 export * from './channels.ts';
 export * from './similarity.ts';
+export * from './group-link.ts';
 export * from './api.ts';
 export * from './caption.ts';
 export * from './business-error.ts';

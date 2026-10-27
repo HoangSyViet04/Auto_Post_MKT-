@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { DEFAULT_PAGE_ID, findPage, findSection, NAV, type PageDef } from './nav.ts';
 import { AccountsPage } from './AccountsPage.tsx';
+import { GroupsPage } from './GroupsPage.tsx';
+import { clearHandoff, getHandoff } from './handoff.ts';
 import { ProductsPage } from './ProductsPage.tsx';
 import { type HealthState, useHealth } from './useHealth.ts';
 
@@ -74,13 +76,17 @@ export function App() {
             Chế độ mô phỏng: dùng adapter giả, không gửi gì tới Facebook.
           </div>
         )}
-        {page.id === 'products' ? <ProductsPage /> : page.id === 'accounts' ? <AccountsPage /> : <PlaceholderPage page={page} />}
+        {page.id === 'products' ? <ProductsPage />
+          : page.id === 'accounts' ? <AccountsPage />
+          : page.id === 'scan-joined' ? <GroupsPage />
+          : <PlaceholderPage page={page} />}
       </main>
     </div>
   );
 }
 
 function PlaceholderPage({ page }: { page: PageDef }) {
+  const handoff = page.id === 'post-group' ? getHandoff() : null;
   return (
     <section>
       <header className="page-header">
@@ -88,6 +94,12 @@ function PlaceholderPage({ page }: { page: PageDef }) {
         <span className="tag">Chưa triển khai · {page.phase}</span>
       </header>
       <p className="muted">{page.description}</p>
+      {handoff && (
+        <div className="notice" role="status">
+          Đã nhận {handoff.groups.length} nhóm cho tài khoản <strong>{handoff.accountLabel}</strong>: {handoff.groups.map((g) => g.name).join(', ')}.
+          Chưa thể tạo hàng chờ hoặc đăng — phần này thuộc P10. <button type="button" onClick={() => { clearHandoff(); window.location.reload(); }}>Bỏ chọn</button>
+        </div>
+      )}
       <div className="actions">
         {page.actions.map((action) => (
           <button key={action} type="button" disabled title="Chưa triển khai">

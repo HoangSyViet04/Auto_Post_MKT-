@@ -147,3 +147,31 @@ test('P03: API tài khoản — thêm, giới hạn hai, đổi nhãn, tạm d�
   const { 'x-apm-token': _token, ...noToken } = headers;
   assert.equal((await app.inject({ method: 'POST', url: '/api/accounts', headers: noToken, payload: { label: 'Lén' } })).statusCode, 403);
 });
+
+test('P06: API nhóm — nhập link/ID, dùng chung một nhóm cho hai tài khoản, lọc theo tài khoản, đổi quan hệ, lưu trữ', async () => {
+  const call = (method: string, url: string, payload?: object) => app.inject({ method: method as 'GET', url, headers, ...(payload ? { payload } : {}) });
+  const a = (await call('POST', '/api/accounts', { label: 'Bán hàng 1' })).json().id as string;
+  const b = (await call('POST', '/api/accounts', { label: 'Bán hàng 2' })).json().id as string;
+  const added = await call('POST', '/api/groups', { reference: 'https://www.facebook.com/groups/123456789012/?ref=x', accountId: a, name: 'Chợ iPhone', membership: 'joined', permission: 'allowed' });
+  assert.equal(added.statusCode, 201); const id = added.json().id as string;
+  assert.equal((await call('POST', '/api/groups', { reference: '123456789012', accountId: b })).json().id, id);
+  assert.equal((await call('POST', '/api/groups', { reference: 'https://example.com/groups/123456789012', accountId: a })).statusCode, 400);
+  assert.equal((await call('POST', '/api/groups', { reference: '123456789012', accountId: a, channel: 'page' })).statusCode, 400);
+
+  const forB = (await call('GET', `/api/groups?accountId=${b}`)).json();
+  assert.equal(forB.total, 1); assert.deepEqual(forB.items[0].accounts.map((r: { accountId: string }) => r.accountId), [b]);
+  assert.equal(forB.items[0].accounts[0].eligible, false);
+  assert.equal((await call('PUT', `/api/groups/${id}/accounts/${b}`, { membership: 'joined', permission: 'allowed' })).statusCode, 204);
+  assert.equal((await call('PUT', `/api/groups/${id}/accounts/${b}`, {})).statusCode, 400);
+  assert.equal((await call('PUT', `/api/groups/${id}`, { rulesNote: 'Cấm quảng cáo', curation: 'preferred' })).statusCode, 204);
+  assert.equal((await call('PUT', `/api/groups/${id}`, { external_id: 'x' })).statusCode, 400); // không sửa được danh tính
+  const found = (await call('GET', '/api/groups?q=cho%20iphone&membership=joined&pageSize=5')).json();
+  assert.equal(found.items[0].rulesNote, 'Cấm quảng cáo'); assert.ok(found.items[0].accounts.every((r: { eligible: boolean }) => r.eligible));
+
+  assert.equal((await call('POST', `/api/groups/${id}/archive`, { archived: true })).statusCode, 204);
+  assert.equal((await call('GET', '/api/groups')).json().total, 0);
+  assert.equal((await call('GET', '/api/groups?includeArchived=true')).json().total, 1);
+  assert.equal((await call('GET', '/api/groups?pageSize=500')).statusCode, 400);
+  const { 'x-apm-token': _token, ...noToken } = headers;
+  assert.equal((await app.inject({ method: 'POST', url: '/api/groups', headers: noToken, payload: { reference: '123456789012', accountId: a } })).statusCode, 403);
+});

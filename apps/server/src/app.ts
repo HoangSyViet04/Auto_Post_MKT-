@@ -6,6 +6,7 @@ import { createLogger } from '#logging';
 import { installLocalAccess, type LocalAccessOptions } from './local-access.ts';
 import { installAccountsApi } from './accounts-api.ts';
 import { installDataApi } from './data-api.ts';
+import { installGroupsApi } from './groups-api.ts';
 
 export interface AppDeps {
   db: Database;
@@ -30,6 +31,7 @@ export function buildApp({ db, env, integrations, logger = true, security, media
   installLocalAccess(app, env, security);
   installDataApi(app, db, mediaStore ?? createMediaStore(db), uploadLimitBytes);
   installAccountsApi(app, db);
+  installGroupsApi(app, db);
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof BusinessError) {
       const status = error.code === 'not_found' ? 404 : error.code === 'invalid_input' ? 400

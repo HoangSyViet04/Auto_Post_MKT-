@@ -160,7 +160,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P03 | Quản lý tài khoản | P01, P02 | Offline: P03.1/P03.2/P03.6 làm một phần (bảng, thêm/đổi nhãn/tạm dừng/gỡ); P03.3–P03.5, P03.7 cần trình duyệt/P01 |
 | P04 | Quản lý proxy | P02, P03 | **Hoãn có chủ đích (27/10/2026)** — chưa cần với 1–2 nick dùng mạng nhà; làm khi mở rộng quy mô. Không xóa. |
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Offline xong phần làm được: P05.1–P05.4, P05.8; P05.5/P05.6/P05.7 làm một phần (chờ tài khoản/đích/lịch từ P03/P06/P07) |
-| P06 | Quét nhóm và danh sách đích | P01–P03 (P04 hoãn: kết nối trực tiếp) | Chưa bắt đầu |
+| P06 | Quét nhóm và danh sách đích | P01–P03 (P04 hoãn: kết nối trực tiếp) | Offline: P06.1, P06.6, P06.7 xong (nhập tay); P06.2–P06.4, P06.8 chờ P01; P06.5 một phần |
 | P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Chưa bắt đầu |
 | P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Chưa bắt đầu |
 | P09 | Kết nối và đăng fanpage | P01, P02, P05, P07 | Chưa bắt đầu |
@@ -282,14 +282,14 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Mục tiêu:** tìm/lưu/chọn nhóm theo tài khoản và chuyển sang đăng.
 
-- [ ] P06.1. Nhập link/ID thủ công, chuẩn hóa đích, quan hệ tài khoản–nhóm, nội quy do người dùng ghi nhận.
-- [ ] P06.2. Nhóm đã tham gia: chọn tài khoản, đọc theo P01; nhóm vắng trong lượt dở không bị coi đã rời.
-- [ ] P06.3. Từ khóa: nhập từ khóa/phạm vi, ghi nguồn/thời điểm; tìm thấy không đồng nghĩa đã tham gia/có quyền.
-- [ ] P06.4. ScanRun có tiến độ, điều kiện dừng, kết quả một phần, hủy; tiếp tục nếu hỗ trợ, nếu không chạy lại có loại trùng.
-- [ ] P06.5. Lưu tên/link/ID, mô tả, loại nhóm/số thành viên khi quan sát được; thiếu là chưa rõ; không quét thành viên.
-- [ ] P06.6. Lọc tên/tài khoản/khu vực có dữ liệu/trạng thái; ghi chú/ưu tiên/không phù hợp; loại trùng nhóm nhưng giữ quan hệ tài khoản.
-- [ ] P06.7. Chuyển nhóm chọn sang Đăng nhóm, giữ đúng tài khoản; đích thiếu điều kiện không tự vào hàng chờ.
-- [ ] P06.8. Dùng chung khóa phiên; cảnh báo/mất phiên dừng thu thập liên quan.
+- [x] P06.1. Nhập link/ID thủ công, chuẩn hóa đích, quan hệ tài khoản–nhóm, nội quy do người dùng ghi nhận. *(Trang "Nhóm đã tham gia": nhập link/ID, một nhóm một bản ghi dù nhiều tài khoản, quan hệ tham gia/quyền đăng riêng từng tài khoản (nguồn `manual`, ghi rõ chưa kiểm chứng). Link chỉ có tên rút gọn lưu được nhưng chưa đăng được — ADR 0011.)*
+- [ ] P06.2. Nhóm đã tham gia: chọn tài khoản, đọc theo P01; nhóm vắng trong lượt dở không bị coi đã rời. *(**Chưa hỗ trợ** đọc tự động — cần P01; giao diện ghi rõ. Nhập tay không được tính là đã hoàn thành quét tự động.)*
+- [ ] P06.3. *(Chưa hỗ trợ — cần P01.)* Từ khóa: nhập từ khóa/phạm vi, ghi nguồn/thời điểm; tìm thấy không đồng nghĩa đã tham gia/có quyền.
+- [ ] P06.4. *(Chưa hỗ trợ — cần P01; bảng `scan_runs/scan_results` và scanner giả đã có.)* ScanRun có tiến độ, điều kiện dừng, kết quả một phần, hủy; tiếp tục nếu hỗ trợ, nếu không chạy lại có loại trùng.
+- [ ] P06.5. Lưu tên/link/ID, mô tả, loại nhóm/số thành viên khi quan sát được; thiếu là chưa rõ; không quét thành viên. *(Đã lưu tên, link, ID, khu vực, chủ đề, nội quy, duyệt bài; thiếu hiển thị "chưa rõ". Chưa có mô tả/công khai-riêng tư/số thành viên — chỉ có khi đọc tự động.)*
+- [x] P06.6. Lọc tên/tài khoản/khu vực có dữ liệu/trạng thái; ghi chú/ưu tiên/không phù hợp; loại trùng nhóm nhưng giữ quan hệ tài khoản. *(Tìm không dấu/không phân biệt hoa thường, lọc theo tài khoản không lẫn nhóm của tài khoản kia, ưu tiên/không phù hợp/ngừng dùng, ghi chú. Hạn chế: cùng một nhóm nhập một lần bằng tên rút gọn và một lần bằng ID số vẫn là hai bản ghi.)*
+- [x] P06.7. Chuyển nhóm chọn sang Đăng nhóm, giữ đúng tài khoản; đích thiếu điều kiện không tự vào hàng chờ. *(Chỉ chọn được nhóm đủ điều kiện của tài khoản đang chọn: có ID số, đã tham gia, được đăng, chưa đánh dấu không phù hợp/ngừng dùng, tài khoản không tạm dừng. Trang Đăng nhóm hiện chỉ nhận và hiển thị lựa chọn; hàng chờ thuộc P10.)*
+- [ ] P06.8. *(Chưa áp dụng — chưa có quét tự động.)* Dùng chung khóa phiên; cảnh báo/mất phiên dừng thu thập liên quan.
 
 **Đầu ra:** hai chế độ quét và dữ liệu đích có nguồn gốc.
 
@@ -499,6 +499,7 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 27/10/2026 | P05.1–P05.4 | Trang Quản lý máy: form ảnh/thứ tự/thumbnail, sửa = revision mới, đã bán/ngừng bán, caption mẫu + chỉnh tay (chưa lưu) | 133/133 test, typecheck/lint đạt; chạy thật server+Vite+Edge headless; build:web vướng quyền dist cũ (build tạm đạt) | P05.5 lưu/duyệt phiên bản, P05.7, P05.8 |
 | 27/10/2026 | P05.5–P05.8 | Lưu bản caption theo phiên bản máy, cảnh báo giống nội dung, dọn ảnh mồ côi an toàn | Test theo phần mới; cổng tổng cuối phase: 139/139 test, typecheck/lint đạt, build web ra thư mục tạm đạt | P03/P04/P06 hoặc P01 thật khi có đầu vào |
 | 27/10/2026 | P03.1/P03.2/P03.6 (một phần) | Trang Quản lý tài khoản: thêm/đổi nhãn/tạm dừng/gỡ, tối đa hai, hồ sơ trình duyệt riêng | Test theo phần mới (repository 2, API 7 trong file); chạy thật Edge headless; chưa chạy cổng tổng | P03.3+ cần trình duyệt/P01; P04 proxy |
+| 27/10/2026 | P06.1/P06.6/P06.7 | Trang Nhóm đã tham gia (nhập tay): chuẩn hóa link/ID, quan hệ theo tài khoản, lọc, ưu tiên, chuyển sang Đăng nhóm; migration 0003, ADR 0011 | Test theo phần mới (domain 3, repository 3, API); chạy thật Edge headless; chưa chạy cổng tổng | P01 thật để mở P06.2–P06.4; P05.5/P05.6 nay làm được với đích |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 

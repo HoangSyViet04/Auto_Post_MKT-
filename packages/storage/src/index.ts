@@ -3,6 +3,7 @@ export * from './db.ts';
 export * from './migrate.ts';
 export * from './account-repository.ts';
 export * from './content-repository.ts';
+export * from './group-repository.ts';
 export * from './job-repository.ts';
 export * from './media-store.ts';
 export * from './secret-store.ts';

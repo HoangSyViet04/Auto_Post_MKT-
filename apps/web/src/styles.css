@@ -25,7 +25,7 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -357,4 +357,46 @@ button.link {
 button.primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.table tr.archived {
+  opacity: 0.6;
+}
+
+.relation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.ok-text {
+  color: var(--ok);
+}
+
+.check {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.actions select,
+.relation select,
+.product-form select {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font: inherit;
+}
+
+.content {
+  overflow-x: auto;
+}
+
+.table select {
+  max-width: 150px;
 }
