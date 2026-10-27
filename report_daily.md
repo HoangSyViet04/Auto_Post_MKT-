@@ -495,3 +495,15 @@ Mẫu một mục:
 - **Kết quả thật (`--dry-run`, không đăng):** đúng danh tính; tìm thấy 1 ô soạn bài, 1 hộp thoại, 1 ô văn bản, 1 nút đối tượng; nhãn đọc được: "Đang chia sẻ với **Công khai**" → khác mong đợi → **dừng, không đăng, không gõ gì lên Facebook**. Mã thoát 8.
 - **Quyết định đang chờ người dùng:** (a) đặt đối tượng mặc định/đối tượng bài của `phu1` thành "Chỉ mình tôi" rồi chạy lại; hoặc (b) cho phép đăng bài test **công khai** (mọi người xem được cho tới khi xóa) bằng `--expect-audience="Công khai"`.
 - **Chưa làm:** chưa đăng TCN; chưa nhập 130 nhóm vào DB thật (cần tạo tài khoản `phu1` trong app); chưa chạy cổng tổng.
+
+## 2026-10-27 12:10 — P01.4 (một phần): đăng thử bài chữ công khai lên TCN của nick phụ
+
+- **Người dùng đồng ý:** đăng bài test **công khai** trên TCN của `phu1` (nick phụ). Người dùng cũng báo đã "back lại" thư mục `dist` (chưa kiểm lại build ở lượt này).
+- **Đã làm:** `spikes/fb-profile-post.ts`: thêm bước "Tiếp" (trang cá nhân có hai bước), chờ nút bật, kiểm lại đối tượng ở bước hai, lệnh `find` chỉ đọc; bước xác nhận sau khi đăng chờ lâu hơn và tải lại tối đa 3 lần.
+- **Kết quả thật:**
+  - Lần chạy 1 và 2 (không đăng): dừng vì không thấy nút "Đăng" — hộp thoại trang cá nhân có nút **"Tiếp"**; sau khi xử lý hai bước, `--dry-run` đạt (đối tượng "Công khai" khớp ở cả hai bước, nút Đăng bật).
+  - **Đăng thật** (marker `APM-TEST-20261027045312`): bấm Đăng đúng một lần, hộp thoại đóng. Xác nhận ngay sau đó báo `unknown` (5 lần cuộn không thấy); chạy `find` chỉ đọc sau đó → **`published`** (cuộn 1 lần). Kết luận: `unknown` ban đầu do trang cập nhật chậm, không phải bài thất bại; không đăng lại.
+- **Kiểm tra:** `npm.cmd run typecheck`, `npm.cmd run lint` (95 file) đạt; guard: thiếu `--confirm-post` bị từ chối; sai đối tượng → dừng (đã thấy ở lượt trước). Không chạy cổng tổng.
+- **Giới hạn:** 1 bài chữ, 1 nick, giao diện tiếng Việt; chưa thử ảnh, đọc ID/link bài TCN, đối tượng khác, sau restart; `published` chỉ dựa vào dấu vết xuất hiện trên trang cá nhân (người dùng nên đối chiếu bằng mắt).
+- **Việc người dùng cần làm:** xem bài trên TCN `phu1`, rồi **tự xóa** (bài đang công khai).
+- **Tiếp theo:** P03.3–P03.5 (nối hồ sơ trình duyệt vào worker) hoặc P07 (hàng chờ, adapter giả); còn tồn đọng P01: chờ duyệt/từ chối (nick không phải quản trị), ảnh TCN, restart, tìm từ khóa, đọc ID cho nhóm tên rút gọn khi mở rộng.

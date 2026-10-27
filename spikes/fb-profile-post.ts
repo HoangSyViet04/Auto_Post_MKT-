@@ -24,8 +24,12 @@ const flags = new Map(rest.map((arg) => {
   const [key = '', ...value] = arg.replace(/^--/u, '').split('=');
   return [key, value.join('=') || 'true'] as const;
 }));
-if (command !== 'post') fail(USAGE);
-if (!flags.has('confirm-post')) fail(`Thiếu --confirm-post.\n${USAGE}`);
+if (command !== 'post' && command !== 'find') fail(USAGE);
+if (command === 'post' && !flags.has('confirm-post')) fail(`Thiếu --confirm-post.\n${USAGE}`);
+const findMarker = flags.get('marker') ?? '';
+if (command === 'find' && (!flags.has('confirm-real') || !/^APM-TEST-\d{14}$/u.test(findMarker))) {
+  fail('Dùng: node spikes/fb-profile-post.ts find --label=<nhãn> --marker=APM-TEST-<14 số> --confirm-real (chỉ đọc)');
+}
 if (getAppEnv() === 'test') fail('Không chạy trong APM_ENV=test.');
 const label = flags.get('label') ?? '';
 if (!/^[a-z0-9_-]{1,30}$/u.test(label)) fail('--label không hợp lệ.');
@@ -58,6 +62,18 @@ try {
   const { page } = opened;
   await page.goto('https://www.facebook.com/me', { waitUntil: 'load', timeout: 45_000 });
   await page.waitForTimeout(4_000);
+  if (command === 'find') {
+    // Chỉ đọc: tìm lại một bài thử theo dấu vết (cuộn tối đa 8 lần).
+    let scrolls = 0;
+    while ((await page.getByText(findMarker).count()) === 0 && scrolls < 8) {
+      await page.mouse.wheel(0, 1_500);
+      await page.waitForTimeout(2_000);
+      scrolls += 1;
+    }
+    say({ event: 'ket_thuc', status: (await page.getByText(findMarker).count()) > 0 ? 'published' : 'unknown', cuon: scrolls });
+    await opened.close();
+    process.exit(0);
+  }
 
   const composers = page.getByRole('button', { name: COMPOSER });
   const count = await composers.count();
@@ -85,25 +101,55 @@ try {
         await box.first().click();
         await page.keyboard.insertText(caption);
         const typed = ((await box.first().textContent()) ?? '').includes(marker);
-        const submit = dialog.getByRole('button', { name: POST_BUTTON });
-        const submitCount = await submit.count();
-        const enabled = submitCount === 1 ? await submit.first().isEnabled() : false;
-        say({ event: 'san_sang', daGoChu: typed, soNutDang: submitCount, nutBat: enabled });
-        if (!typed || submitCount !== 1 || !enabled) { say({ event: 'ket_thuc', status: 'khong_san_sang_de_dang' }); exitCode = 7; }
+        // Trang cá nhân có hai bước: soạn → "Tiếp" → "Đăng". "Tiếp" không đăng gì nên được phép bấm (một lần).
+        const next = dialog.getByRole('button', { name: /^(tiếp|next)$/i });
+        const nextCount = await next.count();
+        let step = dialog;
+        if (typed && nextCount === 1 && (await dialog.getByRole('button', { name: POST_BUTTON }).count()) === 0) {
+          for (let i = 0; i < 16 && !(await next.first().isEnabled()); i += 1) await page.waitForTimeout(500);
+          await next.first().click();
+          await page.waitForTimeout(3_000);
+          // Bước hai là hộp thoại có nút Đăng; kiểm lại đối tượng ở đây trước khi đăng.
+          step = page.getByRole('dialog').filter({ has: page.getByRole('button', { name: POST_BUTTON }) });
+          say({ event: 'buoc_hai', soHopThoai: await step.count() });
+        }
+        const submit = step.getByRole('button', { name: POST_BUTTON });
+        const submitCount = (await step.count()) === 1 ? await submit.count() : 0;
+        let enabled = false;
+        // Nút Đăng thường bật chậm; chờ tối đa ~8 giây, không bấm khi chưa bật.
+        for (let i = 0; i < 16 && submitCount === 1 && !enabled; i += 1) {
+          enabled = await submit.first().isEnabled();
+          if (!enabled) await page.waitForTimeout(500);
+        }
+        const stepText = submitCount === 1 ? ((await step.first().textContent()) ?? '') : '';
+        const stepAudienceOk = nextCount === 1 ? matchesExpected(stepText) : true; // đã kiểm ở bước một nếu không có bước hai
+        say({ event: 'san_sang', daGoChu: typed, soNutDang: submitCount, nutBat: enabled, doiTuongBuocHaiKhop: stepAudienceOk });
+        if (!typed || submitCount !== 1 || !enabled || !stepAudienceOk) {
+          // Liệt kê tên các nút (rút gọn) để chọn cách nhận diện đúng; không bấm gì thêm.
+          const names = await page.getByRole('dialog').first().getByRole('button').evaluateAll((nodes) => nodes
+            .map((node) => (node.getAttribute('aria-label') ?? node.textContent ?? '').trim().slice(0, 40)).filter(Boolean).slice(0, 25));
+          say({ event: 'ket_thuc', status: stepAudienceOk ? 'khong_san_sang_de_dang' : 'doi_tuong_buoc_hai_khong_khop_khong_dang', nutTrongHopThoai: names.join(' | ') });
+          exitCode = stepAudienceOk ? 7 : 8;
+        }
         else if (dryRun) say({ event: 'ket_thuc', status: 'dry_run_xong_khong_dang', marker });
         else {
           await submit.first().click(); // ĐÚNG MỘT LẦN — không bao giờ bấm lại
           say({ event: 'da_bam_dang', marker });
-          const closed = await dialog.waitFor({ state: 'hidden', timeout: 60_000 }).then(() => true, () => false);
-          await page.goto('https://www.facebook.com/me', { waitUntil: 'load', timeout: 45_000 });
-          await page.waitForTimeout(5_000);
+          const closed = await step.first().waitFor({ state: 'hidden', timeout: 60_000 }).then(() => true, () => false);
+          // Trang cá nhân cập nhật chậm sau khi đăng (lần thử đầu không thấy dù bài đã lên): tải lại tối đa 3 lần, chỉ đọc.
           let scrolls = 0;
-          while ((await page.getByText(marker).count()) === 0 && scrolls < 5) {
-            await page.mouse.wheel(0, 1_500);
-            await page.waitForTimeout(2_000);
-            scrolls += 1;
+          let found = false;
+          for (let attempt = 0; attempt < 3 && !found; attempt += 1) {
+            await page.waitForTimeout(attempt === 0 ? 8_000 : 5_000);
+            await page.goto('https://www.facebook.com/me', { waitUntil: 'load', timeout: 45_000 });
+            await page.waitForTimeout(4_000);
+            for (let i = 0; i < 4 && (await page.getByText(marker).count()) === 0; i += 1) {
+              await page.mouse.wheel(0, 1_500);
+              await page.waitForTimeout(2_000);
+              scrolls += 1;
+            }
+            found = (await page.getByText(marker).count()) > 0;
           }
-          const found = (await page.getByText(marker).count()) > 0;
           const status = found ? 'published' : 'unknown'; // không thấy thì không đoán; người dùng đối chiếu bằng mắt
           say({ event: 'ket_thuc', status, hopThoaiDong: closed, cuon: scrolls, marker });
           mkdirSync(join(spikesDir(), 'evidence'), { recursive: true });
