@@ -12,6 +12,8 @@ const MESSAGES = {
   media_too_large: 'Ảnh vượt giới hạn dung lượng hoặc số điểm ảnh.',
   media_missing: 'Ảnh trong kho không còn tồn tại.',
   media_io: 'Không thể đọc hoặc ghi ảnh trong kho.',
+  secret_unavailable: 'Bí mật chưa sẵn sàng hoặc đã bị thu hồi.',
+  secret_lost: 'Không thể mở bí mật. Cần kết nối lại.',
 } as const;
 
 export type BusinessErrorCode = keyof typeof MESSAGES;

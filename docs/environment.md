@@ -69,3 +69,9 @@ Scanner phân biệt joined/keyword, giới hạn1..1000 kết quả, nguồn/th
 Sau pull lockfile mới, chạy `npm ci` để cài `sharp@0.35.5` và binary phù hợp máy. Thư viện `#storage.createMediaStore` dùng dataDir cấu hình, lưu file trong `media/staging` và `media/objects` ngoài repo. Nhập JPEG/PNG/WebP tĩnh, mặc định20MiB/25MP, giữ nguyên bytes và SHA256. Chưa có màn hình/upload API hoặc thumbnail.
 
 Caller nội bộ dùng `importFile(pathĐãChọn)` lấy media ID; trước sử dụng gọi `resolveForPublish(idsTheoThứTự)`. Không nhận đường dẫn hệ thống tùy ý từ web, không tự bỏ qua ảnh lỗi. Mất/hỏng file chuyển missing/failed và chặn thao tác. Crash có thể còn staging/orphan không được coi ready; chưa tự quét/dọn khi có tiến trình khác có thể đang import. Xem [ADR0008](adr/0008-managed-media-store.md).
+
+## Kho secrets Windows (P02.5)
+
+`#storage.createSecretStore` dùng DPAPI CurrentUser và ACL riêng cho `<dataDir>/secrets` (user hiện tại + SYSTEM). Không có file khóa cạnh ciphertext; DB chỉ giữ reference. Không gọi get từ HTTP hoặc log giá trị trả về. Nếu nhận `secret_lost`, người dùng cần kết nối lại; sao chép ciphertext sang máy khác không bảo đảm giải mã được. Thu hồi secret đánh dấu revoked và xóa file mã hóa.
+
+Helper chỉ chạy trên Windows, không thay đổi ExecutionPolicy/ACL thư mục cha. Test DPAPI/ACL thật cần quyền Windows user bình thường; sandbox hạn chế ACL có thể chặn, khi đó phải chạy đúng test đó ngoài sandbox và ghi kết quả thật. Xem [ADR0009](adr/0009-windows-dpapi-secrets.md).

@@ -4,3 +4,4 @@ export * from './migrate.ts';
 export * from './content-repository.ts';
 export * from './job-repository.ts';
 export * from './media-store.ts';
+export * from './secret-store.ts';
