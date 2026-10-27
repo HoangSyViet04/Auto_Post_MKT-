@@ -421,3 +421,16 @@ Mẫu một mục:
 - **Kiểm tra:** `npm.cmd run typecheck`, `npm.cmd run lint` (91 file) đạt; chốt an toàn: `--group=abc` bị từ chối. Không chạy cổng tổng.
 - **Giới hạn:** mới 1 nhóm, 1 lần đạt, giao diện tiếng Việt; chưa biết hành vi khi UI/ngôn ngữ đổi; `onGroupPage` mới kiểm tra đường dẫn có `/groups/`, chưa so ID/slug với nhóm mong đợi nên bước đăng phải bắt buộc đối chiếu tên nhóm do người dùng cung cấp.
 - **Tiếp theo (bước B, đăng thật):** cần người dùng xác nhận tên nhóm đúng; sau đó thêm lệnh `post` với `--confirm-post` và `--expect-title` bắt buộc, đăng chữ rồi chữ + 2 ảnh tự tạo, phân biệt published/pending/unknown, không tự thử lại.
+
+## 2026-10-27 11:20 — P01.5 (đang làm): đăng thử thật vào group — soạn đạt, kết quả gửi CHƯA xác định
+
+- **Người dùng xác nhận:** tên nhóm "Highlands Coffee- Nhận Voucher Ưu Đãi" đúng là nhóm họ quản trị; nick `phu1` cũng là quản trị. Người dùng cho phép đăng thử.
+- **Đã làm:** lệnh `post` trong `spikes/fb-group-post.ts`: bắt buộc `--confirm-post` và `--expect-title` (sai tên nhóm thì dừng, không đăng), có `--dry-run`, một lần bấm Đăng, không tự thử lại; ảnh do công cụ tự tạo (2 ảnh PNG), bài có marker duy nhất.
+- **Kết quả thật:**
+  - `--dry-run` chữ: 1 hộp thoại, 1 ô văn bản, chữ khớp, 1 nút Đăng đang bật. `--dry-run` ảnh: lần đầu đếm 7 ảnh (gồm icon), sửa đếm chỉ ảnh lớn → đúng 2 ảnh.
+  - **Đăng thật 1 bài chữ** (marker `APM-TEST-20261027041131`): đã bấm Đăng một lần, hộp thoại đóng. Công cụ báo `pending_approval` và không tìm thấy bài trong feed sau ~6 giây, `postId` không đọc được.
+  - **Đánh giá trung thực:** kết luận `pending_approval` dựa vào regex tìm chữ "đang chờ/chờ duyệt/pending" trên cả trang; với tài khoản quản trị trang nhóm có sẵn mục như vậy nên regex có thể khớp nhầm. Bài có thể đã đăng nhưng chưa hiện trong 6 giây, hoặc đang chờ duyệt, hoặc không lên. **Trạng thái thật chưa biết** cho đến khi người dùng đối chiếu trên nhóm.
+- **Việc đã sửa/kiểm:** `npm.cmd run typecheck`, `npm.cmd run lint` (91 file) đạt; chốt an toàn: thiếu `--confirm-post`/`--expect-title` bị từ chối. Không chạy cổng tổng.
+- **Chưa làm:** đăng thử có ảnh (cố ý hoãn đến khi biết kết quả bài chữ); P01.4 TCN (người dùng chưa xác nhận đích/đối tượng "Chỉ mình tôi"); nhận diện đã gửi/chờ duyệt/từ chối chắc chắn.
+- **Tồn đọng:** người dùng cần tự xóa bài thử trên nhóm (công cụ không xóa). Cần cải thiện nhận diện: tìm marker lâu hơn/cuộn feed, xem mục bài chờ duyệt của quản trị, chỉ coi pending khi thấy marker trong danh sách chờ.
+- **Tiếp theo:** người dùng cho biết bài `APM-TEST-20261027041131` đang ở đâu (đã hiện / chờ duyệt / không có) để hiệu chỉnh nhận diện, rồi mới đăng thử ảnh.
