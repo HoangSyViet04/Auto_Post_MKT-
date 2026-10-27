@@ -155,3 +155,135 @@ nav {
   color: #92400e;
   font-size: 14px;
 }
+
+.actions button.primary,
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.row-link {
+  cursor: pointer;
+}
+
+.row-link:hover {
+  background: var(--bg);
+}
+
+.thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.mono {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}
+
+.clip {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.product-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+}
+
+.product-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.product-form input:not([type='file']),
+.product-form textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.product-form fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.product-form button {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font: inherit;
+  cursor: pointer;
+}
+
+.product-form button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.field-error {
+  color: var(--error);
+  font-size: 13px;
+}
+
+.images {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.images li {
+  display: list-item;
+}
+
+.images li > * {
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.image-tools {
+  display: inline-flex;
+  gap: 4px;
+}

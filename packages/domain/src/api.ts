@@ -16,3 +16,43 @@ export interface ApiError {
   error: string;
   message: string;
 }
+
+/** Dữ kiện nhập cho một phiên bản máy; trường tùy chọn thiếu là null, không phải 0. */
+export interface ProductFacts {
+  name: string;
+  condition: string;
+  mediaIds: string[];
+  priceVnd: number | null;
+  capacityText: string | null;
+  batteryText: string | null;
+  warrantyText: string | null;
+  locationText: string | null;
+}
+
+export type ProductStatus = 'selling' | 'sold' | 'archived';
+
+export interface ProductListItem {
+  id: string;
+  code: string;
+  status: ProductStatus;
+  name: string;
+  condition: string;
+  priceVnd: number | null;
+  mediaCount: number;
+  firstMediaId: string | null;
+}
+
+export interface ProductListResponse {
+  items: ProductListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface ProductDetail extends ProductFacts {
+  id: string;
+  code: string;
+  status: ProductStatus;
+  revisionId: string;
+  revisionNo: number;
+}

@@ -51,10 +51,27 @@ export function createContentRepository(db: Database, options: RepositoryOptions
           JOIN product_revisions r ON r.id=p.current_revision_id`).get()?.n ?? 0);
         const items = db.prepare(`SELECT p.id,p.code,p.status,p.current_revision_id AS currentRevisionId,
           r.name,r.condition_text AS condition,r.price_vnd AS priceVnd,p.created_at AS createdAt,
-          (SELECT count(*) FROM product_revision_media pm WHERE pm.product_revision_id=r.id) AS mediaCount
+          (SELECT count(*) FROM product_revision_media pm WHERE pm.product_revision_id=r.id) AS mediaCount,
+          (SELECT pm.media_id FROM product_revision_media pm WHERE pm.product_revision_id=r.id ORDER BY pm.position LIMIT 1) AS firstMediaId
           FROM products p JOIN product_revisions r ON r.id=p.current_revision_id
           ORDER BY p.created_at DESC,p.id LIMIT ? OFFSET ?`).all(pageSize, (page - 1) * pageSize);
         return { items, total, page, pageSize };
+      });
+    },
+
+    /** Phiên bản hiện tại của máy, kèm ID ảnh theo thứ tự. */
+    getProduct(productId: string) {
+      identifier(productId);
+      return atomic(db, () => {
+        const row = one<{ revisionId: string }>(db, `SELECT p.id,p.code,p.status,p.current_revision_id AS revisionId,
+          r.revision_no AS revisionNo,r.name,r.condition_text AS condition,r.price_vnd AS priceVnd,
+          r.capacity_text AS capacityText,r.battery_text AS batteryText,r.warranty_text AS warrantyText,
+          r.location_text AS locationText FROM products p JOIN product_revisions r ON r.id=p.current_revision_id
+          WHERE p.id=?`, productId);
+        if (!row) throw new BusinessError('not_found');
+        const mediaIds = db.prepare('SELECT media_id FROM product_revision_media WHERE product_revision_id=? ORDER BY position')
+          .all(row.revisionId).map((media) => String(media.media_id));
+        return { ...row, mediaIds };
       });
     },
 

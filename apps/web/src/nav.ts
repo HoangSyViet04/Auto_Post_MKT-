@@ -48,6 +48,13 @@ export const NAV: NavSection[] = [
     title: 'Chức năng đăng bài',
     pages: [
       {
+        id: 'products',
+        title: 'Quản lý máy',
+        description: 'Nhập máy với ảnh, tên và tình trạng; xem trước caption mẫu.',
+        phase: 'P05',
+        actions: [],
+      },
+      {
         id: 'post-group',
         title: 'Đăng bài viết nhóm',
         description: 'Chọn tài khoản và group, cấu hình nội dung, ảnh, lịch; theo dõi kết quả từng group.',

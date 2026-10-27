@@ -6,6 +6,10 @@ export interface ProductCaptionInput {
   storageGb?: number | null;
   batteryPercent?: number | null;
   warrantyText?: string | null;
+  /** Dữ kiện dạng chữ do người dùng nhập; chỉ dùng khi không có số tương ứng. */
+  capacityText?: string | null;
+  batteryText?: string | null;
+  locationText?: string | null;
 }
 
 type CaptionField = keyof ProductCaptionInput | 'product';
@@ -45,10 +49,19 @@ export function generateProductCaption(input: ProductCaptionInput): string {
       || input.batteryPercent < 0 || input.batteryPercent > 100) throw new CaptionValidationError('batteryPercent');
     lines.push(`Pin: ${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 20 }).format(input.batteryPercent)}%`);
   }
+  const extra = (value: unknown, field: CaptionField, label: string, skip: boolean) => {
+    if (value === null || value === undefined) return;
+    if (typeof value !== 'string') throw new CaptionValidationError(field);
+    const trimmed = value.trim();
+    if (trimmed && !skip) lines.push(`${label}: ${trimmed}`);
+  };
+  extra(input.capacityText, 'capacityText', 'Dung lượng', input.storageGb != null);
+  extra(input.batteryText, 'batteryText', 'Pin', input.batteryPercent != null);
   if (input.warrantyText !== null && input.warrantyText !== undefined) {
     if (typeof input.warrantyText !== 'string') throw new CaptionValidationError('warrantyText');
     const warranty = input.warrantyText.trim();
     if (warranty) lines.push(`Bảo hành: ${warranty}`);
   }
+  extra(input.locationText, 'locationText', 'Khu vực', false);
   return lines.join('\n');
 }

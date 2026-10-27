@@ -60,3 +60,32 @@ test('upload giữ CSRF/token; JSON path hoặc URL traversal không đọc/xóa
   assert.ok([400, 404].includes(traversal.statusCode)); assert.ok(!traversal.body.includes('private-sentinel'));
   assert.equal(db.prepare('SELECT count(*) AS n FROM media').get()?.n, 0);
 });
+
+test('P05: sửa máy tạo revision mới giữ thứ tự ảnh, xung đột phiên bản, đổi trạng thái, thumbnail', async () => {
+  const upload = async (color: string) => (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' },
+    payload: await sharp({ create: { width: 640, height: 8, channels: 3, background: color } }).png().toBuffer() })).json().id as string;
+  const [a, b] = [await upload('#336699'), await upload('#993333')];
+  const created = (await app.inject({ method: 'POST', url: '/api/products', headers, payload: { name: 'iPhone 13', condition: 'Xước viền', mediaIds: [a, b] } })).json();
+
+  const thumb = await app.inject({ method: 'GET', url: `/api/media/${a}?size=thumb`, headers });
+  assert.equal(thumb.statusCode, 200, thumb.body); assert.equal(thumb.headers['content-type'], 'image/jpeg');
+  assert.equal((await sharp(thumb.rawPayload).metadata()).width, 320);
+  assert.equal((await app.inject({ method: 'GET', url: `/api/media/${a}?size=huge`, headers })).statusCode, 400);
+
+  const detail = (await app.inject({ method: 'GET', url: `/api/products/${created.productId}`, headers })).json();
+  assert.deepEqual(detail.mediaIds, [a, b]); assert.equal(detail.priceVnd, null); assert.equal(detail.status, 'selling');
+  assert.equal((await app.inject({ method: 'GET', url: '/api/products?pageSize=1', headers })).json().items[0].firstMediaId, a);
+
+  const revise = (expectedRevisionId: string, mediaIds: string[], extra: object = {}) => app.inject({ method: 'PUT',
+    url: `/api/products/${created.productId}`, headers, payload: { expectedRevisionId, name: 'iPhone 13 128GB', condition: 'Đẹp', mediaIds, ...extra } });
+  const revised = await revise(detail.revisionId, [b, a], { priceVnd: 9_000_000 });
+  assert.equal(revised.statusCode, 200); assert.deepEqual(revised.json().mediaIds, [b, a]);
+  assert.equal(revised.json().revisionNo, 2); assert.equal(revised.json().priceVnd, 9_000_000);
+  assert.equal((await revise(detail.revisionId, [a])).statusCode, 409); // revision cũ
+  assert.equal(db.prepare('SELECT count(*) AS n FROM product_revisions').get()?.n, 2);
+
+  const sold = await app.inject({ method: 'POST', url: `/api/products/${created.productId}/status`, headers, payload: { status: 'sold' } });
+  assert.equal(sold.statusCode, 200); assert.equal(sold.json().status, 'sold');
+  assert.equal((await app.inject({ method: 'POST', url: `/api/products/${created.productId}/status`, headers, payload: { status: 'x' } })).statusCode, 400);
+  assert.equal((await app.inject({ method: 'GET', url: '/api/products/00000000-0000-4000-8000-000000000000', headers })).statusCode, 404);
+});

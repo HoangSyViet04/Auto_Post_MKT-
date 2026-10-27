@@ -289,3 +289,21 @@ Mẫu một mục:
 - **Quyết định:** không đổi ACL hệ thống. `dist` đã nằm trong `.gitignore`.
 - **Tồn đọng / lưu ý:** `apps/web/dist` cần được xóa bằng quyền quản trị (hoặc takeown) một lần; sau đó `npm run build:web` chạy bình thường. Mục P02 còn lại không có việc mở: P02.1–P02.8 xong ở phạm vi offline, tích hợp Facebook thật vẫn chưa kiểm chứng.
 - **Tiếp theo:** phần độc lập khi chờ đầu vào P01 thật: P03 (quản lý tài khoản, offline) hoặc P05 (nhập máy/soạn bài). P01 thật cần tài khoản/đích/phạm vi do người dùng chọn.
+
+## 2026-10-27 09:42 — P05.1–P05.4: trang Quản lý máy (nhập máy, ảnh, caption mẫu)
+
+- **Đã làm:** Đọc báo cáo trước khi làm (P02.8 đã chốt ở lượt trước). Làm UI nhập máy trên backend P02 có sẵn, chưa đụng Facebook/LLM.
+  - Backend: `getProduct` (kèm ID ảnh theo thứ tự), `listProducts` thêm `firstMediaId`; API `GET/PUT /api/products/:id` (sửa = revision mới, `expectedRevisionId` cũ → 409), `POST /api/products/:id/status` (selling/sold/archived), `GET /api/media/:id?size=thumb` (sharp, 320px JPEG, tạo theo yêu cầu, không lưu thêm file). Schema Fastify dùng chung cho POST/PUT.
+  - Domain: `generateProductCaption` nhận thêm `capacityText/batteryText/locationText` (chỉ dùng khi không có số cùng loại; trống thì bỏ dòng); kiểu API `ProductFacts/ProductDetail/ProductListResponse`.
+  - Web: `apps/web/src/ProductsPage.tsx` (danh sách có thumbnail/phân trang, form thêm/sửa, ảnh ↑/↓/Bỏ, nút đã bán/ngừng bán/bán lại, xem trước caption và chỉnh tay), `product-form.ts` (validate, parse giá, caption, đổi thứ tự — thuần, có test), trang con "Quản lý máy" trong mục Chức năng đăng bài.
+- **Kiểm tra:**
+  - `npm.cmd run check`: typecheck đạt, lint 72 file sạch, **133/133 test đạt** (thêm 1 test API luồng P05, 3 test caption, 4 test form). `build:web` trong `check` vẫn lỗi EPERM do thư mục `apps/web/dist` cũ (xem mục P02.8); `vite build --outDir <tạm>` → đạt.
+  - Chạy thật (dữ liệu tạm ở scratchpad, server + Vite, `APM_INTEGRATIONS=fake`): qua proxy 5173 tạo máy, sửa đổi thứ tự ảnh (200), sửa với revision cũ → 409, thumbnail trả image/jpeg. Edge headless điều khiển qua DevTools: bấm "Thêm máy" → lưu trống báo đủ 3 lỗi; chọn 2 ảnh PNG + 1 file .txt → 2 ảnh vào, .txt bị từ chối; đổi thứ tự ảnh; giá "9tr" bị từ chối nhưng tên/tình trạng được giữ; sửa giá → caption "Samsung S23 / Tình trạng… / Giá: 8.200.000 đ / Dung lượng: 256GB" không có dòng pin/bảo hành; lưu → danh sách có máy mới. Đã xem ảnh chụp danh sách và form. Đã tắt server/Vite.
+  - Chưa thử: sửa máy trên UI (mới thử qua API), đổi trạng thái trên UI, phân trang >20 máy, trình duyệt khác Edge.
+- **Quyết định:** không thêm dependency, không migration. Thumbnail tạo theo yêu cầu thay vì lưu file (đủ cho quy mô hai tài khoản; đổi sang cache nếu chậm). PUT là thay toàn bộ dữ kiện: trường tùy chọn không gửi sẽ thành null.
+- **Tồn đọng / lưu ý:**
+  - Caption chỉnh tay chưa được lưu và chưa gắn phiên bản/duyệt → P05.5. Mục này chưa được coi là có "phiên bản đã duyệt".
+  - Ảnh tải lên mà người dùng bỏ form vẫn nằm trong kho (không gắn máy nào); dọn ảnh mồ côi thuộc P05.8.
+  - Danh sách chưa có tìm kiếm/lọc theo trạng thái.
+  - `apps/web/dist` vẫn cần xóa bằng quyền quản trị.
+- **Tiếp theo:** P05.5 (lưu phiên bản caption/ảnh có thứ tự, duyệt gắn đúng phiên bản; cần API content-versions), rồi P05.7 và P05.8.

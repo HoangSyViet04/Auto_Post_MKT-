@@ -77,3 +77,20 @@ describe('caption từ dữ kiện người dùng (chuẩn bị P05.4)', () => {
     }
   });
 });
+
+describe('caption từ dữ kiện dạng chữ', () => {
+  test('dùng capacityText/batteryText/locationText khi có, bỏ khi trống, không bịa', () => {
+    assert.equal(generateProductCaption({ ...minimal, capacityText: ' 128GB ', batteryText: '', locationText: 'Hà Nội' }),
+      `${generateProductCaption(minimal)}\nDung lượng: 128GB\nKhu vực: Hà Nội`);
+    assert.equal(generateProductCaption({ ...minimal, capacityText: null, batteryText: '  ' }), generateProductCaption(minimal));
+  });
+
+  test('số có sẵn được ưu tiên hơn chữ cùng loại', () => {
+    const caption = generateProductCaption({ ...minimal, storageGb: 256, capacityText: '128GB' });
+    assert.ok(caption.includes('Dung lượng: 256 GB') && !caption.includes('128GB'));
+  });
+
+  test('sai kiểu bị từ chối', () => {
+    assert.throws(() => generateProductCaption({ ...minimal, locationText: 5 } as unknown as ProductCaptionInput), CaptionValidationError);
+  });
+});

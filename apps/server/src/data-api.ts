@@ -1,11 +1,22 @@
 import { readFile } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
+import sharp from 'sharp';
 import { BusinessError } from '#domain';
 import { createContentRepository, type createMediaStore, type Database, DEFAULT_MEDIA_MAX_BYTES, type ProductRevisionInput } from '#storage';
 
 const UUID = '^[a-fA-F0-9]{8}-(?:[a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}$';
 const ids = { type: 'array', minItems: 1, maxItems: 100, uniqueItems: true, items: { type: 'string', pattern: UUID } };
-const optionalText = { anyOf: [{ type: 'string', maxLength: 10_000 }, { type: 'null' }] };
+const THUMB_PX = 320;
+const optionalInt = { anyOf: [{ type: 'integer', minimum: 1, maximum: Number.MAX_SAFE_INTEGER }, { type: 'null' }] };
+const revisionProperties = {
+  name: { type: 'string', minLength: 1, maxLength: 500 }, condition: { type: 'string', minLength: 1, maxLength: 10_000 },
+  mediaIds: ids, priceVnd: optionalInt,
+  capacityText: { anyOf: [{ type: 'string', maxLength: 10_000 }, { type: 'null' }] },
+  batteryText: { anyOf: [{ type: 'string', maxLength: 10_000 }, { type: 'null' }] },
+  warrantyText: { anyOf: [{ type: 'string', maxLength: 10_000 }, { type: 'null' }] },
+  locationText: { anyOf: [{ type: 'string', maxLength: 10_000 }, { type: 'null' }] },
+} as const;
+const idParams = { type: 'object', additionalProperties: false, required: ['id'], properties: { id: { type: 'string', pattern: UUID } } } as const;
 
 export function installDataApi(app: FastifyInstance, db: Database,
   media: ReturnType<typeof createMediaStore>, uploadLimitBytes = DEFAULT_MEDIA_MAX_BYTES): void {
@@ -21,23 +32,49 @@ export function installDataApi(app: FastifyInstance, db: Database,
     return reply.code(201).send({ id: saved.id, mimeType: saved.mime_type, byteSize: saved.byte_size,
       sha256: saved.sha256, state: saved.state });
   });
-  app.get<{ Params: { id: string } }>('/api/media/:id', {
-    schema: { params: { type: 'object', additionalProperties: false, required: ['id'], properties: { id: { type: 'string', pattern: UUID } } } },
+  app.get<{ Params: { id: string }; Querystring: { size?: 'thumb' } }>('/api/media/:id', {
+    schema: {
+      params: idParams,
+      querystring: { type: 'object', additionalProperties: false, properties: { size: { type: 'string', enum: ['thumb'] } } },
+    },
   }, async (request, reply) => {
     const saved = await media.verify(request.params.id);
+    if (request.query.size === 'thumb') {
+      // Ảnh thu nhỏ tạo theo yêu cầu, không lưu thêm file; ảnh gốc trong kho giữ nguyên.
+      const thumb = await sharp(await readFile(saved.path), { failOn: 'warning' }).rotate()
+        .resize(THUMB_PX, THUMB_PX, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer();
+      return reply.type('image/jpeg').header('X-Content-Type-Options', 'nosniff')
+        .header('Cache-Control', 'no-store').send(thumb);
+    }
     return reply.type(saved.media.mime_type).header('X-Content-Type-Options', 'nosniff')
       .header('Cache-Control', 'no-store').send(await readFile(saved.path));
   });
 
   app.post<{ Body: ProductRevisionInput }>('/api/products', {
-    schema: { body: { type: 'object', additionalProperties: false, required: ['name', 'condition', 'mediaIds'], properties: {
-      name: { type: 'string', minLength: 1, maxLength: 500 }, condition: { type: 'string', minLength: 1, maxLength: 10_000 },
-      mediaIds: ids, priceVnd: { anyOf: [{ type: 'integer', minimum: 1, maximum: Number.MAX_SAFE_INTEGER }, { type: 'null' }] },
-      capacityText: optionalText, batteryText: optionalText, warrantyText: optionalText, locationText: optionalText,
-    } } },
+    schema: { body: { type: 'object', additionalProperties: false, required: ['name', 'condition', 'mediaIds'],
+      properties: revisionProperties } },
   }, async (request, reply) => {
     await media.resolveForPublish(request.body.mediaIds);
     return reply.code(201).send(products.createProduct(request.body));
+  });
+  app.get<{ Params: { id: string } }>('/api/products/:id', { schema: { params: idParams } },
+    async (request) => products.getProduct(request.params.id));
+  app.put<{ Params: { id: string }; Body: ProductRevisionInput & { expectedRevisionId: string } }>('/api/products/:id', {
+    schema: { params: idParams, body: { type: 'object', additionalProperties: false,
+      required: ['expectedRevisionId', 'name', 'condition', 'mediaIds'],
+      properties: { ...revisionProperties, expectedRevisionId: { type: 'string', pattern: UUID } } } },
+  }, async (request) => {
+    const { expectedRevisionId, ...revision } = request.body;
+    await media.resolveForPublish(revision.mediaIds);
+    products.reviseProduct(request.params.id, expectedRevisionId, revision);
+    return products.getProduct(request.params.id);
+  });
+  app.post<{ Params: { id: string }; Body: { status: 'selling' | 'sold' | 'archived' } }>('/api/products/:id/status', {
+    schema: { params: idParams, body: { type: 'object', additionalProperties: false, required: ['status'],
+      properties: { status: { type: 'string', enum: ['selling', 'sold', 'archived'] } } } },
+  }, async (request) => {
+    products.setProductStatus(request.params.id, request.body.status);
+    return products.getProduct(request.params.id);
   });
   app.get<{ Querystring: { page?: number; pageSize?: number } }>('/api/products', {
     schema: { querystring: { type: 'object', additionalProperties: false, properties: {
