@@ -4,29 +4,39 @@
  */
 import { getAppEnv, getDatabasePath, getIntegrationMode, getServerPort } from '#config';
 import { migrate, openDatabase } from '#storage';
+import { createLogger } from '#logging';
 import { buildApp } from './app.ts';
 
-const env = getAppEnv();
-const integrations = getIntegrationMode();
-const db = openDatabase(getDatabasePath());
-migrate(db);
+let log = createLogger({ env: 'production', name: 'server' });
+async function main() {
+  const env = getAppEnv();
+  log = createLogger({ env, name: 'server' });
+  const integrations = getIntegrationMode();
+  const db = openDatabase(getDatabasePath());
+  try {
+    migrate(db);
+    const app = buildApp({ db, env, integrations, logger: log });
 
-const app = buildApp({ db, env, integrations });
+    const shutdown = async (signal: string) => {
+      app.log.info(`Nhận ${signal}, đang dừng server`);
+      await app.close();
+      db.close();
+      process.exit(0);
+    };
+    process.once('SIGINT', () => void shutdown('SIGINT'));
+    process.once('SIGTERM', () => void shutdown('SIGTERM'));
 
-const shutdown = async (signal: string) => {
-  app.log.info(`Nhận ${signal}, đang dừng server`);
-  await app.close();
-  db.close();
-  process.exit(0);
-};
-process.once('SIGINT', () => void shutdown('SIGINT'));
-process.once('SIGTERM', () => void shutdown('SIGTERM'));
+    // Chỉ loopback: không mở truy cập từ máy khác trong mạng
+    await app.listen({ host: '127.0.0.1', port: getServerPort() });
+  } catch (error) {
+    db.close();
+    throw error;
+  }
+}
 
 try {
-  // Chỉ loopback: không mở truy cập từ máy khác trong mạng
-  await app.listen({ host: '127.0.0.1', port: getServerPort() });
+  await main();
 } catch (error) {
-  app.log.error(error);
-  db.close();
-  process.exit(1);
+  log.error(error);
+  process.exitCode = 1;
 }

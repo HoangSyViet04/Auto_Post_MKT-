@@ -26,7 +26,8 @@ export function App() {
       return next;
     });
 
-  const page = findPage(pageId) ?? findPage(DEFAULT_PAGE_ID)!;
+  const page = findPage(pageId) ?? findPage(DEFAULT_PAGE_ID);
+  if (!page) throw new Error('Thiếu trang điều hướng mặc định');
 
   return (
     <div className="layout">
@@ -37,8 +38,8 @@ export function App() {
             section.pages.length === 1 ? (
               <a
                 key={section.id}
-                href={`#/${section.pages[0]!.id}`}
-                className={`nav-item${pageId === section.pages[0]!.id ? ' active' : ''}`}
+                href={`#/${section.pages[0].id}`}
+                className={`nav-item${pageId === section.pages[0].id ? ' active' : ''}`}
               >
                 {section.title}
               </a>

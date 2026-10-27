@@ -15,7 +15,8 @@
     "#browser": "./packages/integrations/browser/src/index.ts",
     "#fb-profile": "./packages/integrations/facebook-profile/src/index.ts",
     "#fb-group": "./packages/integrations/facebook-group/src/index.ts",
-    "#fb-page": "./packages/integrations/facebook-page/src/index.ts"
+    "#fb-page": "./packages/integrations/facebook-page/src/index.ts",
+    "#logging": "./packages/logging/src/index.ts"
   },
   "scripts": {
     "dev:server": "node --env-file-if-exists=.env --watch apps/server/src/index.ts",
@@ -24,9 +25,12 @@
     "build:web": "vite build --config apps/web/vite.config.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p apps/web/tsconfig.json",
     "test": "node --env-file=tests/test.env --test \"{apps,packages,tests}/**/*.test.ts\"",
-    "db:migrate": "node --env-file-if-exists=.env scripts/db-migrate.ts"
+    "db:migrate": "node --env-file-if-exists=.env scripts/db-migrate.ts",
+    "lint": "biome lint --error-on-warnings .",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build:web"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.3",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -36,6 +40,8 @@
   },
   "dependencies": {
     "fastify": "5.12.7",
+    "pino": "10.4.0",
+    "pino-pretty": "13.2.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   }

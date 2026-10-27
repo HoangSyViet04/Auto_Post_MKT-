@@ -33,8 +33,8 @@ export function loadMigrations(dir: string = MIGRATIONS_DIR): Migration[] {
   const migrations: Migration[] = [];
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
     const match = FILE_PATTERN.exec(file);
-    if (!match) throw new MigrationError(`Tên file migration không hợp lệ: ${file} (cần dạng 0001_ten_viet_thuong.sql)`);
-    migrations.push(defineMigration(Number(match[1]), match[2]!, readFileSync(join(dir, file), 'utf8')));
+    if (!match?.[2]) throw new MigrationError(`Tên file migration không hợp lệ: ${file} (cần dạng 0001_ten_viet_thuong.sql)`);
+    migrations.push(defineMigration(Number(match[1]), match[2], readFileSync(join(dir, file), 'utf8')));
   }
   migrations.forEach((m, index) => {
     if (m.version !== index + 1) {

@@ -1,24 +1,23 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import type { AppEnv } from '#config';
 import type { ApiError, HealthResponse, IntegrationMode } from '#domain';
 import type { Database } from '#storage';
+import { createLogger } from '#logging';
 
 export interface AppDeps {
   db: Database;
   env: AppEnv;
   integrations: IntegrationMode;
   /** false trong test để không in log. */
-  logger?: boolean;
+  logger?: boolean | FastifyBaseLogger;
 }
 
 /** Tạo Fastify app (chưa listen) để server và test dùng chung. */
 export function buildApp({ db, env, integrations, logger = true }: AppDeps): FastifyInstance {
   const app = Fastify({
-    logger: logger && {
-      level: env === 'production' ? 'info' : 'debug',
-      // Không để header nhạy cảm lọt vào log
-      redact: ['req.headers.authorization', 'req.headers.cookie', 'req.headers["x-apm-token"]'],
-    },
+    ...(logger === false ? { logger: false } : {
+      loggerInstance: logger === true ? createLogger({ env, name: 'server' }) : logger,
+    }),
   });
   const startedAt = new Date().toISOString();
   const schemaVersion = db.prepare('SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations');

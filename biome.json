@@ -1,0 +1,21 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": { "includes": ["**/*.ts", "**/*.tsx", "!**/dist"] },
+  "formatter": { "enabled": false },
+  "assist": { "enabled": false },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noEnum": "error",
+        "noNamespace": "error",
+        "noParameterProperties": "error",
+        "useImportType": "error"
+      },
+      "suspicious": { "noConsole": "error" },
+      "correctness": { "useImportExtensions": { "level": "error", "options": { "forceJsExtensions": false } } }
+    }
+  }
+}

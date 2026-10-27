@@ -165,3 +165,24 @@ Mẫu một mục:
   - Khi không có `.env`, Node in dòng ".env not found. Continuing without it." — vô hại.
   - Giao ước publisher chỉ là phác thảo; chưa có scanner contract, chưa nối với DB/job (P02.6, P07).
 - **Tiếp theo:** P00.7 — typecheck/lint/build và kiểm tra nghiệp vụ; log có lọc bí mật từ đầu (định dạng log dễ đọc, redact đầy đủ).
+
+## 2026-10-26 23:46 — P00.7: cổng kiểm tra và log lọc bí mật
+
+- **Đã làm:**
+  - Đọc CLAUDE → nhật ký (kỹ các mục cuối) → plan → README → ADR → môi trường; `git pull` đã mới nhất. Baseline typecheck đạt, test 27/27 đạt.
+  - Thêm `npm run lint` (Biome, warning cũng thất bại), `npm run check` chạy tuần tự typecheck → lint → test → build:web. Giữ nguyên Node 24 type stripping, `erasableSyntaxOnly`, alias nội bộ; thêm `#logging`.
+  - Logger chung cho Fastify (request/error/child), worker và migration, kể cả lỗi startup. Development dùng pretty; test/production JSON. Lọc tại destination sau serializer/bindings/format args/toJSON, trước khi ghi stdout/pretty; lỗi lọc chỉ ghi thông báo cố định.
+  - `redactSecrets`: lọc đệ quy object/array, cookie/token/authorization/password/proxy pass/API key (hoa thường/camel/snake/header), toàn bộ headers/body/rawBody/payload, Error/cause/stack, URL userinfo, query percent-encode, JSON/form/Bearer/Basic, header name-value; không sửa input, xử lý vòng tham chiếu/getter/giới hạn độ sâu.
+  - Thêm 7 test (6 logger + 1 Fastify); bổ sung khẳng định verify unknown/pending chỉ đọc, không tự gửi lại. Sửa non-null assertions cũ bằng kiểu tuple nav/guard; chỉ sửa migration runner, không sửa file SQL migration đã có.
+  - Cập nhật README, CLAUDE, môi trường, checkbox/bảng tiến độ; ADR 0003 ghi công cụ, dependency, lý do và giới hạn.
+- **Cách làm / file chính:** `biome.json`, `package.json`/lockfile; `packages/logging/src/{index,redact,logging.test}.ts`; server/worker/migration entrypoints và test API. Log không tạo file vận hành trong repo.
+- **Kiểm tra:**
+  - PowerShell chặn `npm.ps1`; dùng `npm.cmd` (không đổi ExecutionPolicy). Lần kiểm tra đầu đã xác nhận 27/27; trong quá trình làm từng gặp lỗi cấu hình Biome, type logger và cách capture pretty, đã sửa rồi chạy lại.
+  - `npm.cmd run check` → typecheck đạt cả Node/web; lint 36 file không lỗi/cảnh báo; `npm test` 34/34 đạt; build:web đạt. `git diff --check` sạch.
+  - Test kiểm tra đầu ra JSON/pretty thật, Fastify inject query/header/body/nested/Error, child, format args và toJSON không có sentinel bí mật; spawn server/worker/migration với cấu hình lỗi chứa sentinel → exit 1, không lộ sentinel qua stdout/stderr.
+  - Probe lint bằng mã sai tạm → chặn đủ noEnum/noNamespace/noParameterProperties/useImportExtensions. Thử stdin ban đầu không xuất đủ diagnostic; đã đổi sang file tạm với import tới file tồn tại, xác nhận rồi xóa probe.
+  - Smoke `node _tmp_p007_verify.mjs` → worker development có INFO dễ đọc, fake, exit 0; migration DB tạm phiên bản 1; server thật loopback health HTTP 200/schemaVersion=1/integrations=fake. Đã dừng server, xóa DB tạm và script probe.
+  - `npm install` báo audit 0 vulnerabilities (91 package). Chưa xem UI trên trình duyệt, không mở Facebook/đăng thật. Kiểm tra nghiệp vụ chỉ áp dụng phần đã có: config/fake publisher/DB, chưa nghiệm thu P02–P12.
+- **Quyết định:** [ADR 0003](docs/adr/0003-quality-gate-safe-logging.md). Khóa chính xác `@biomejs/biome@2.6.3` (dev: lint TS/TSX, parser riêng); `pino@10.4.0` (khai báo trực tiếp vì import trực tiếp, trước có gián tiếp qua Fastify); `pino-pretty@13.2.0` (runtime để development chạy trực tiếp Node có pretty).
+- **Tồn đọng / lưu ý:** Filter cố ý che dư từ nhạy cảm và toàn bộ headers/body; không nhận diện được bí mật trần không có tên/ngữ cảnh, không đưa loại dữ liệu này vào message/metadata. `APM_INTEGRATIONS` vẫn mặc định fake. Chưa triển khai log rotation/lưu/xuất nhật ký P11. Commit/push thực hiện ngay sau mục này; kết quả chỉ xác nhận khi git trả thành công.
+- **Tiếp theo:** P00.8 — origin/CSRF và cơ chế truy cập cục bộ cho request thay đổi dữ liệu; không bắt đầu Facebook thật trong lượt P00.7.

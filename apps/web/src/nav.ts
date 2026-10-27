@@ -13,7 +13,7 @@ export interface PageDef {
 export interface NavSection {
   id: string;
   title: string;
-  pages: PageDef[];
+  pages: [PageDef, ...PageDef[]];
 }
 
 export const NAV: NavSection[] = [

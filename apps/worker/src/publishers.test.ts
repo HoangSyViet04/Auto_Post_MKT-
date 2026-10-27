@@ -31,6 +31,6 @@ describe('worker publishers', () => {
   test('worker từ chối live trong test', () => {
     const res = runWorker({ APM_ENV: 'test', APM_INTEGRATIONS: 'live' });
     assert.notEqual(res.status, 0);
-    assert.match(res.stderr, /bị cấm/);
+    assert.match(res.stdout, /bị cấm/);
   });
 });

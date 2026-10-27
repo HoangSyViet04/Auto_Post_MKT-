@@ -364,4 +364,6 @@ Dữ liệu cần tách rõ: sản phẩm/máy, tài khoản, cấu hình proxy,
 
 ## 11. Tình trạng triển khai
 
-Hiện chỉ có tài liệu định hướng. Chưa có ứng dụng chạy được, lệnh cài đặt hoặc kết quả kiểm thử đăng Facebook. Việc tiếp theo là thực hiện giai đoạn 0 và ghi lại kết quả kiểm chứng trước khi chốt phạm vi tự động hóa cho bản đầu.
+Đã hoàn thành nền dự án P00.1–P00.7: khung React/Vite, Fastify health trên loopback, SQLite WAL/migration, cấu hình môi trường và adapter giả mặc định, lint/typecheck/test/build và log lọc bí mật. Chưa có kết quả kiểm thử đăng Facebook thật; các chức năng nghiệp vụ/UI còn là khung theo tiến độ trong [plan.md](plan.md).
+
+Máy mới cài Node 24, chạy `npm ci` rồi `npm run check` (PowerShell có thể dùng `npm.cmd`). Lệnh check chạy typecheck → lint → test → build web. Xem [docs/environment.md](docs/environment.md) để cấu hình/chạy dev. Việc tiếp theo là P00.8 về origin/CSRF và quyền truy cập API cục bộ, sau đó mới đến các thử nghiệm P01 được người dùng chọn rõ tài khoản/đích.

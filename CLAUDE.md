@@ -23,6 +23,8 @@ Cập nhật checkbox/trạng thái tương ứng trong `plan.md` khi đạt ti�
 ## Lệnh
 
 - `npm run typecheck` — kiểm tra kiểu cả phía Node và web.
+- `npm run lint` — Biome kiểm tra TS/TSX; warning cũng thất bại.
+- `npm run check` — typecheck + lint + test + build:web; chạy trước khi commit.
 - `npm test` — chạy `node:test` cho `{apps,packages,tests}/**/*.test.ts`.
 - `npm run db:migrate` — áp dụng migration cho DB môi trường hiện tại (`APM_ENV`, `APM_DATA_DIR`). Migration mới: thêm file `packages/storage/migrations/NNNN_ten.sql`, **không sửa file đã có** (ADR 0002).
 - `npm run dev:server` / `npm run dev:worker` / `npm run dev:web`
@@ -33,3 +35,4 @@ Cập nhật checkbox/trạng thái tương ứng trong `plan.md` khi đạt ti�
 - Không đăng bài Facebook thật, không mở profile thật nếu người dùng chưa chọn rõ tài khoản và đích cho lượt thử đó.
 - Chỉ worker được điều khiển Playwright; server gửi lệnh qua DB.
 - Không ghi cookie/token/mật khẩu proxy/API key vào log, file mẫu hoặc Git.
+- Log Node dùng `#logging` (server/worker/migration): lọc bí mật trước stdout/pretty. Không dùng console hoặc đưa bí mật trần vào message tự do; xem ADR 0003.

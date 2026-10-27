@@ -32,8 +32,11 @@ describe('fake publisher', () => {
     });
     assert.equal((await pub.submit(request)).status, 'unknown');
     assert.deepEqual(await pub.verify(request), { status: 'unknown' });
+    assert.deepEqual(await pub.verify(request), { status: 'unknown' });
+    assert.equal(pub.submitted.length, 1, 'verify unknown không được gửi lại');
     assert.equal((await pub.submit({ ...request, jobId: 'job-2' })).status, 'pending_approval');
     assert.deepEqual(await pub.verify({ ...request, jobId: 'job-3' }), { status: 'not_found' });
+    assert.equal(pub.submitted.length, 2, 'verify chỉ đọc, pending không được tự published');
   });
 
   test('sau stop không nhận thêm job', async () => {

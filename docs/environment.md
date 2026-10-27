@@ -18,3 +18,15 @@ Cấu hình đọc từ biến môi trường (`packages/config`). `npm run dev:
 - Adapter giả (`#contracts` → `createFakePublisher`) chạy trong bộ nhớ; test thay `fetch` bằng hàm ném lỗi để chắc chắn không gọi mạng.
 
 Không ghi cookie, token, mật khẩu proxy, API key vào `.env.example`, `tests/test.env` hay bất kỳ file nào trong Git.
+
+## Kiểm tra trước khi commit (P00.7)
+
+```sh
+npm run check
+```
+
+Lệnh chạy tuần tự `typecheck` → `lint` → `test` → `build:web`, dừng nếu có lỗi. Có thể chạy từng script riêng. PowerShell chặn `npm.ps1` thì dùng `npm.cmd run check`, không cần đổi ExecutionPolicy. Sau khi pull có lockfile thay đổi, chạy `npm ci` trước.
+
+Lint dùng Biome 2.6.3, bao gồm TS/TSX phía Node và web; warning cũng làm thất bại. Typecheck giữ `erasableSyntaxOnly`, không build/transpile server/worker. Test nghiệp vụ hiện chạy offline bằng fake publisher và SQLite tạm; chưa nghiệm thu nghiệp vụ các phần chưa triển khai.
+
+Log qua `#logging`: development dễ đọc, test/production là JSON. Bộ lọc chung che bí mật lồng nhau và toàn bộ headers/body/payload trước đầu ra, kể cả request/Error/child logger. Không dùng `console` hoặc log bí mật trong message tự do. Chi tiết và giới hạn ở [ADR 0003](adr/0003-quality-gate-safe-logging.md).
