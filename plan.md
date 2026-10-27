@@ -155,7 +155,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | Phần | Đầu ra | Phụ thuộc | Trạng thái |
 | --- | --- | --- | --- |
 | P00 | Nền dự án, môi trường Windows | README/plan | Hoàn thành (P00.1–P00.8) |
-| P01 | Bằng chứng khả thi các tích hợp | P00 | Đang chuẩn bị offline; chưa kiểm chứng thật |
+| P01 | Bằng chứng khả thi các tích hợp | P00 | Đang làm (nick phụ `phu1`, 1 nhóm quản trị): P01.2 đăng nhập/danh tính đạt một profile; P01.5 đăng chữ + 2 ảnh đạt với quản trị (chưa thử chờ duyệt/từ chối); P01.6 đọc 130 nhóm đã tham gia (một phần). Chưa làm: P01.3 proxy (hoãn), P01.4 TCN, P01.7 Page API, nửa sau P01.6 (từ khóa), P01.8 |
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Offline xong (P02.1–P02.8); tích hợp thật chờ P01 |
 | P03 | Quản lý tài khoản | P01, P02 | Offline: P03.1/P03.2/P03.6 làm một phần (bảng, thêm/đổi nhãn/tạm dừng/gỡ); P03.3–P03.5, P03.7 cần trình duyệt/P01 |
 | P04 | Quản lý proxy | P02, P03 | **Hoãn có chủ đích (27/10/2026)** — chưa cần với 1–2 nick dùng mạng nhà; làm khi mở rộng quy mô. Không xóa. |
