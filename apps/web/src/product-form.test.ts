@@ -1,10 +1,22 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { emptyForm, moveImage, parsePrice, previewCaption, validateForm } from './product-form.ts';
+import type { ProductDetail } from '#domain';
+import { emptyForm, formFromDetail, isDirty, moveImage, parsePrice, previewCaption, validateForm } from './product-form.ts';
 
 const filled = { ...emptyForm(), name: ' iPhone 13 ', condition: 'Xước viền', images: [{ id: 'a', label: 'a.jpg' }] };
 
+const detail: ProductDetail = { id: 'p', code: 'APM-p', status: 'selling', revisionId: 'r', revisionNo: 1, name: 'iPhone 13',
+  condition: 'Xước viền', mediaIds: ['a', 'b'], priceVnd: 9_000_000, capacityText: null, batteryText: null, warrantyText: null, locationText: null };
+
 describe('form nhập máy', () => {
+  test('isDirty phát hiện sửa chữ hoặc đổi thứ tự ảnh, bỏ qua khoảng trắng đầu/cuối', () => {
+    const saved = formFromDetail(detail);
+    assert.equal(isDirty(saved, detail), false);
+    assert.equal(isDirty({ ...saved, name: ' iPhone 13 ' }, detail), false);
+    assert.equal(isDirty({ ...saved, battery: '89%' }, detail), true);
+    assert.equal(isDirty({ ...saved, images: [...saved.images].reverse() }, detail), true);
+  });
+
   test('chỉ bắt buộc tên, tình trạng và ít nhất một ảnh; báo đủ lỗi một lượt', () => {
     assert.deepEqual(Object.keys(validateForm(emptyForm()).errors).sort(), ['condition', 'images', 'name']);
     const ok = validateForm(filled);

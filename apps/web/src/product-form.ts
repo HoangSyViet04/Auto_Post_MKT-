@@ -89,6 +89,14 @@ export function previewCaption(form: ProductFormState): string {
   });
 }
 
+/** Form khác với phiên bản máy đã lưu (so sánh cả thứ tự ảnh). */
+export function isDirty(form: ProductFormState, detail: ProductDetail): boolean {
+  const saved = formFromDetail(detail);
+  const ids = (state: ProductFormState) => state.images.map((image) => image.id).join();
+  return ids(form) !== ids(saved) || (['name', 'condition', 'price', 'capacity', 'battery', 'warranty', 'location'] as const)
+    .some((field) => form[field].trim() !== saved[field].trim());
+}
+
 /** Đổi chỗ ảnh; vượt biên thì giữ nguyên. Không sửa mảng gốc. */
 export function moveImage(images: readonly ImageItem[], index: number, delta: -1 | 1): ImageItem[] {
   const target = index + delta;

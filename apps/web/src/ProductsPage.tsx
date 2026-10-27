@@ -1,11 +1,12 @@
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } from 'react';
-import type { ApiError, ProductDetail, ProductListResponse, ProductStatus } from '#domain';
+import { type ApiError, type ContentVersionItem, findSimilarCaptions, type ProductDetail, type ProductListResponse, type ProductStatus } from '#domain';
 import { apiFetch } from './api.ts';
 import {
   emptyForm,
   type FormErrors,
   formFromDetail,
   type ImageItem,
+  isDirty,
   MAX_IMAGES,
   moveImage,
   type ProductFormState,
@@ -129,6 +130,7 @@ function ProductForm({ productId, onClose }: { productId: string | null; onClose
   const [uploadNotes, setUploadNotes] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(productId !== null);
+  const [versions, setVersions] = useState<ContentVersionItem[]>([]);
   /** null: dùng caption mẫu tự sinh. Chuỗi: người dùng đã chỉnh tay (chưa lưu — thuộc P05.5). */
   const [captionDraft, setCaptionDraft] = useState<string | null>(null);
 
@@ -141,12 +143,18 @@ function ProductForm({ productId, onClose }: { productId: string | null; onClose
     setCaptionDraft(null);
   }, []);
 
+  const loadVersions = useCallback(async (id: string) => {
+    const response = await apiFetch(`/api/products/${id}/content-versions`);
+    if (!response.ok) throw new Error(await readError(response));
+    setVersions(((await response.json()) as { items: ContentVersionItem[] }).items);
+  }, []);
+
   useEffect(() => {
     if (!productId) return;
-    load(productId)
+    Promise.all([load(productId), loadVersions(productId)])
       .catch((e) => setMessage(networkMessage(e)))
       .finally(() => setLoading(false));
-  }, [productId, load]);
+  }, [productId, load, loadVersions]);
 
   const set = (field: keyof Omit<ProductFormState, 'images'>) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
@@ -218,6 +226,28 @@ function ProductForm({ productId, onClose }: { productId: string | null; onClose
     }
   }
 
+  async function saveCaption() {
+    if (!detail) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      // Mỗi lần bấm lưu đúng một bản; không tự gửi lại khi lỗi.
+      const response = await apiFetch(`/api/products/${detail.id}/content-versions`, {
+        method: 'POST',
+        body: JSON.stringify({ revisionId: detail.revisionId, caption, source: captionDraft === null || captionDraft === template ? 'template' : 'manual' }),
+      });
+      if (!response.ok) setMessage(await readError(response));
+      else {
+        await loadVersions(detail.id);
+        setMessage('Đã lưu bản caption. Bản này chưa gắn đích nên chưa thể duyệt hoặc đăng.');
+      }
+    } catch (e) {
+      setMessage(networkMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function changeStatus(status: ProductStatus) {
     if (!detail) return;
     setBusy(true);
@@ -239,6 +269,9 @@ function ProductForm({ productId, onClose }: { productId: string | null; onClose
   if (loading) return <p className="muted">Đang tải máy…</p>;
   const template = previewCaption(form);
   const caption = captionDraft ?? template;
+  const dirty = detail ? isDirty(form, detail) : false;
+  const similar = findSimilarCaptions(caption, versions);
+  const canSaveCaption = !!detail && !dirty && detail.status === 'selling' && caption.trim() !== '';
 
   return (
     <form className="product-form" onSubmit={submit} noValidate>
@@ -315,11 +348,40 @@ function ProductForm({ productId, onClose }: { productId: string | null; onClose
         {captionDraft !== null && (
           <button type="button" onClick={() => setCaptionDraft(null)}>Dùng lại caption mẫu</button>
         )}
+        {detail && (
+          <button type="button" disabled={busy || !canSaveCaption} onClick={saveCaption}>Lưu caption này</button>
+        )}
+        {detail && similar.length > 0 && (
+          <span className="field-warning" role="status">
+            Giống {Math.round((similar[0]?.score ?? 0) * 100)}% một bản đã lưu (phiên bản máy {similar[0]?.item.revisionNo}). Vẫn lưu được,
+            nhưng nên đổi cách viết để tránh lặp nội dung.
+          </span>
+        )}
+        {detail && dirty && <span className="muted">Lưu phiên bản máy trước để caption khớp dữ kiện và ảnh.</span>}
         <p className="notice">
-          Caption chỉ gồm dữ kiện bạn đã nhập, không tự thêm giá, pin hay bảo hành. Phần chỉnh tay chưa được lưu (lưu
-          phiên bản và duyệt thuộc P05.5).
+          Caption chỉ gồm dữ kiện bạn đã nhập, không tự thêm giá, pin hay bảo hành. Caption chỉ được lưu khi bạn bấm "Lưu caption
+          này" (máy phải đã lưu); duyệt cần tài khoản và đích nên chưa có ở đây.
         </p>
       </fieldset>
+
+      {detail && versions.length > 0 && (
+        <fieldset>
+          <legend>Bản caption đã lưu ({versions.length})</legend>
+          <ul className="versions">
+            {versions.map((version) => (
+              <li key={version.id}>
+                <span className="muted">
+                  Phiên bản máy {version.revisionNo}
+                  {version.revisionId !== detail.revisionId ? ' (cũ — máy đã sửa sau đó)' : ''} ·{' '}
+                  {version.source === 'template' ? 'caption mẫu' : 'chỉnh tay'} · {version.mediaIds.length} ảnh ·{' '}
+                  {new Date(version.createdAt).toLocaleString('vi-VN')}
+                </span>
+                <pre>{version.caption}</pre>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+      )}
 
       {message && <p className="notice" role="status">{message}</p>}
       <div className="actions">

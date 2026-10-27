@@ -75,6 +75,20 @@ export function createContentRepository(db: Database, options: RepositoryOptions
       });
     },
 
+    /** Các bản caption đã lưu của mọi phiên bản máy, mới nhất trước; ảnh theo thứ tự đã lưu. */
+    listVersions(productId: string) {
+      identifier(productId);
+      return atomic(db, () => {
+        if (!one(db, 'SELECT id FROM products WHERE id=?', productId)) throw new BusinessError('not_found');
+        const rows = db.prepare(`SELECT c.id,c.product_revision_id AS revisionId,r.revision_no AS revisionNo,c.caption,c.source,
+          c.destination_id AS destinationId,c.created_at AS createdAt FROM content_versions c
+          JOIN product_revisions r ON r.id=c.product_revision_id WHERE r.product_id=?
+          ORDER BY c.created_at DESC,c.id LIMIT 50`).all(productId);
+        const media = db.prepare('SELECT media_id FROM content_version_media WHERE content_version_id=? ORDER BY position');
+        return rows.map((row) => ({ ...row, mediaIds: media.all(row.id as string).map((m) => String(m.media_id)) }));
+      });
+    },
+
     createProduct(input: ProductRevisionInput) {
       return atomic(db, () => {
         const now = clock(); const productId = randomUUID();

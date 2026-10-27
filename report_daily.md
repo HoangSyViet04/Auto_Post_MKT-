@@ -307,3 +307,19 @@ Mẫu một mục:
   - Danh sách chưa có tìm kiếm/lọc theo trạng thái.
   - `apps/web/dist` vẫn cần xóa bằng quyền quản trị.
 - **Tiếp theo:** P05.5 (lưu phiên bản caption/ảnh có thứ tự, duyệt gắn đúng phiên bản; cần API content-versions), rồi P05.7 và P05.8.
+
+## 2026-10-27 09:48 — P05.5/P05.6 (một phần): lưu bản caption và cảnh báo giống nội dung
+
+- **Đã làm:**
+  - Backend: `listVersions` (repository), `POST/GET /api/products/:id/content-versions`. Bản caption luôn lấy ảnh theo thứ tự của đúng phiên bản máy hiện tại; chưa gắn đích. Phiên bản máy cũ → 409, máy đã bán/ngừng bán → 409, caption trống hoặc nguồn `llm` → 400.
+  - Domain: `captionSimilarity`/`findSimilarCaptions` (so khớp từ, bỏ dấu/hoa thường/dấu câu, ngưỡng 80%, chỉ cảnh báo không chặn).
+  - Web: nút "Lưu caption này" (chỉ bật khi form khớp phiên bản máy đã lưu — `isDirty`), danh sách bản đã lưu (đánh dấu bản của phiên bản cũ), cảnh báo giống nội dung theo thời gian thực.
+- **Kiểm tra (theo yêu cầu: chỉ test phần mới, cổng tổng để cuối phase):**
+  - `node scripts/test.ts apps/server/src/data-api.test.ts apps/web/src/product-form.test.ts` → 10/10 đạt (có test mới P05.5 và `isDirty`).
+  - `node scripts/test.ts packages/domain/src/similarity.test.ts` → 2/2 đạt.
+  - `npm.cmd run typecheck` và `npm.cmd run lint` (74 file) → đạt. **Không** chạy full suite/build lượt này.
+  - Chạy thật (server + Vite + Edge headless, dữ liệu tạm): mở máy có sẵn, bấm "Lưu caption này" hai lần → 2 bản trong danh sách, cảnh báo "Giống 100%… Vẫn lưu được". Đã tắt server/Vite.
+  - Chưa thử trên UI: lưu bản chỉnh tay, bản của phiên bản máy cũ hiển thị nhãn "cũ".
+- **Quyết định:** không dependency/migration. `source` do client gửi (template nếu caption bằng caption mẫu, ngược lại manual); server không tự kiểm chứng vì chỉ phục vụ nhãn hiển thị.
+- **Tồn đọng / lưu ý:** P05.5 chưa đóng vì chưa có duyệt (cần tài khoản/đích P03/P06); P05.6 chưa có phiên bản theo đích. Hai mục này mở lại khi có đích. `apps/web/dist` vẫn cần xóa bằng quyền admin.
+- **Tiếp theo:** P05.8 (xóa ảnh an toàn/dọn ảnh mồ côi, ưu tiên ẩn thay vì mất bằng chứng), P05.7 (hiển thị bài/lịch cần kiểm tra khi máy sửa sau duyệt — phụ thuộc job, có thể chỉ làm phần repository đã có). Sau đó chạy cổng tổng một lần khi hết phase P05 offline.

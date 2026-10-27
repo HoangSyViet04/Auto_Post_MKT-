@@ -89,3 +89,31 @@ test('P05: sửa máy tạo revision mới giữ thứ tự ảnh, xung đột p
   assert.equal((await app.inject({ method: 'POST', url: `/api/products/${created.productId}/status`, headers, payload: { status: 'x' } })).statusCode, 400);
   assert.equal((await app.inject({ method: 'GET', url: '/api/products/00000000-0000-4000-8000-000000000000', headers })).statusCode, 404);
 });
+
+test('P05.5: lưu bản caption theo đúng phiên bản máy, giữ thứ tự ảnh; phiên bản cũ/đã bán bị từ chối', async () => {
+  const up = async (color: string) => (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' },
+    payload: await sharp({ create: { width: 4, height: 4, channels: 3, background: color } }).png().toBuffer() })).json().id as string;
+  const [a, b] = [await up('#336699'), await up('#993333')];
+  const made = (await app.inject({ method: 'POST', url: '/api/products', headers, payload: { name: 'iPhone 13', condition: 'Đẹp', mediaIds: [b, a] } })).json();
+  const url = `/api/products/${made.productId}/content-versions`;
+  const save = (revisionId: string, caption = 'iPhone 13\nTình trạng: Đẹp', source = 'template') => app.inject({ method: 'POST', url, headers, payload: { revisionId, caption, source } });
+
+  assert.equal((await save(made.revisionId)).statusCode, 201);
+  assert.equal((await save(made.revisionId, 'Bản chỉnh tay', 'manual')).statusCode, 201);
+  const listed = (await app.inject({ method: 'GET', url, headers })).json().items;
+  assert.equal(listed.length, 2); assert.deepEqual(listed[0].mediaIds, [b, a]); assert.equal(listed[0].destinationId, null);
+  assert.deepEqual(listed.map((v: { source: string }) => v.source).sort(), ['manual', 'template']);
+
+  assert.equal((await save(made.revisionId, '   ')).statusCode, 400);
+  assert.equal((await save(made.revisionId, 'x', 'llm')).statusCode, 400);
+  await app.inject({ method: 'PUT', url: `/api/products/${made.productId}`, headers,
+    payload: { expectedRevisionId: made.revisionId, name: 'iPhone 13', condition: 'Đẹp hơn', mediaIds: [a] } });
+  assert.equal((await save(made.revisionId)).statusCode, 409); // revision cũ không còn là bản hiện tại
+  const after = (await app.inject({ method: 'GET', url, headers })).json().items;
+  assert.equal(after.length, 2); assert.equal(after[0].revisionNo, 1); // bản cũ vẫn xem được
+
+  await app.inject({ method: 'POST', url: `/api/products/${made.productId}/status`, headers, payload: { status: 'sold' } });
+  const current = (await app.inject({ method: 'GET', url: `/api/products/${made.productId}`, headers })).json();
+  assert.equal((await save(current.revisionId)).statusCode, 409); // máy đã bán không tạo bản mới
+  assert.equal((await app.inject({ method: 'GET', url: '/api/products/00000000-0000-4000-8000-000000000000/content-versions', headers })).statusCode, 404);
+});

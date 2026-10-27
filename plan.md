@@ -159,7 +159,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Offline xong (P02.1–P02.8); tích hợp thật chờ P01 |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
 | P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
-| P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Offline: P05.1–P05.4 xong (UI quản lý máy); còn P05.5–P05.8 (lưu/duyệt phiên bản, cảnh báo giống, sửa sau duyệt, xóa ảnh) |
+| P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Offline: P05.1–P05.4 xong; P05.5/P05.6 làm được một phần (chờ đích/tài khoản cho duyệt và bản theo đích); còn P05.7, P05.8 |
 | P06 | Quét nhóm và danh sách đích | P01–P04 | Chưa bắt đầu |
 | P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Chưa bắt đầu |
 | P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Chưa bắt đầu |
@@ -266,8 +266,8 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [x] P05.2. Lưu bản sao ảnh, thumbnail và thứ tự; xóa/di chuyển file nguồn không làm hỏng bản đã lưu. *(MediaStore P02.4 + thumbnail `GET /api/media/:id?size=thumb` (320px, tạo theo yêu cầu, không lưu thêm); đổi thứ tự ↑/↓, thứ tự lưu theo phiên bản máy.)*
 - [x] P05.3. Tự sinh mã, sửa máy, đánh dấu đã bán/ngừng bán; giá/thông số thiếu là null, không thành 0 hoặc khẳng định tốt. *(`GET/PUT /api/products/:id` (sửa = revision mới, kiểm tra phiên bản cũ → 409), `POST /api/products/:id/status`; chưa có phân trang tìm kiếm/lọc theo trạng thái.)*
 - [x] P05.4. Caption mẫu từ tên/tình trạng, bỏ dòng tùy chọn thiếu, xem trước/chỉnh tay. *(Hàm domain `generateProductCaption` nhận thêm dung lượng/pin/khu vực dạng chữ; UI xem trước và chỉnh tay đã có nhưng phần chỉnh tay **chưa được lưu** — lưu phiên bản ở P05.5.)*
-- [ ] P05.5. Lưu phiên bản máy, caption, ảnh có thứ tự; duyệt gắn đúng phiên bản.
-- [ ] P05.6. Phiên bản theo đích và cảnh báo giống nội dung; chưa cần semantic phức tạp hoặc AI.
+- [ ] P05.5. Lưu phiên bản máy, caption, ảnh có thứ tự; duyệt gắn đúng phiên bản. *(Đã có: phiên bản máy, lưu/liệt kê bản caption kèm ảnh theo thứ tự, từ chối phiên bản cũ/máy đã bán. Chưa có: duyệt — cần tài khoản và đích từ P03/P06; repository `approve` đã có nhưng chưa có API/UI.)*
+- [ ] P05.6. Phiên bản theo đích và cảnh báo giống nội dung; chưa cần semantic phức tạp hoặc AI. *(Đã có: cảnh báo giống nội dung (so khớp từ, ngưỡng 80%) giữa các bản của một máy. Chưa có: phiên bản theo đích — chờ đích từ P06.)*
 - [ ] P05.7. Máy sửa sau duyệt thì bài/lịch cần kiểm tra; máy đã bán/ngừng bán ngăn lịch mới và dừng lịch chờ.
 - [ ] P05.8. Chỉ xóa ảnh khi không còn tham chiếu cần giữ; ưu tiên ẩn/lưu trữ thay vì mất bằng chứng bài cũ.
 

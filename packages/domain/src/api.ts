@@ -49,6 +49,17 @@ export interface ProductListResponse {
   pageSize: number;
 }
 
+export interface ContentVersionItem {
+  id: string;
+  revisionId: string;
+  revisionNo: number;
+  caption: string;
+  source: 'template' | 'manual' | 'llm';
+  destinationId: string | null;
+  createdAt: number;
+  mediaIds: string[];
+}
+
 export interface ProductDetail extends ProductFacts {
   id: string;
   code: string;
