@@ -156,7 +156,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | --- | --- | --- | --- |
 | P00 | Nền dự án, môi trường Windows | README/plan | Hoàn thành (P00.1–P00.8) |
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Đang chuẩn bị offline; chưa kiểm chứng thật |
-| P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Đang làm offline (P02.1–P02.2 xong); chưa nghiệm thu toàn phần |
+| P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Đang làm offline (P02.1–P02.2, P02.6 xong); chưa nghiệm thu toàn phần |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
 | P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Chuẩn bị quy tắc caption offline; chưa UI/media/phiên bản |
@@ -218,7 +218,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [ ] P02.3. Repository/transaction cho nhận job, lưu phiên bản, đổi trạng thái; lỗi nghiệp vụ dùng chung.
 - [ ] P02.4. MediaStore: chép vào vùng tạm, kiểm tra file, đưa vào kho và hoàn tất metadata; xử lý lỗi giữa chừng, không coi máy có ảnh mất là hợp lệ.
 - [ ] P02.5. Chọn cách bảo vệ secrets trên Windows/quyền thư mục; khóa không nằm cạnh ciphertext trong mã nguồn. Mất khóa thì báo cần kết nối lại.
-- [ ] P02.6. Giao ước publisher/scanner, trạng thái, adapter giả; phân biệt published/pending/unknown.
+- [x] P02.6. Giao ước publisher/scanner, trạng thái, adapter giả; phân biệt published/pending/unknown. *(Approved context + runtime validation, fake snapshot/evidence/verify/stop; scanner joined/keyword nguồn/thời điểm/account/unknown/partial/limit; ADR0006. 18/18 contract tests đạt. DB wiring/scheduler/P06 và adapter thật chưa triển khai.)*
 - [ ] P02.7. Validation, phân trang, giới hạn upload, bảo vệ đường dẫn; metadata client không được dẫn tới đọc/xóa file ngoài kho.
 - [ ] P02.8. Dữ liệu fixture giả và DB test tách khỏi dữ liệu vận hành.
 
@@ -488,6 +488,7 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 27/10/2026 | P01.1 chuẩn bị offline | CLI chủ động fake-only và ma trận khả thi P01 | 5/5 harness tests; unknown chỉ submit1 lần, stop/block không submit; chưa driver/kiểm chứng thật | Chuẩn bị driver và đầu vào thử thật; tiếp tục module offline độc lập |
 | 27/10/2026 | P05.4 chuẩn bị offline | Hàm domain sinh caption từ dữ kiện đã cung cấp, không LLM | 8/8 test T01/thiếu optional/validation/input bất biến | Nối media/schema và UI soạn/xem trước trước khi nghiệm thu P05 |
 | 27/10/2026 | P02.1–P02.2 | Migration0002 nền nghiệp vụ26 bảng, snapshot/identity/order/history/fence, ADR0005 | 29/29 storage tests; v1→v2, backup/restore WAL thật, FK/REPLACE/DO NOTHING/UPSERT; reviewer độc lập đạt | P02.3 repository/transaction và các phần media/secrets |
+| 27/10/2026 | P02.6 | Publisher/scanner contracts + fake có context/provenance/unknown/stop/partial, ADR0006 | 18/18 contracts, 27/27 ghép worker+harness; cổng tích hợp94/94 + typecheck/lint/build đạt | P02.3/P02.4/P02.5/P02.7/P02.8; P01 thật chưa đủ đầu vào |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 

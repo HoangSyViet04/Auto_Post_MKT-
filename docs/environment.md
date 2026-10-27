@@ -57,3 +57,9 @@ Phải chọn rõ scenario; không có lựa chọn thì không chạy. Chỉ fa
 Mọi connection phải dùng `#storage.openDatabase`: WAL, foreign_keys và recursive_triggers đều bật; không tắt hai PRAGMA trong repository/migration. Recursive triggers bảo đảm SQLite REPLACE không xóa qua các ràng buộc giữ lịch sử. Các snapshot được duyệt không sửa tại chỗ; tạo phiên bản mới. Test đã backup/restore vào DBtạm riêng, chưa có công cụ phục hồi DBvận hành hoặc UI P11.
 
 Test tích hợp web hiện cần cổng5173 trống, mở server/Vite riêng với dữ liệu/cache tạm rồi tự đóng. Không chạy đồng thời một Vite dev khác trên5173 khi gọi `npm test`.
+
+## Publisher/scanner fake (P02.6)
+
+`#contracts` cung cấp `createFakePublisher`/`createFakeScanner`, chỉ bộ nhớ và luôn gắn nguồn mô phỏng. Consumer scheduler/live tương lai phải dùng `ApprovedPublishRequest` qua runtime validator; request cũ thiếu context chỉ phục vụ fixture fake. TCN/Page phải đúng identity đích. Verify sai snapshot trả unknown, không cấp quyền retry; stop không thu hồi bài đã gửi.
+
+Scanner phân biệt joined/keyword, giới hạn1..1000 kết quả, nguồn/thời điểm/account, trạng thái unknown/partial và stop. Không suy đã tham gia/quyền đăng/không kiểm duyệt từ kết quả tìm kiếm. Chưa nối DB hoặc UI, chưa có driver thật; xem [ADR0006](adr/0006-integration-contracts.md).

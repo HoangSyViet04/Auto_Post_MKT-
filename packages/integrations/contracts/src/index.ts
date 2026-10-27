@@ -1,3 +1,5 @@
-/** Giao ước adapter publisher/scanner (capabilities/prepare/submit/verify/stop) và adapter giả. Scanner: P02.6. */
+/** Publisher/scanner contracts and explicit offline fakes. No live adapters here. */
 export * from './publisher.ts';
 export * from './fake.ts';
+export * from './scanner.ts';
+export * from './fake-scanner.ts';
