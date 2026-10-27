@@ -195,7 +195,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 **Mục tiêu:** xác định phần làm được của từng kênh trước khi xây đầy đủ.
 
 - [ ] P01.1. Viết công cụ thử trong `spikes/`, chạy từng bước chủ động; log/bằng chứng không chứa cookie/token. *(Đã có `npm run spike:offline -- --scenario=...`, 7 fixture fake-only và 5 test; chưa có driver Facebook thật nên chưa đóng mục. Xem docs/feasibility.md.)*
-- [ ] P01.2. Tạo hai profile riêng, người dùng đăng nhập thủ công; mở lại và xác nhận danh tính. Không mở cùng thư mục profile bằng hai tiến trình.
+- [ ] P01.2. Tạo hai profile riêng, người dùng đăng nhập thủ công; mở lại và xác nhận danh tính. Không mở cùng thư mục profile bằng hai tiến trình. *(Đang làm: có `npm run spike:fb -- login|verify`, khóa profile, bằng chứng chỉ lưu băm danh tính; Edge mở được trang đăng nhập Facebook. Chưa có kết quả vì chưa ai đăng nhập `phu1`; mới một profile.)*
 - [ ] P01.3. Thử trực tiếp/proxy do người dùng cung cấp; ghi giao thức/xác thực hỗ trợ, lỗi mạng và cách đổi cấu hình.
 - [ ] P01.4. Thử TCN: caption, nhiều ảnh, đúng danh tính, đúng đích được chọn; lấy kết quả/link khi đủ căn cứ.
 - [ ] P01.5. Thử group: quyền tham gia/đăng, caption/ảnh, phân biệt đã gửi, chờ duyệt, từ chối và unknown.
