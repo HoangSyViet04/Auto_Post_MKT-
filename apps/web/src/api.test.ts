@@ -15,6 +15,14 @@ function fixture(respond?: (call: Call) => Response | Promise<Response>) {
 }
 
 describe('local API client', () => {
+  test('upload ảnh giữ đúng Content-Type và vẫn lấy token/khóa cùng origin', async () => {
+    const { client, calls } = fixture();
+    await client.fetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'image/png' }, body: new Uint8Array([137, 80]) });
+    assert.equal(calls.length, 2);
+    assert.equal(new Headers(calls[1]?.init?.headers).get('Content-Type'), 'image/png');
+    assert.equal(new Headers(calls[1]?.init?.headers).get('X-APM-Token'), 'test-session-value');
+    assert.equal(calls[1]?.init?.mode, 'same-origin');
+  });
   test('GET health không bootstrap hoặc gắn token, giữ chế độ same-origin và chặn redirect', async () => {
     const { client, calls } = fixture();
     const response = await client.fetch('/api/health');

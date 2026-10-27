@@ -43,6 +43,21 @@ export function createContentRepository(db: Database, options: RepositoryOptions
   }
 
   return {
+    listProducts(page = 1, pageSize = 20) {
+      if (!Number.isSafeInteger(page) || page < 1 || page > 1_000_000
+        || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100) throw new BusinessError('invalid_input');
+      return atomic(db, () => {
+        const total = Number(db.prepare(`SELECT count(*) AS n FROM products p
+          JOIN product_revisions r ON r.id=p.current_revision_id`).get()?.n ?? 0);
+        const items = db.prepare(`SELECT p.id,p.code,p.status,p.current_revision_id AS currentRevisionId,
+          r.name,r.condition_text AS condition,r.price_vnd AS priceVnd,p.created_at AS createdAt,
+          (SELECT count(*) FROM product_revision_media pm WHERE pm.product_revision_id=r.id) AS mediaCount
+          FROM products p JOIN product_revisions r ON r.id=p.current_revision_id
+          ORDER BY p.created_at DESC,p.id LIMIT ? OFFSET ?`).all(pageSize, (page - 1) * pageSize);
+        return { items, total, page, pageSize };
+      });
+    },
+
     createProduct(input: ProductRevisionInput) {
       return atomic(db, () => {
         const now = clock(); const productId = randomUUID();

@@ -11,7 +11,7 @@ function validatePath(path: string): void {
 }
 
 /**
- * Access tokens stay in memory. Mutations accept a JSON string body, and are
+ * Access tokens stay in memory. Mutations accept JSON, or image bytes at /api/media, and are
  * sent once only: neither a 403 nor a network error automatically resubmits.
  */
 export function createApiClient(fetcher: typeof fetch = globalThis.fetch) {
@@ -50,7 +50,9 @@ export function createApiClient(fetcher: typeof fetch = globalThis.fetch) {
       const headers = new Headers(init.headers);
       if (mutation) {
         headers.set('X-APM-Token', await getSession());
-        headers.set('Content-Type', 'application/json');
+        const upload = method === 'POST' && path.split('?', 1)[0] === '/api/media'
+          && ['image/jpeg', 'image/png', 'image/webp'].includes(headers.get('Content-Type')?.split(';', 1)[0]?.trim().toLowerCase() ?? '');
+        if (!upload) headers.set('Content-Type', 'application/json');
       }
       const response = await fetcher(path, {
         ...init, method, headers, credentials: 'same-origin', mode: 'same-origin', redirect: 'error',

@@ -58,7 +58,9 @@ export function installLocalAccess(app: FastifyInstance, env: AppEnv, options: L
         && timingSafeEqual(tokenBytes, Buffer.from(suppliedToken, 'hex'));
       const isJson = typeof contentType === 'string'
         && contentType.split(';', 1)[0]?.trim().toLowerCase() === 'application/json';
-      if (origin === undefined || !validToken || !isJson) return reply.code(403).send(DENIED);
+      const isMediaUpload = request.method === 'POST' && request.url.split('?', 1)[0] === '/api/media'
+        && typeof contentType === 'string' && ['image/jpeg', 'image/png', 'image/webp'].includes(contentType.split(';', 1)[0]?.trim().toLowerCase() ?? '');
+      if (origin === undefined || !validToken || (!isJson && !isMediaUpload)) return reply.code(403).send(DENIED);
     }
   });
 

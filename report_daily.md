@@ -268,3 +268,12 @@ Mẫu một mục:
 - **Quyết định:** [ADR0009](docs/adr/0009-windows-dpapi-secrets.md). Khóa do Windows quản lý theo CurrentUser; chuyển máy/tài khoản hoặc không giải mã được cần kết nối lại. Không khẳng định đã thử đổi Windows user/máy thật; failure test dùng hỏng/mất file. Thêm UTF8 console encoding cho đường dẫn Unicode; cổng tổng cuối lượt kiểm tra lại cùng2case.
 - **Tồn đọng / lưu ý:** Chưa có UI/HTTP quản lý kết nối hoặc profile browser ACL. get plaintext chỉ nội bộ consumer, không đưa vào log/caption/LLM. Test chỉ secrets giả và thư mục tạm, không chạm kho vận hành. Commit/push ngay sau mục này.
 - **Tiếp theo:** P02.7 validation/pagination/upload/path guard; P02.8 runner/fixtures tách dữ liệu vận hành.
+
+## 2026-10-27 09:20 — P02.7: validation, phân trang và API ảnh bằng ID
+
+- **Đã làm:** API POST/media nhận bytes bounded qua MediaStore, GET/media/:id UUID+verify/nosniff/no-store, POST/products strict facts/mediaIDs + physical verify, GET/products pagination. Không endpoint nhận sourcepath hoặc xóa file; DTO không đường dẫn/storage key/secrets. Error handler dùng mã cố định, không echo raw schema/JSON/exception.
+- **Cách làm / file chính:** `apps/server/src/data-api.ts`, app.ts, local-access.ts; MediaStore importBytes qua staging, content repository listProducts SQLtham số hóa; web apiFetch giữ image MIME chỉ POST/media. Chỉ nới Content-Type đúng endpointupload; Host/Origin/token/Fetch Metadata giữ nguyên, không CORS. Không dependency/migration mới.
+- **Kiểm tra:** Chỉ thêm3test API chính: upload→read→product→pagination→missing, schema/body limit, CSRF/path/JSONpath không truy cập ngoài. Targeted `node --env-file=tests/test.env --test apps/server/src/data-api.test.ts` → **3/3đạt**, lint6file đạt. Typecheck ban đầu báo errorhandler unknown, đã narrow an toàn và chạy lại typecheck đạt. Thêm1client binary transport test, sẽ chạy cùng cổng tổng cuối P02.8; không lặp full suite ở bước này.
+- **Quyết định:** [ADR0010](docs/adr/0010-data-api-validation.md), bổ sung note ADR0004. Raw upload tránh thêm multipart parser, 20MiB technical bound; pageSize1..100. Chưa API edit/delete hoặc UI/thumbnail; không tự retry upload khi mạng lỗi.
+- **Tồn đọng / lưu ý:** Đây là backend nền, chưa hoàn tất P05 UI. Không endpointsecret reveal/đăng Facebook, chế độ fake giữ nguyên. Test dữ liệu ảnh/DBtạm. Commit/push ngay sau mục này.
+- **Tiếp theo:** P02.8 ép test env/fake, thư mục DB/media tạm và fixture dùng lại; chạy cổng tổng một lần cuối3mục.

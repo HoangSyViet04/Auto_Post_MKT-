@@ -156,7 +156,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | --- | --- | --- | --- |
 | P00 | Nền dự án, môi trường Windows | README/plan | Hoàn thành (P00.1–P00.8) |
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Đang chuẩn bị offline; chưa kiểm chứng thật |
-| P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Đang làm offline (P02.1–P02.6 xong); còn P02.7–P02.8 |
+| P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Đang làm offline (P02.1–P02.7 xong); còn P02.8 |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
 | P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Chuẩn bị quy tắc caption offline; chưa UI/media/phiên bản |
@@ -219,7 +219,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [x] P02.4. MediaStore: chép vào vùng tạm, kiểm tra file, đưa vào kho và hoàn tất metadata; xử lý lỗi giữa chừng, không coi máy có ảnh mất là hợp lệ. *(UUID kho ngoài repo, staging→ready, sharp giải mã JPEG/PNG/WebP thật, SHA256/size verify và missing/failed chặn batch;4test luồng chính, ADR0008. Chưa API/UI/thumbnail hoặc quét orphan sau crash.)*
 - [x] P02.5. Chọn cách bảo vệ secrets trên Windows/quyền thư mục; khóa không nằm cạnh ciphertext trong mã nguồn. Mất khóa thì báo cần kết nối lại. *(DPAPI CurrentUser qua PowerShell stdin, ciphertext UUID ngoài repo, ACL secrets chỉ user/SYSTEM, lost/revoke;2test Windows thật đạt ngoài sandbox, ADR0009. Chưa UI kết nối/profile ACL.)*
 - [x] P02.6. Giao ước publisher/scanner, trạng thái, adapter giả; phân biệt published/pending/unknown. *(Approved context + runtime validation, fake snapshot/evidence/verify/stop; scanner joined/keyword nguồn/thời điểm/account/unknown/partial/limit; ADR0006. 18/18 contract tests đạt. DB wiring/scheduler/P06 và adapter thật chưa triển khai.)*
-- [ ] P02.7. Validation, phân trang, giới hạn upload, bảo vệ đường dẫn; metadata client không được dẫn tới đọc/xóa file ngoài kho.
+- [x] P02.7. Validation, phân trang, giới hạn upload, bảo vệ đường dẫn; metadata client không được dẫn tới đọc/xóa file ngoài kho. *(Strict Fastify schemas, ảnh raw20MiB + UUID read/verify, product create/list phân trang1..100; không client filepath, không delete API;3test API chính đạt, ADR0010. Chưa UI/thumbnail.)*
 - [ ] P02.8. Dữ liệu fixture giả và DB test tách khỏi dữ liệu vận hành.
 
 **Đầu ra:** schema, migration, storage, API nền và adapter giả.
@@ -492,6 +492,7 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 27/10/2026 | P02.3 | Repository product/content/job, transaction version/idempotency/claim/state/result/recovery, ADR0007 | 113/113 test + typecheck/lint/build đạt;3 tiến trình nhận60job không trùng, DB restart còn lịch sử | P02.4 MediaStore; P02.5 secrets/P02.7 validation/P02.8 fixtures |
 | 27/10/2026 | P02.4 | MediaStore UUID/staging/decode/hash/verify, sharp0.35.5, ADR0008 | 4/4 test MediaStore sau sửa2mã lỗi;113 test cũ đạt ở lượt tổng; typecheck/lint/build đạt, không lặp full suite | P02.5 secrets Windows; P02.7 API/validation và P02.8 fixtures |
 | 27/10/2026 | P02.5 | DPAPI CurrentUser + ACL kho secrets, put/get/revoke/lost, ADR0009 | 2/2 Windows tests thật ngoài sandbox; typecheck/lint đạt; không thêm dependency | P02.7 API/validation và P02.8 test fixtures |
+| 27/10/2026 | P02.7 | Upload/read media bằng bytes/ID, product create/list, strict schemas/body bounds/pagination, ADR0010 | 3/3 API tests; typecheck đạt; full gate cùng P02.8 | P02.8 test runner/fixtures, sau đó phần độc lập P03/P05 |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 

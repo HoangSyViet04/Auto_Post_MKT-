@@ -121,7 +121,7 @@ export function createMediaStore(db: Database, options: MediaStoreOptions = {}) 
     throw new BusinessError(failure ?? 'media_invalid');
   }
 
-  return {
+  const store = {
     async importFile(sourcePath: string): Promise<MediaRecord> {
       if (db.isTransaction || typeof sourcePath !== 'string' || !sourcePath.trim()) throw new BusinessError('invalid_input');
       const id = randomUUID(); const key = randomUUID();
@@ -181,6 +181,18 @@ export function createMediaStore(db: Database, options: MediaStoreOptions = {}) 
 
     verify,
 
+    /** HTTP callers supply bytes, never an arbitrary local source path. */
+    async importBytes(bytes: Buffer): Promise<MediaRecord> {
+      if (!Buffer.isBuffer(bytes) || !bytes.length) throw new BusinessError('media_invalid');
+      if (bytes.length > maxBytes) throw new BusinessError('media_too_large');
+      const { staging } = await directories(); const path = join(staging, `${randomUUID()}.part`);
+      const file = await open(path, 'wx', 0o600);
+      try {
+        try { await file.writeFile(bytes); } finally { await file.close(); }
+        return await store.importFile(path);
+      } finally { await removeOwned(path, staging); }
+    },
+
     async resolveForPublish(mediaIds: readonly string[]): Promise<string[]> {
       validateMediaIds(mediaIds);
       const paths: string[] = [];
@@ -188,4 +200,5 @@ export function createMediaStore(db: Database, options: MediaStoreOptions = {}) 
       return paths; // No partial list if any image is missing/corrupt.
     },
   };
+  return store;
 }

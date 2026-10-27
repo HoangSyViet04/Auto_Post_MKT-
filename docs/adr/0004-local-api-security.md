@@ -19,6 +19,8 @@ Server chỉ nghe `127.0.0.1` nhưng trình duyệt có thể gửi request từ
 
 ## Giới hạn
 
+Cập nhật P02.7: [ADR0010](0010-data-api-validation.md) cho phép raw image Content-Type chỉ POST /api/media. Tất cả kiểm tra Host/Origin/Fetch Metadata/token vẫn giữ; mutation khác vẫn JSON.
+
 - Đây là boundary trình duyệt/mạng cho API loopback, không phải xác thực chống một tiến trình độc hại đã chạy dưới cùng tài khoản Windows. Tiến trình cục bộ có thể đọc bootstrap và tự đặt header. XSS trên origin được phép cũng nằm ngoài lớp này.
 - Server restart làm token cũ hết hiệu lực. Client giữ token trong bộ nhớ và không tự phát lại mutation bị từ chối: phát lại có thể gây tác vụ trùng khi trạng thái chưa rõ.
 - Production hiện chỉ cho origin server; cách phục vụ web production phải cùng origin hoặc được thiết kế lại có kiểm chứng. Chưa hỗ trợ remote access, cookie session, TLS hay phân quyền đa người dùng.

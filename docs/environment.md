@@ -75,3 +75,14 @@ Caller nội bộ dùng `importFile(pathĐãChọn)` lấy media ID; trước s�
 `#storage.createSecretStore` dùng DPAPI CurrentUser và ACL riêng cho `<dataDir>/secrets` (user hiện tại + SYSTEM). Không có file khóa cạnh ciphertext; DB chỉ giữ reference. Không gọi get từ HTTP hoặc log giá trị trả về. Nếu nhận `secret_lost`, người dùng cần kết nối lại; sao chép ciphertext sang máy khác không bảo đảm giải mã được. Thu hồi secret đánh dấu revoked và xóa file mã hóa.
 
 Helper chỉ chạy trên Windows, không thay đổi ExecutionPolicy/ACL thư mục cha. Test DPAPI/ACL thật cần quyền Windows user bình thường; sandbox hạn chế ACL có thể chặn, khi đó phải chạy đúng test đó ngoài sandbox và ghi kết quả thật. Xem [ADR0009](adr/0009-windows-dpapi-secrets.md).
+
+## API nền P02.7
+
+| Method/path | Đầu vào/kết quả |
+| --- | --- |
+| POST /api/media | Raw bytes JPEG/PNG/WebP, Content-Type tương ứng, tối đa20MiB; trả id/mimeType/byteSize/hash/state |
+| GET /api/media/:id | UUID hợp lệ, verify file; trả ảnh với nosniff/no-store; không nhận filesystem path |
+| POST /api/products | JSON name/condition/mediaIds và optional facts; kiểm ảnh vật lý trước lưu product/revision |
+| GET /api/products?page=1&pageSize=20 | Page1..1triệu, pageSize1..100; trả items/total/page/pageSize, không path/secrets |
+
+Mutation vẫn cần Origin đúng + X-APM-Token; chỉ POST/media được dùng image Content-Type thay JSON. apiFetch hỗ trợ ngoại lệ này. Sai schema/field dư/payload lớn bị chặn; không echo payload trong lỗi. Chưa có UI, delete file API hoặc endpoint đọc plaintext secrets. Xem [ADR0010](adr/0010-data-api-validation.md).
