@@ -138,13 +138,17 @@ export function createGroupRepository(db: Database, options: RepositoryOptions =
 
     /**
      * Nhập danh sách nhóm đã đọc được từ trang "nhóm đã tham gia" của một tài khoản (kết quả một phần). Chỉ đặt trạng thái tham gia = joined
-     * và nguồn `joined_scan`; KHÔNG đụng tới quyền đăng và không ghi đè dữ liệu đã có. Chạy lại không tạo trùng. Mục không nhận ra thì bỏ qua và đếm.
+     * và nguồn `joined_scan`; KHÔNG đụng tới quyền đăng và không ghi đè dữ liệu đã có. Chạy lại không tạo trùng. Bỏ qua mục không nhận ra (skipped)
+     * và nhóm chưa có ID số (withoutId); cả hai đều được đếm.
      */
-    importObserved(accountId: string, items: ReadonlyArray<{ reference: string; name?: string | null }>): { created: number; existing: number; skipped: number } {
+    importObserved(accountId: string, items: ReadonlyArray<{ reference: string; name?: string | null }>): { created: number; existing: number; skipped: number; withoutId: number } {
       activeAccount(accountId);
-      const counts = { created: 0, existing: 0, skipped: 0 };
+      const counts = { created: 0, existing: 0, skipped: 0, withoutId: 0 };
       for (const item of items) {
-        if (typeof item?.reference !== 'string' || !normalizeGroupReference(item.reference)) { counts.skipped += 1; continue; }
+        const normalized = typeof item?.reference === 'string' ? normalizeGroupReference(item.reference) : null;
+        if (!normalized) { counts.skipped += 1; continue; }
+        // Nhóm chỉ có tên rút gọn (chưa có ID số) chưa đăng được nên không nhập; đếm riêng để người dùng biết.
+        if (!normalized.externalId) { counts.withoutId += 1; continue; }
         const name = typeof item.name === 'string' && item.name.length <= 500 ? item.name : null;
         const result = repository.add({ reference: item.reference, accountId, name, membership: 'joined' }, 'joined_scan');
         if (result.created) counts.created += 1; else counts.existing += 1;

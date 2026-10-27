@@ -1,7 +1,7 @@
 /**
  * Nhập danh sách nhóm đã đọc bằng `spikes/fb-groups-read.ts` vào DB của ứng dụng (không mở Facebook).
  *   node scripts/import-joined-groups.ts --label=<nhãn đã quét> --account=<nhãn tài khoản trong app> [--apply]
- * Mặc định chỉ chạy thử (không ghi). Tài khoản phải đã có trong trang Quản lý tài khoản. Chỉ đặt "đã tham gia";
+ * Mặc định chỉ chạy thử (không ghi). Tài khoản phải đã có trong trang Quản lý tài khoản. Chỉ nhập nhóm có ID số (nhóm chỉ có tên rút gọn bị bỏ qua); chỉ đặt "đã tham gia";
  * quyền đăng vẫn để người dùng xác nhận. Kết quả đọc luôn là một phần, không phải toàn bộ nhóm của nick.
  */
 import { readFileSync } from 'node:fs';
@@ -50,7 +50,7 @@ try {
   log.info({ account: account.label, trongTep: items.length, nhanDuoc: recognized, coIdSo: withId, chiCoTenRutGon: recognized - withId, apply, completeTrongTep: scan.complete === true }, apply ? 'Bắt đầu nhập' : 'Chạy thử, chưa ghi gì (thêm --apply để nhập)');
   if (apply) {
     const result = createGroupRepository(db).importObserved(account.id, items);
-    log.info(result, 'Đã nhập (kết quả đọc là một phần; quyền đăng chưa được xác nhận)');
+    log.info(result, 'Đã nhập nhóm có ID số (bỏ qua nhóm chưa có ID số; kết quả đọc là một phần; quyền đăng chưa được xác nhận)');
   }
 } finally {
   db.close();

@@ -482,3 +482,16 @@ Mẫu một mục:
   - Hồ sơ trình duyệt của app (`browser_profiles`) chưa nối với hồ sơ thử P01 (`spikes/profiles/phu1`) — việc của P03.3.
   - Kết quả đọc là một phần; chưa đối chiếu tổng số nhóm thật.
 - **Tiếp theo:** P03.3 (nối tài khoản trong app với hồ sơ trình duyệt đã đăng nhập, đăng nhập/mở lại trong worker) để app tự đọc/đăng thay vì công cụ thử; hoặc làm giàu ID cho 49 nhóm; hoặc tìm theo từ khóa.
+
+## 2026-10-27 11:55 — Quyết định người dùng + P01.4 (TCN) bước đầu: dừng vì đối tượng bài là "Công khai"
+
+- **Người dùng cho biết/quyết định:**
+  1. Đã tự đếm: nick phụ có **130 nhóm** — khớp kết quả đọc (P01.6 đối chiếu được số lượng). Nhóm **không có ID số thì bỏ qua**, không cần; làm giàu ID để khi mở rộng sau.
+  2. Đồng ý **đăng thử 1 bài test lên TCN** của `phu1`.
+  3. Đã xóa thư mục `dist` trong `D:\OneDrive - EDUPIA\Auto_Post_MKT\apps\web\dist` — đó là **thư mục OneDrive cũ**, không phải repo hiện tại; kiểm tra lại: `D:\Project\Auto_Post_MKT\apps\web\dist` vẫn còn và `npm run build:web` vẫn báo EPERM. Cần người dùng xóa đúng thư mục này (hoặc bằng quyền admin).
+- **Đã làm:**
+  - `importObserved` và `groups:import` chỉ nhập nhóm **có ID số**; nhóm chưa có ID được đếm riêng (`withoutId`) và không lưu. Test `group-repository` cập nhật: 4/4 đạt; typecheck/lint (95 file) đạt.
+  - `spikes/fb-common.ts` dùng chung và `spikes/fb-profile-post.ts post --label --confirm-post [--expect-audience] [--dry-run]`: mở trang cá nhân, mở hộp soạn bài, **đọc đối tượng của bài** và chỉ đăng khi khớp `--expect-audience` (mặc định "Chỉ mình tôi"/"Only me"); không đọc được hoặc khác → dừng; không tự đổi quyền riêng tư; bấm Đăng đúng một lần.
+- **Kết quả thật (`--dry-run`, không đăng):** đúng danh tính; tìm thấy 1 ô soạn bài, 1 hộp thoại, 1 ô văn bản, 1 nút đối tượng; nhãn đọc được: "Đang chia sẻ với **Công khai**" → khác mong đợi → **dừng, không đăng, không gõ gì lên Facebook**. Mã thoát 8.
+- **Quyết định đang chờ người dùng:** (a) đặt đối tượng mặc định/đối tượng bài của `phu1` thành "Chỉ mình tôi" rồi chạy lại; hoặc (b) cho phép đăng bài test **công khai** (mọi người xem được cho tới khi xóa) bằng `--expect-audience="Công khai"`.
+- **Chưa làm:** chưa đăng TCN; chưa nhập 130 nhóm vào DB thật (cần tạo tài khoản `phu1` trong app); chưa chạy cổng tổng.
