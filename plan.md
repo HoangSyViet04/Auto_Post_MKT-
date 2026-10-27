@@ -158,9 +158,9 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Đang chuẩn bị offline; chưa kiểm chứng thật |
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Offline xong (P02.1–P02.8); tích hợp thật chờ P01 |
 | P03 | Quản lý tài khoản | P01, P02 | Offline: P03.1/P03.2/P03.6 làm một phần (bảng, thêm/đổi nhãn/tạm dừng/gỡ); P03.3–P03.5, P03.7 cần trình duyệt/P01 |
-| P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
+| P04 | Quản lý proxy | P02, P03 | **Hoãn có chủ đích (27/10/2026)** — chưa cần với 1–2 nick dùng mạng nhà; làm khi mở rộng quy mô. Không xóa. |
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Offline xong phần làm được: P05.1–P05.4, P05.8; P05.5/P05.6/P05.7 làm một phần (chờ tài khoản/đích/lịch từ P03/P06/P07) |
-| P06 | Quét nhóm và danh sách đích | P01–P04 | Chưa bắt đầu |
+| P06 | Quét nhóm và danh sách đích | P01–P03 (P04 hoãn: kết nối trực tiếp) | Chưa bắt đầu |
 | P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Chưa bắt đầu |
 | P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Chưa bắt đầu |
 | P09 | Kết nối và đăng fanpage | P01, P02, P05, P07 | Chưa bắt đầu |
@@ -243,6 +243,9 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 **Đạt khi:** hai tài khoản mở lại đúng profile, không lẫn phiên; dừng/gỡ xử lý đúng job; UI không lộ mật khẩu/cookie/2FA.
 
 ### P04 — Tab Quản lý proxy
+
+> **Trạng thái: HOÃN, làm sau (quyết định người dùng 27/10/2026).** Với một đến hai nick đăng bằng mạng nhà thì chưa cần proxy; proxy lạ còn có thể gây checkpoint và không bảo đảm tránh khóa. Toàn bộ mục P04.1–P04.7 giữ nguyên bên dưới để triển khai khi cần (ví dụ tăng số nick, cần tách IP, hoặc mỗi nick một proxy cố định).
+> Trong lúc hoãn: mọi tài khoản dùng **kết nối trực tiếp**, cột Proxy hiển thị "Không dùng" (đã đúng ở trang tài khoản), các phần khác (P06, P07, P08) coi là không có proxy. Schema đã có sẵn bảng `proxies` và `browser_profiles.proxy_id` nên khi làm P04 không cần đổi cấu trúc nền. Lưu ý khi làm: Chromium không hỗ trợ SOCKS5 có user/password (xem báo cáo ngày 22:40); mật khẩu proxy phải qua kho secrets DPAPI (P02.5).
 
 **Mục tiêu:** cấu hình mạng theo tài khoản, kiểm tra và báo lỗi rõ.
 

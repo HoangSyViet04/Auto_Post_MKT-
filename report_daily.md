@@ -352,3 +352,11 @@ Mẫu một mục:
 - **Quyết định:** không dependency/migration. Danh tính/phiên/proxy hiển thị đúng dữ liệu hiện có (chưa có thì ghi "Chưa xác nhận"/"Chưa kiểm tra"/"Không dùng"), không giả số liệu.
 - **Tồn đọng / lưu ý:** P03.1 thiếu avatar và "lần kiểm tra phiên"; P03.2 thiếu mở/đóng phiên; P03.3–P03.5, P03.7 cần Playwright/profile thật (P01). Gỡ tài khoản chưa xóa profile/cookie trên đĩa (chưa tồn tại). Tạm dừng/gỡ mới thử với tác vụ giả ở tầng DB, chưa có worker/scheduler thật.
 - **Tiếp theo:** P04.1 (form proxy; mật khẩu qua DPAPI, gán proxy cho tài khoản) để hoàn thiện cột Proxy, rồi quay lại P05.5/P05.6 khi có đích (P06). P01 thật vẫn chờ người dùng chọn tài khoản/đích/phạm vi.
+
+## 2026-10-27 10:13 — Quyết định: hoãn P04 (Quản lý proxy)
+
+- **Đã làm:** Chỉ ghi tài liệu, không đổi mã. Theo yêu cầu người dùng, P04 để lại làm sau, không xóa; ghi vào `plan.md` (bảng tiến độ, ghi chú đầu mục P04, P06 không còn phụ thuộc P04).
+- **Lý do (người dùng quyết định):** chỉ dùng 1–2 nick, đăng bằng mạng nhà nên chưa cần proxy. Tư vấn trong phiên: proxy trả phí thường không cần ở quy mô này, proxy lạ có thể làm tăng checkpoint; rủi ro chính nằm ở hành vi đăng (tần suất, nội dung lặp, group cấm bán hàng) và tự động hóa trình duyệt trái điều khoản Facebook — không có cách nào bảo đảm không bị hạn chế. Đây là nhận định chung, chưa kiểm chứng bằng thử nghiệm thật trên máy này.
+- **Trong lúc hoãn:** mọi tài khoản dùng kết nối trực tiếp; cột Proxy ở trang tài khoản hiển thị "Không dùng". Schema (`proxies`, `browser_profiles.proxy_id`) giữ nguyên, nên bật lại P04 không cần migration nền. Khi làm lại: lưu ý SOCKS5 có user/password của Chromium và mật khẩu proxy qua DPAPI.
+- **Khi nào làm lại:** khi tăng số nick, cần tách IP, hoặc P01 thật cho thấy mạng là điểm nghẽn.
+- **Tiếp theo:** chuẩn bị P01 thử thật — cần người dùng chọn rõ 1 nick, 1 group thử và phạm vi (không gửi mật khẩu/cookie vào chat hay Git); hoặc làm P06 offline (danh sách đích, nội quy group) để mở khóa duyệt/bản theo đích của P05.
