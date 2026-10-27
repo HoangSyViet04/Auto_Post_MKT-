@@ -209,3 +209,12 @@ Mẫu một mục:
 - **Quyết định:** Không thêm dependency hoặc Playwright khi chưa có phạm vi thử thật; chưa tạo profile hoặc driver Facebook. Giữ P01.1 checkbox mở do công cụ hiện chỉ offline, P01.2–P01.10 chưa nghiệm thu thật.
 - **Tồn đọng / lưu ý:** P01 cần tài khoản/đích/phạm vi cụ thể cho lượt thử, proxy nếu dùng và quyền App/Page hợp lệ khi thử Page. Không cần gửi cookie/password vào chat/Git. Kết quả fixture không chứng minh khả thi Facebook. Commit/push ngay sau mục này.
 - **Tiếp theo:** Tiếp tục schema/migration và quy tắc caption offline độc lập theo plan; thêm driver thật sau khi có đầu vào thử được chọn rõ.
+
+## 2026-10-27 08:10 — P05.4: chuẩn bị quy tắc caption domain offline
+
+- **Đã làm:** Thêm `generateProductCaption` thuần qua #domain; chỉ dùng tên/tình trạng và optional do người dùng cung cấp, không LLM hoặc network. Optional thiếu/null không có dòng, không tự thêm giá0, pin, nguyên zin, bảo hành hoặc ưu đãi. Tên hiển thị chuẩn hóa khoảng trắng, giữ nội dung/ngắt dòng tình trạng nguồn; input không bị sửa.
+- **Cách làm / file chính:** `packages/domain/src/caption.ts`, `caption.test.ts`, export từ index. `CaptionValidationError.field` báo trường sai bằng thông báo cố định không echo dữ liệu; giá/dung lượng nguyên dương, pin0..100 hữu hạn (0 explicit giữ nguyên), bảo hành phải text nếu có.
+- **Kiểm tra:** `node --env-file=tests/test.env --test packages/domain/src/caption.test.ts` →8/8 đạt; `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run build:web` đều exit0. Cổng tích hợp trước đó63/63 đạt. Test T01 và ví dụ dữ liệu thiếu optional xác nhận caption không bịa thông tin.
+- **Quyết định:** Không thêm dependency; domain không dùng API Node và dùng được cả web/server. Đây là bước offline độc lập khi P01 thật còn thiếu đầu vào.
+- **Tồn đọng / lưu ý:** Chưa có luồng tạo máy với ảnh, media validation, lưu revision, UI xem trước/chỉnh tay hay schedule. Giữ P05.4 checkbox mở; không gọi toàn P05 hoàn tất. Commit/push ngay sau mục này.
+- **Tiếp theo:** P02.1–P02.2 schema/migration đang được agent triển khai và agent khác review, sau đó giao ước publisher/scanner P02.6 và nối các luồng offline.

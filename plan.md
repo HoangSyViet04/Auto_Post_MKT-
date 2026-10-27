@@ -159,7 +159,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Chưa bắt đầu |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
 | P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
-| P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Chưa bắt đầu |
+| P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Chuẩn bị quy tắc caption offline; chưa UI/media/phiên bản |
 | P06 | Quét nhóm và danh sách đích | P01–P04 | Chưa bắt đầu |
 | P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Chưa bắt đầu |
 | P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Chưa bắt đầu |
@@ -265,7 +265,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [ ] P05.1. Form chỉ bắt buộc ít nhất một ảnh, tên, tình trạng; giữ nội dung đang nhập khi validation lỗi.
 - [ ] P05.2. Lưu bản sao ảnh, thumbnail và thứ tự; xóa/di chuyển file nguồn không làm hỏng bản đã lưu.
 - [ ] P05.3. Tự sinh mã, sửa máy, đánh dấu đã bán/ngừng bán; giá/thông số thiếu là null, không thành 0 hoặc khẳng định tốt.
-- [ ] P05.4. Caption mẫu từ tên/tình trạng, bỏ dòng tùy chọn thiếu, xem trước/chỉnh tay.
+- [ ] P05.4. Caption mẫu từ tên/tình trạng, bỏ dòng tùy chọn thiếu, xem trước/chỉnh tay. *(Đã có hàm domain thuần `generateProductCaption` và 8 test; phần xem trước/chỉnh tay/UI chưa triển khai nên chưa đóng mục.)*
 - [ ] P05.5. Lưu phiên bản máy, caption, ảnh có thứ tự; duyệt gắn đúng phiên bản.
 - [ ] P05.6. Phiên bản theo đích và cảnh báo giống nội dung; chưa cần semantic phức tạp hoặc AI.
 - [ ] P05.7. Máy sửa sau duyệt thì bài/lịch cần kiểm tra; máy đã bán/ngừng bán ngăn lịch mới và dừng lịch chờ.
@@ -486,6 +486,7 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 26/10/2026 | P00.7 | Biome + lệnh check tổng; logger chung lọc bí mật, dev pretty; ADR 0003 | typecheck/lint/build đạt, 34/34 test; lint từ chối 4 cú pháp/import sai; smoke server/worker/migration thật trên dữ liệu tạm | P00.8 origin/CSRF và truy cập cục bộ |
 | 27/10/2026 | P00.8 | Guard API cục bộ + client session trong bộ nhớ, ADR 0004 | 11 server tests + 7 client tests; real server/Vite proxy và raw Host trùng bị chặn | P01 tooling và kiểm chứng tích hợp |
 | 27/10/2026 | P01.1 chuẩn bị offline | CLI chủ động fake-only và ma trận khả thi P01 | 5/5 harness tests; unknown chỉ submit1 lần, stop/block không submit; chưa driver/kiểm chứng thật | Chuẩn bị driver và đầu vào thử thật; tiếp tục module offline độc lập |
+| 27/10/2026 | P05.4 chuẩn bị offline | Hàm domain sinh caption từ dữ kiện đã cung cấp, không LLM | 8/8 test T01/thiếu optional/validation/input bất biến | Nối media/schema và UI soạn/xem trước trước khi nghiệm thu P05 |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 
