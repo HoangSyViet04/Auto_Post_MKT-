@@ -1,7 +1,7 @@
 # Kế hoạch triển khai Auto Post MKT
 
 > Cập nhật: 26/10/2026.
-> Trạng thái: nền dự án P00.1–P00.7 đã hoàn thành; chưa có thử nghiệm Facebook thật nào được xác nhận hoàn thành.
+> Trạng thái: P00 đã hoàn thành; chưa có thử nghiệm Facebook thật nào được xác nhận hoàn thành.
 > Tài liệu yêu cầu: [README.md](README.md). README mô tả sản phẩm; tài liệu này xác định thứ tự và cách triển khai.
 
 ## 1. Kết quả cuối cùng cần đạt
@@ -150,11 +150,11 @@ Adapter giả phục vụ kiểm tra offline, không gọi Facebook/LLM. UI ph�
 
 ## 5. Bảng thứ tự triển khai
 
-P00 đang triển khai; các phần P01–P13 chưa bắt đầu. Pxx là mã phần giao việc, không phải phiên bản sản phẩm.
+P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. Pxx là mã phần giao việc, không phải phiên bản sản phẩm.
 
 | Phần | Đầu ra | Phụ thuộc | Trạng thái |
 | --- | --- | --- | --- |
-| P00 | Nền dự án, môi trường Windows | README/plan | Đang làm (P00.1–P00.7 xong) |
+| P00 | Nền dự án, môi trường Windows | README/plan | Hoàn thành (P00.1–P00.8) |
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Chưa bắt đầu |
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Chưa bắt đầu |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
@@ -184,7 +184,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [x] P00.5. Dựng API health, UI bốn mục; hành động chưa có ghi chưa triển khai. *(Fastify `GET /api/health` trên 127.0.0.1:4317, UI hash-routing, Vite proxy `/api`.)*
 - [x] P00.6. Cấu hình dev/test/local và adapter giả mặc định; không tự đăng Facebook khi mở app. *(`APM_INTEGRATIONS=fake` mặc định, `live` cấm trong test và chưa có adapter thật; `.env`/`tests/test.env`; health + UI báo mô phỏng — xem [docs/environment.md](docs/environment.md).)*
 - [x] P00.7. Thiết lập typecheck, lint, build và kiểm tra nghiệp vụ; log có lọc bí mật từ đầu. *(Biome 2.6.3; `npm run check`; `#logging` lọc đệ quy trước JSON/pretty, che headers/body/payload; ADR 0003. 34/34 test offline đạt; chưa kiểm chứng Facebook thật.)*
-- [ ] P00.8. Server chỉ trên loopback; chuẩn bị kiểm tra origin/CSRF và cơ chế truy cập cục bộ cho lệnh thay đổi dữ liệu. Localhost không đồng nghĩa bỏ mọi kiểm tra request.
+- [x] P00.8. Server chỉ trên loopback; chuẩn bị kiểm tra origin/CSRF và cơ chế truy cập cục bộ cho lệnh thay đổi dữ liệu. Localhost không đồng nghĩa bỏ mọi kiểm tra request. *(Exact Host/Origin/IP, Fetch Metadata, bootstrap token trong bộ nhớ + JSON mutation; client không tự retry; ADR 0004. Test request thật qua Vite proxy và raw HTTP đạt.)*
 
 **Đầu ra:** mã nền, lockfile, cấu hình mẫu không có bí mật thật, tài liệu môi trường.
 
@@ -484,13 +484,14 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 26/10/2026 | P00.5 + hạ tầng | Fastify health, UI 4 mục; chuyển repo ra `D:/Project` vì OneDrive làm hỏng node_modules | 15/15 test; server thật + proxy trả health đúng, chỉ nghe loopback | P00.6 cấu hình dev/test + adapter giả |
 | 26/10/2026 | P00.6 | Cấu hình env (`APM_INTEGRATIONS`), giao ước publisher phác thảo + adapter giả, banner mô phỏng | 27/27 test; worker/server thật chạy fake, `live` bị từ chối | P00.7 lint/build/log lọc bí mật |
 | 26/10/2026 | P00.7 | Biome + lệnh check tổng; logger chung lọc bí mật, dev pretty; ADR 0003 | typecheck/lint/build đạt, 34/34 test; lint từ chối 4 cú pháp/import sai; smoke server/worker/migration thật trên dữ liệu tạm | P00.8 origin/CSRF và truy cập cục bộ |
+| 27/10/2026 | P00.8 | Guard API cục bộ + client session trong bộ nhớ, ADR 0004 | 11 server tests + 7 client tests; real server/Vite proxy và raw Host trùng bị chặn | P01 tooling và kiểm chứng tích hợp |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 
 ## 11. Việc làm ở lượt triển khai đầu tiên
 
 - [x] Kiểm tra môi trường/đường dẫn tại `D:/Project/Auto_Post_MKT` (hai máy đồng bộ qua git; đã bỏ OneDrive — ADR 0001).
-- [ ] P00: khung bốn mục, API health, SQLite tối thiểu, adapter giả.
+- [x] P00: khung bốn mục, API health, SQLite tối thiểu, adapter giả.
 - [ ] Chuẩn bị P01 và liệt kê đầu vào người dùng cần cung cấp: đăng nhập hai tài khoản, đích thử, proxy nếu dùng.
 - [ ] Chưa bật lịch đăng thật trước khi adapter và dừng/đối chiếu đạt yêu cầu.
 

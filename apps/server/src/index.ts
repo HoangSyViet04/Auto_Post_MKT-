@@ -15,7 +15,8 @@ async function main() {
   const db = openDatabase(getDatabasePath());
   try {
     migrate(db);
-    const app = buildApp({ db, env, integrations, logger: log });
+    const port = getServerPort();
+    const app = buildApp({ db, env, integrations, logger: log, security: { serverPort: port } });
 
     const shutdown = async (signal: string) => {
       app.log.info(`Nhận ${signal}, đang dừng server`);
@@ -27,7 +28,7 @@ async function main() {
     process.once('SIGTERM', () => void shutdown('SIGTERM'));
 
     // Chỉ loopback: không mở truy cập từ máy khác trong mạng
-    await app.listen({ host: '127.0.0.1', port: getServerPort() });
+    await app.listen({ host: '127.0.0.1', port });
   } catch (error) {
     db.close();
     throw error;

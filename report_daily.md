@@ -186,3 +186,17 @@ Mẫu một mục:
 - **Quyết định:** [ADR 0003](docs/adr/0003-quality-gate-safe-logging.md). Khóa chính xác `@biomejs/biome@2.6.3` (dev: lint TS/TSX, parser riêng); `pino@10.4.0` (khai báo trực tiếp vì import trực tiếp, trước có gián tiếp qua Fastify); `pino-pretty@13.2.0` (runtime để development chạy trực tiếp Node có pretty).
 - **Tồn đọng / lưu ý:** Filter cố ý che dư từ nhạy cảm và toàn bộ headers/body; không nhận diện được bí mật trần không có tên/ngữ cảnh, không đưa loại dữ liệu này vào message/metadata. `APM_INTEGRATIONS` vẫn mặc định fake. Chưa triển khai log rotation/lưu/xuất nhật ký P11. Commit/push thực hiện ngay sau mục này; kết quả chỉ xác nhận khi git trả thành công.
 - **Tiếp theo:** P00.8 — origin/CSRF và cơ chế truy cập cục bộ cho request thay đổi dữ liệu; không bắt đầu Facebook thật trong lượt P00.7.
+
+## 2026-10-27 07:58 — P00.8: bảo vệ API cục bộ và client web
+
+- **Đã làm:** Điều phối 3 subagent theo yêu cầu; hai nhánh server/client hoàn tất P00.8, nhánh khác chuẩn bị tooling offline riêng. P00.1–P00.8 đã hoàn thành.
+- **Cách làm / file chính:** `apps/server/src/local-access.ts` root onRequest chặn IP/Host/Origin/Fetch Metadata/header trùng trước parse body/handler; `GET /api/session` cấp token 32byte trong bộ nhớ, no-store; mutation cần Origin đúng + X-APM-Token + JSON. Không trust forwarded headers, không CORS, lỗi403/404 cố định không echo URL/header. `apps/web/src/api.ts` bootstrap lazy/dùng chung promise, chỉ đường dẫn /api cùng origin, không redirect hoặc tự retry mutation, không lưu token ra file/localStorage. Vite dev/preview chỉ127.0.0.1:5173 strictPort, giữHost qua proxy. Root tsconfig kiểm tra thêm test client phía Node.
+- **Kiểm tra:**
+  - Đầu lượt `git pull` mới nhất; `npm.cmd run check` baseline34/34 đạt.
+  - `node --env-file=tests/test.env --test "{apps,packages/config,packages/integrations,packages/logging,packages/storage,tests/e2e}/**/*.test.ts"` → **50/50 đạt** cho baseline + P00.8. Gồm11 server tests,7 client tests,1 kiểm tra request thật server+Vite (các test nền khác vẫn đạt).
+  - `npm.cmd run check` tích hợp worktree → typecheck/lint/build đạt;63/63 test đạt (có thêm5 harness offline và8 caption đang được chốt thành phần riêng sau P00.8). `git diff --check` sạch.
+  - Request thật qua Vite: health200 fake, bootstrap200/no-store, mutation hợp lệ tới API chưa có trả404, thiếu bảo vệ403, Origin lạ403/không CORS, raw HTTP Host lạ/trùng bị chặn; token thật không xuất trong log. DB/cache test tách thư mục tạm, server/Vite đã dừng và dữ liệu tạm đã xóa.
+  - Test ban đầu vướng cache Vite ngoài workspace nên đã chuyển cache vào thư mục tạm riêng; Node fetch chuẩn hóa Host nên kiểm tra Host được đổi sang node:http raw header. Không coi hai lần lỗi thử này là kết quả đạt.
+- **Quyết định:** [ADR0004](docs/adr/0004-local-api-security.md), không thêm dependency. Production chỉ origin server; chưa có hosting web production. Bảo vệ này không chống tiến trình độc hại dưới cùng tài khoản Windows hoặc XSS trên origin được phép.
+- **Tồn đọng / lưu ý:** Không có API nghiệp vụ mutation mới; route đếm ghi chỉ trong test. P02 upload cần thiết kế content type riêng. Token cũ mất hiệu lực khi restart; client không phát lại thao tác cũ. APM_INTEGRATIONS vẫn fake, không mở Facebook/đăng thật. Commit/push ngay sau mục này, chỉ xác nhận thành công sau kết quả git.
+- **Tiếp theo:** P01.1 tooling offline và bảng khả thi; các phần dữ liệu/caption độc lập có thể làm khi chờ đầu vào kiểm chứng thật, không đánh dấu tích hợp thật đạt.

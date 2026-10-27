@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { HealthResponse } from '#domain';
+import { apiFetch } from './api.ts';
 
 export type HealthState =
   | { kind: 'loading' }
@@ -16,7 +17,7 @@ export function useHealth(): HealthState {
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await fetch('/api/health');
+        const res = await apiFetch('/api/health');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as HealthResponse;
         if (!cancelled) setState({ kind: 'ok', data });

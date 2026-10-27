@@ -13,6 +13,14 @@ export default defineConfig({
   cacheDir: process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, 'AutoPostMKT', 'cache', 'vite') : undefined,
   server: {
     host: '127.0.0.1',
+    port: 5173,
+    strictPort: true,
+    proxy: { '/api': `http://127.0.0.1:${getServerPort()}` },
+  },
+  // Preview is a local development check, not production hosting.
+  preview: {
+    host: '127.0.0.1',
+    port: 5173,
     strictPort: true,
     proxy: { '/api': `http://127.0.0.1:${getServerPort()}` },
   },

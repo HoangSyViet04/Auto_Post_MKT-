@@ -18,7 +18,7 @@ after(async () => {
 
 describe('server API', () => {
   test('GET /api/health trả trạng thái và phiên bản schema', async () => {
-    const res = await app.inject({ method: 'GET', url: '/api/health' });
+    const res = await app.inject({ method: 'GET', url: '/api/health', headers: { host: '127.0.0.1:4317' } });
     assert.equal(res.statusCode, 200);
     const body = res.json();
     assert.equal(body.status, 'ok');
@@ -29,7 +29,11 @@ describe('server API', () => {
   });
 
   test('API không tồn tại trả 404 JSON', async () => {
-    const res = await app.inject({ method: 'POST', url: '/api/posts' });
+    const session = await app.inject({ method: 'GET', url: '/api/session', headers: { host: '127.0.0.1:4317' } });
+    const res = await app.inject({ method: 'POST', url: '/api/posts', headers: {
+      host: '127.0.0.1:4317', origin: 'http://127.0.0.1:4317',
+      'content-type': 'application/json', 'x-apm-token': session.json().token,
+    }, payload: {} });
     assert.equal(res.statusCode, 404);
     assert.equal(res.json().error, 'not_found');
   });
@@ -43,12 +47,20 @@ describe('server API', () => {
       throw new Error('Authorization: auth-sentinel');
     });
     try {
+      const session = await server.inject({ method: 'GET', url: '/api/session', headers: { host: '127.0.0.1:4317' } });
+      const token = session.json().token;
       const response = await server.inject({ method: 'POST', url: '/log-check?access_token=query-sentinel',
-        headers: { cookie: 'cookie-sentinel', authorization: 'Bearer auth-sentinel', 'x-api-key': 'api-sentinel' },
+        headers: { host: '127.0.0.1:4317', origin: 'http://127.0.0.1:4317', 'x-apm-token': token,
+          cookie: 'cookie-sentinel', authorization: 'Bearer auth-sentinel', 'x-api-key': 'api-sentinel' },
         payload: { unusual: 'body-sentinel' },
       });
       assert.equal(response.statusCode, 500);
-      for (const secret of ['proxy-sentinel', 'auth-sentinel', 'query-sentinel', 'cookie-sentinel', 'api-sentinel', 'body-sentinel']) {
+      const invalidJson = await server.inject({ method: 'POST', url: '/log-check', headers: {
+        host: '127.0.0.1:4317', origin: 'http://127.0.0.1:4317', 'x-apm-token': token,
+        'content-type': 'application/json',
+      }, payload: 'body-sentinel' });
+      assert.equal(invalidJson.statusCode, 400);
+      for (const secret of [token, 'proxy-sentinel', 'auth-sentinel', 'query-sentinel', 'cookie-sentinel', 'api-sentinel', 'body-sentinel']) {
         assert.ok(!output.includes(secret), `Secret leaked: ${secret}`);
       }
       assert.match(output, /REDACTED/);
