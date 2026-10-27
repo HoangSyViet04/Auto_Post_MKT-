@@ -1,6 +1,6 @@
 # Mô hình dữ liệu nền offline — P02.1–P02.2
 
-Schema v2 được bổ sung bằng `0002_offline_core.sql`; `0001_init.sql` giữ nguyên. Đây là nền lưu trữ, **chưa có repository, scheduler, MediaStore, kho bí mật hoặc adapter Facebook thật**. Không có tài khoản/job/credential/capability được seed vào DB vận hành.
+Schema v2 được bổ sung bằng `0002_offline_core.sql`; `0001_init.sql` giữ nguyên. Đã có repository product/content/job P02.3; **chưa có scheduler, MediaStore, kho bí mật hoặc adapter Facebook thật**. Không có tài khoản/job/credential/capability được seed vào DB vận hành. Hành vi transaction/recovery được chốt trong [ADR0007](adr/0007-publishing-repositories.md).
 
 ## Quy ước chung
 
@@ -43,12 +43,12 @@ Job không có các cột account/content/destination riêng để client chọn
 
 ## Idempotency và kết quả
 
-- `(scope, request_key)` unique; cùng key phải đọc và so fingerprint trong transaction P02.3. Schema bảo vệ tính unique/bất biến, **chưa triển khai** cách trả response cũ hoặc conflict khi payload khác.
+- `(scope, request_key)` unique; repository P02.3 đọc và so fingerprint trong transaction: payload giống trả job cũ, payload khác báo idempotency_conflict. Key mới biểu thị ý định mới; replay không tạo job kể cả nguồn cũ đã thay đổi.
 - Unique `(request_id, approval_id)` và trigger mỗi request–target identity chỉ có một job, kể cả hai approval ID khác nhau. Target identity dùng account hoặc Page connection + destination. Một request có thể chứa nhiều đích/danh tính. Request mới được phép sử dụng lại approval cho một ý định đăng lại có chủ đích.
-- Job có đúng 10 trạng thái trong `JOB_STATUSES`. `running` cần claim owner/generation/time/expiry. Chưa có state-transition graph hoặc claim algorithm ở schema nền.
+- Job có đúng 10 trạng thái trong `JOB_STATUSES`. `running` cần claim owner/generation/time/expiry. Repository nhận queued đến hạn bằng UPDATE có điều kiện và tạo attempt trong transaction, kiểm receipt generation/owner/expiry khi ghi kết quả; chưa có scheduler hoặc khóa profile thực.
 - `send_started_at` chỉ được ghi lần đầu, không xóa/đổi; attempt/job không được xóa để tránh mất dấu đã có thể gửi. `finished_at` khi có cũng write-once. Bước thực hiện phải commit mốc gửi **trước** side effect; schema không tự thực hiện điều này.
 - Observation có source explicit `fake`, `api_response`, `ui_observation`, `manual`; outcome `published`, `pending_approval`, `unknown`, `failed`, `not_found`. Published cần remote ID/link không rỗng. Fake source không gắn live approval; API/UI source không gắn fake approval. Manual luôn cần được diễn giải cùng approval mode.
-- Observation không tự cập nhật job status. Không có trigger biến pending thành published hoặc unknown thành queued. Recovery/no-retry khi đã bắt đầu gửi thuộc repository/scheduler; chưa được coi là hoàn thành bởi CHECK/trigger.
+- Observation không tự cập nhật job status bằng trigger. Repository finish ghi observation/đóng attempt/job status cùng transaction. Recovery claim hết hạn trước marker thành paused, sau marker thành unknown; không tự requeue. Pending/unknown chưa có luồng reconciliation P11 và không được tự chuyển queued.
 
 ## Index và những giới hạn còn lại
 
@@ -56,7 +56,7 @@ Index due chỉ gồm job queued `(scheduled_at,id)`; các index approval/status
 
 Destination identity (channel/external ID/canonical URL) và Page binding hiện bất biến suốt đời. Một group nhập bằng URL rồi quan sát được ID mới có thể lưu ID ở `scan_results.observed_external_id`, nhưng **chưa có merge/enrichment** cho canonical destination; cần thiết kế ở P06 trước khi sử dụng thực tế. Không lén đổi đích của lịch sử để gộp trùng.
 
-P02.3/P05/P07 còn phải kiểm tra current product revision, selling/paused/archive, quyền account/group/Page còn hiệu lực, approval revocation, media ready và file vật lý ngay trước tạo/nhận/gửi job. Khi nguồn đổi hoặc máy sold phải invalidate/dừng đúng transaction. Những việc này không được tự suy từ FK hoặc approval cũ.
+Repository P02.3 đã kiểm tra current revision/selling/paused/archive/quyền lưu trong DB/revocation/media ready trước enqueue/claim và marker; sửa product và invalidate/stop job cùng transaction. File vật lý P02.4 và quyền/danh tính phiên thật P01/P03/P08/P09 vẫn phải kiểm chứng ở adapter; metadata DB không thay thế được các bước này.
 
 P02.4/P02.7 còn phải bảo vệ path thực, kiểm MIME/hash/bytes và ghi file atomic; DB chỉ lưu managed UUID, không đọc được ổ đĩa để xác minh. P02.5 còn phải chọn kho bí mật/quyền file; secret reference row không phải mã hóa. P03/P07 còn phải có khóa profile thực và holder abort khi mất lease; fence DB không ngăn một browser process cũ tiếp tục chạy.
 

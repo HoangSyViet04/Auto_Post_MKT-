@@ -156,7 +156,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | --- | --- | --- | --- |
 | P00 | Nền dự án, môi trường Windows | README/plan | Hoàn thành (P00.1–P00.8) |
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Đang chuẩn bị offline; chưa kiểm chứng thật |
-| P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Đang làm offline (P02.1–P02.2, P02.6 xong); chưa nghiệm thu toàn phần |
+| P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Đang làm offline (P02.1–P02.3, P02.6 xong); chưa nghiệm thu toàn phần |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
 | P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Chuẩn bị quy tắc caption offline; chưa UI/media/phiên bản |
@@ -215,7 +215,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 - [x] P02.1. Thiết kế schema mục 4: foreign key, index lịch, phiên bản, quan hệ tài khoản–nhóm, kết quả từng đích. *(Migration0002 có26 bảng STRICT, composite FK danh tính/đích/content, snapshot/media/approval bất biến, intent/attempt/observation/lease/scan/preset; docs/data-model.md, ADR0005.)*
 - [x] P02.2. Migration có phiên bản; kiểm tra nâng cấp và quay về bản sao lưu; không tự xóa DB để cập nhật. *(DB tạm v1→v2/noop/rollback, backup online với WAL rồi restore đường dẫn riêng và upgrade giữ dữ liệu. Không sửa0001; chưa có UI/restore vận hành P11.)*
-- [ ] P02.3. Repository/transaction cho nhận job, lưu phiên bản, đổi trạng thái; lỗi nghiệp vụ dùng chung.
+- [x] P02.3. Repository/transaction cho nhận job, lưu phiên bản, đổi trạng thái; lỗi nghiệp vụ dùng chung. *(Product/content/approval snapshots, batch idempotency, CAS claim/receipt/marker/result/recovery; BusinessError qua #domain. 19 test mới, gồm3 tiến trình/60job và fake end-to-end; ADR0007. Chưa scheduler/khóa profile/physical files hoặc API/UI.)*
 - [ ] P02.4. MediaStore: chép vào vùng tạm, kiểm tra file, đưa vào kho và hoàn tất metadata; xử lý lỗi giữa chừng, không coi máy có ảnh mất là hợp lệ.
 - [ ] P02.5. Chọn cách bảo vệ secrets trên Windows/quyền thư mục; khóa không nằm cạnh ciphertext trong mã nguồn. Mất khóa thì báo cần kết nối lại.
 - [x] P02.6. Giao ước publisher/scanner, trạng thái, adapter giả; phân biệt published/pending/unknown. *(Approved context + runtime validation, fake snapshot/evidence/verify/stop; scanner joined/keyword nguồn/thời điểm/account/unknown/partial/limit; ADR0006. 18/18 contract tests đạt. DB wiring/scheduler/P06 và adapter thật chưa triển khai.)*
@@ -489,6 +489,7 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 27/10/2026 | P05.4 chuẩn bị offline | Hàm domain sinh caption từ dữ kiện đã cung cấp, không LLM | 8/8 test T01/thiếu optional/validation/input bất biến | Nối media/schema và UI soạn/xem trước trước khi nghiệm thu P05 |
 | 27/10/2026 | P02.1–P02.2 | Migration0002 nền nghiệp vụ26 bảng, snapshot/identity/order/history/fence, ADR0005 | 29/29 storage tests; v1→v2, backup/restore WAL thật, FK/REPLACE/DO NOTHING/UPSERT; reviewer độc lập đạt | P02.3 repository/transaction và các phần media/secrets |
 | 27/10/2026 | P02.6 | Publisher/scanner contracts + fake có context/provenance/unknown/stop/partial, ADR0006 | 18/18 contracts, 27/27 ghép worker+harness; cổng tích hợp94/94 + typecheck/lint/build đạt | P02.3/P02.4/P02.5/P02.7/P02.8; P01 thật chưa đủ đầu vào |
+| 27/10/2026 | P02.3 | Repository product/content/job, transaction version/idempotency/claim/state/result/recovery, ADR0007 | 113/113 test + typecheck/lint/build đạt;3 tiến trình nhận60job không trùng, DB restart còn lịch sử | P02.4 MediaStore; P02.5 secrets/P02.7 validation/P02.8 fixtures |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 
