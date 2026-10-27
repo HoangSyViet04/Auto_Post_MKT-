@@ -98,6 +98,12 @@ export function createAccountRepository(db: Database, options: RepositoryOptions
       return row.directory_key;
     },
 
+    /** ID bản ghi danh tính hiện tại (dùng khi duyệt bài gắn với đúng danh tính đã xác nhận); null nếu chưa xác nhận. */
+    identityId(accountId: string): string | null {
+      identifier(accountId);
+      return one<{ current_identity_id: string | null }>(db, 'SELECT current_identity_id FROM accounts WHERE id=? AND archived_at IS NULL', accountId)?.current_identity_id ?? null;
+    },
+
     /** Tham chiếu danh tính Facebook đã xác nhận (id:… hoặc vanity:…); null nếu chưa xác nhận. */
     identityRef(accountId: string): string | null {
       identifier(accountId);

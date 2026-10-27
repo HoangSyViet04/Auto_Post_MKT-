@@ -80,17 +80,18 @@ export function installDataApi(app: FastifyInstance, db: Database,
   });
   app.get<{ Params: { id: string } }>('/api/products/:id/content-versions', { schema: { params: idParams } },
     async (request) => ({ items: products.listVersions(request.params.id) }));
-  app.post<{ Params: { id: string }; Body: { revisionId: string; caption: string; source: 'template' | 'manual' } }>(
+  app.post<{ Params: { id: string }; Body: { revisionId: string; caption: string; source: 'template' | 'manual'; destinationId?: string } }>(
     '/api/products/:id/content-versions', {
       schema: { params: idParams, body: { type: 'object', additionalProperties: false, required: ['revisionId', 'caption', 'source'],
         properties: { revisionId: { type: 'string', pattern: UUID }, caption: { type: 'string', minLength: 1, maxLength: 10_000 },
-          source: { type: 'string', enum: ['template', 'manual'] } } } },
+          source: { type: 'string', enum: ['template', 'manual'] }, destinationId: { type: 'string', pattern: UUID } } } },
     }, async (request, reply) => {
       // Bản caption luôn mang ảnh của đúng phiên bản máy, theo thứ tự đã lưu; chưa gắn đích nên chưa thể duyệt.
       const product = products.getProduct(request.params.id);
       if (product.revisionId !== request.body.revisionId) throw new BusinessError('stale_approval');
       const id = products.createVersion({ productRevisionId: product.revisionId, caption: request.body.caption,
-        mediaIds: product.mediaIds, source: request.body.source });
+        mediaIds: product.mediaIds, source: request.body.source,
+        ...(request.body.destinationId ? { destinationId: request.body.destinationId } : {}) });
       return reply.code(201).send({ id });
     });
   app.get<{ Querystring: { page?: number; pageSize?: number } }>('/api/products', {

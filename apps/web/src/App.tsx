@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { DEFAULT_PAGE_ID, findPage, findSection, NAV, type PageDef } from './nav.ts';
 import { AccountsPage } from './AccountsPage.tsx';
 import { GroupsPage } from './GroupsPage.tsx';
+import { JobsPage } from './JobsPage.tsx';
 import { clearHandoff, getHandoff } from './handoff.ts';
 import { ProductsPage } from './ProductsPage.tsx';
 import { type HealthState, useHealth } from './useHealth.ts';
@@ -79,6 +80,7 @@ export function App() {
         {page.id === 'products' ? <ProductsPage />
           : page.id === 'accounts' ? <AccountsPage />
           : page.id === 'scan-joined' ? <GroupsPage />
+          : page.id === 'queue' ? <JobsPage />
           : <PlaceholderPage page={page} />}
       </main>
     </div>

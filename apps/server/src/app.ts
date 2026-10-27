@@ -7,6 +7,7 @@ import { installLocalAccess, type LocalAccessOptions } from './local-access.ts';
 import { installAccountsApi } from './accounts-api.ts';
 import { installDataApi } from './data-api.ts';
 import { installGroupsApi } from './groups-api.ts';
+import { installJobsApi } from './jobs-api.ts';
 
 export interface AppDeps {
   db: Database;
@@ -18,10 +19,12 @@ export interface AppDeps {
   security?: LocalAccessOptions;
   mediaStore?: ReturnType<typeof createMediaStore>;
   uploadLimitBytes?: number;
+  /** Ngưỡng job hẹn trễ không tự chạy (hiển thị "quá hạn"); mặc định 15 phút, khớp cấu hình worker. */
+  overdueAfterMs?: number;
 }
 
 /** Tạo Fastify app (chưa listen) để server và test dùng chung. */
-export function buildApp({ db, env, integrations, logger = true, security, mediaStore, uploadLimitBytes }: AppDeps): FastifyInstance {
+export function buildApp({ db, env, integrations, logger = true, security, mediaStore, uploadLimitBytes, overdueAfterMs = 15 * 60_000 }: AppDeps): FastifyInstance {
   const app = Fastify({
     ajv: { customOptions: { removeAdditional: false } },
     ...(logger === false ? { logger: false } : {
@@ -32,6 +35,7 @@ export function buildApp({ db, env, integrations, logger = true, security, media
   installDataApi(app, db, mediaStore ?? createMediaStore(db), uploadLimitBytes);
   installAccountsApi(app, db);
   installGroupsApi(app, db);
+  installJobsApi(app, db, integrations, overdueAfterMs);
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof BusinessError) {
       const status = error.code === 'not_found' ? 404 : error.code === 'invalid_input' ? 400

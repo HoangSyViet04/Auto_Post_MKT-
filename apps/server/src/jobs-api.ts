@@ -1,0 +1,71 @@
+import type { FastifyInstance } from 'fastify';
+import { BusinessError, type IntegrationMode, JOB_STATUSES, type JobStatus } from '#domain';
+import { createAccountRepository, createContentRepository, createJobQueries, createJobRepository, type Database } from '#storage';
+
+const UUID = '^[a-fA-F0-9]{8}-(?:[a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}$';
+const uuid = { type: 'string', pattern: UUID } as const;
+const idParams = { type: 'object', additionalProperties: false, required: ['id'], properties: { id: uuid } } as const;
+const emptyBody = { type: 'object', additionalProperties: false, properties: {} } as const;
+const epochMs = { type: 'integer', minimum: 0, maximum: 8_640_000_000_000_000 } as const;
+
+/**
+ * Bản duyệt và hàng chờ đăng (P07). Server chỉ ghi dữ liệu; worker mới nhận và chạy job. Chế độ (fake/live) lấy từ cấu hình server,
+ * client không chọn được. Giờ hẹn là epoch mili giây UTC; giao diện hiển thị/lập lịch theo Asia/Ho_Chi_Minh.
+ */
+export function installJobsApi(app: FastifyInstance, db: Database, mode: IntegrationMode, overdueAfterMs: number): void {
+  const accounts = createAccountRepository(db);
+  const content = createContentRepository(db);
+  const jobs = createJobRepository(db);
+  const queries = createJobQueries(db);
+
+  app.get<{ Querystring: { status?: JobStatus; accountId?: string; page?: number; pageSize?: number } }>('/api/jobs', {
+    schema: { querystring: { type: 'object', additionalProperties: false, properties: {
+      status: { type: 'string', enum: [...JOB_STATUSES] }, accountId: uuid,
+      page: { type: 'integer', minimum: 1, maximum: 1_000_000 }, pageSize: { type: 'integer', minimum: 1, maximum: 100 },
+    } } },
+  }, async (request) => queries.list({ ...request.query, overdueAfterMs }));
+
+  // Duyệt đúng một bản caption (đã gắn đích) cho đúng một tài khoản; gắn với danh tính đã xác nhận của tài khoản đó.
+  app.post<{ Body: { contentVersionId: string; accountId: string } }>('/api/approvals', {
+    schema: { body: { type: 'object', additionalProperties: false, required: ['contentVersionId', 'accountId'],
+      properties: { contentVersionId: uuid, accountId: uuid } } },
+  }, async (request, reply) => {
+    const identityId = accounts.identityId(request.body.accountId);
+    if (!identityId) throw new BusinessError('not_ready'); // chưa đăng nhập/xác nhận danh tính
+    const approvalId = content.approve({ contentVersionId: request.body.contentVersionId, mode, accountId: request.body.accountId, accountIdentityId: identityId });
+    return reply.code(201).send({ approvalId });
+  });
+
+  // Mỗi mục = một đích = một job/kết quả riêng. requestKey chống bấm gửi hai lần: cùng khóa + cùng nội dung → trả lại kết quả cũ.
+  app.post<{ Body: { requestKey: string; jobs: Array<{ approvalId: string; scheduledAt: number }> } }>('/api/jobs', {
+    schema: { body: { type: 'object', additionalProperties: false, required: ['requestKey', 'jobs'], properties: {
+      requestKey: { type: 'string', minLength: 8, maxLength: 200 },
+      jobs: { type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', additionalProperties: false, required: ['approvalId', 'scheduledAt'],
+        properties: { approvalId: uuid, scheduledAt: epochMs } } },
+    } } },
+  }, async (request, reply) => {
+    const result = jobs.enqueue({ requestKey: request.body.requestKey, mode, jobs: request.body.jobs });
+    return reply.code(result.replayed ? 200 : 201).send({ requestId: result.requestId, replayed: result.replayed, jobIds: result.jobs.map((job) => job.id) });
+  });
+
+  const state = (path: string, expected: JobStatus[], next: 'queued' | 'paused' | 'cancelled') =>
+    app.post<{ Params: { id: string } }>(path, { schema: { params: idParams, body: emptyBody } }, async (request) => {
+      const current = jobs.get(request.params.id);
+      if (!expected.includes(current.status)) throw new BusinessError('invalid_transition');
+      return { status: jobs.changeState(request.params.id, current.status, next).status };
+    });
+  state('/api/jobs/:id/pause', ['queued'], 'paused');
+  state('/api/jobs/:id/resume', ['paused', 'blocked'], 'queued');
+  state('/api/jobs/:id/cancel', ['queued', 'paused', 'blocked', 'needs_review'], 'cancelled'); // chỉ khi chưa gửi
+
+  // Đang gửi: chỉ ghi yêu cầu dừng, kết quả thực tế vẫn được ghi (không giả như đã hủy nếu Facebook đã nhận).
+  app.post<{ Params: { id: string } }>('/api/jobs/:id/stop', { schema: { params: idParams, body: emptyBody } }, async (request, reply) => {
+    jobs.requestStop(request.params.id);
+    return reply.code(202).send({ state: 'stop_requested' });
+  });
+
+  // "Chạy ngay" / "tiếp tục job quá hạn" / đổi giờ hẹn: chỉ job chưa gửi.
+  app.post<{ Params: { id: string }; Body: { scheduledAt: number } }>('/api/jobs/:id/reschedule', {
+    schema: { params: idParams, body: { type: 'object', additionalProperties: false, required: ['scheduledAt'], properties: { scheduledAt: epochMs } } },
+  }, async (request) => ({ scheduledAt: jobs.reschedule(request.params.id, request.body.scheduledAt).scheduled_at }));
+}

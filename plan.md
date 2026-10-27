@@ -161,7 +161,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P04 | Quản lý proxy | P02, P03 | **Hoãn có chủ đích (27/10/2026)** — chưa cần với 1–2 nick dùng mạng nhà; làm khi mở rộng quy mô. Không xóa. |
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Offline xong phần làm được: P05.1–P05.4, P05.8; P05.5/P05.6/P05.7 làm một phần (chờ tài khoản/đích/lịch từ P03/P06/P07) |
 | P06 | Quét nhóm và danh sách đích | P01–P03 (P04 hoãn: kết nối trực tiếp) | Offline: P06.1, P06.6, P06.7 xong (nhập tay); P06.2–P06.4, P06.8 chờ P01; P06.5 một phần |
-| P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Chưa bắt đầu |
+| P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Xong phần mô phỏng (P07.1, P07.3–P07.9); P07.2 còn ô nhập lịch (P10) và giới hạn/ngày |
 | P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Chưa bắt đầu |
 | P09 | Kết nối và đăng fanpage | P01, P02, P05, P07 | Chưa bắt đầu |
 | P10 | Ba trang đăng tích hợp | P05–P09 | Chưa bắt đầu |
@@ -299,15 +299,15 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Mục tiêu:** kiểm chứng điều phối trước khi nối gửi thật.
 
-- [ ] P07.1. Job từ cặp tài khoản–đích được chọn, một đích một kết quả; mã yêu cầu chống bấm gửi hai lần.
-- [ ] P07.2. Lưu UTC, hiển thị/lập lịch `Asia/Ho_Chi_Minh`; khoảng cách/giới hạn là chính sách vận hành, không phải ngưỡng chống ban.
-- [ ] P07.3. Worker nhận job bằng transaction, khóa tài khoản/Page, heartbeat, kiểm tra worker cũ; tuần tự trong từng tài khoản.
-- [ ] P07.4. Trước gửi kiểm tra phiên bản duyệt, máy được đăng, đủ ảnh, tài khoản/đích/quyền và mạng.
-- [ ] P07.5. Chạy ngay/hẹn giờ/tạm dừng/tiếp tục/hủy phần chưa gửi; UI đọc trạng thái lưu bền, không chỉ bộ nhớ.
-- [ ] P07.6. Mốc chuẩn bị/gửi/kết quả; crash trước gửi khác sau gửi, không tự nhận lại job có thể đã gửi.
-- [ ] P07.7. Sau restart liệt kê lịch quá hạn để tiếp tục/bỏ; không phát dồn bài cũ.
-- [ ] P07.8. Kiểm tra nhiều đích lỗi xen kẽ: A thành công không ngăn B; mốc lịch theo slot thực tế, không theo số lượt thành công.
-- [ ] P07.9. Cảnh báo ngăn job tiếp theo; phân biệt dừng một tài khoản và toàn bộ.
+- [x] P07.1. Job từ cặp tài khoản–đích được chọn, một đích một kết quả; mã yêu cầu chống bấm gửi hai lần. *(API `POST /api/approvals` (gắn danh tính đã xác nhận) và `POST /api/jobs` (một mục = một đích; `requestKey` cùng nội dung → trả lại kết quả cũ, khác nội dung → 409). Giao diện tạo job thuộc P10.)*
+- [ ] P07.2. Lưu UTC, hiển thị/lập lịch `Asia/Ho_Chi_Minh`; khoảng cách/giới hạn là chính sách vận hành, không phải ngưỡng chống ban. *(Đã có: lưu epoch UTC, hiển thị giờ Việt Nam, `parseVnLocal` cho ô nhập lịch, giãn cách là chính sách cấu hình. Chưa có ô nhập lịch trên giao diện — P10; chưa có giới hạn số bài mỗi ngày.)*
+- [x] P07.3. Worker nhận job bằng transaction, khóa tài khoản/Page, heartbeat, kiểm tra worker cũ; tuần tự trong từng tài khoản. *(worker nhận job có điều kiện, giữ khóa trình duyệt theo tài khoản, gia hạn quyền nhận theo nhịp, khôi phục job của worker chết; tuần tự trong từng tài khoản.)*
+- [x] P07.4. Trước gửi kiểm tra phiên bản duyệt, máy được đăng, đủ ảnh, tài khoản/đích/quyền và mạng. *(trước gửi kiểm tra bản duyệt còn hiệu lực, máy còn bán, ảnh còn trong kho (ảnh mất → failed, không đăng chỉ chữ), tài khoản/đích/quyền, `prepare` của adapter; có móc `preflight` cho danh tính/phiên/mạng khi dùng adapter thật (P08).)*
+- [x] P07.5. Chạy ngay/hẹn giờ/tạm dừng/tiếp tục/hủy phần chưa gửi; UI đọc trạng thái lưu bền, không chỉ bộ nhớ. *(chạy ngay (đổi giờ hẹn), tạm dừng, tiếp tục, hủy phần chưa gửi, yêu cầu dừng job đang chạy; trang "Hàng chờ đăng" đọc từ dữ liệu bền, tự cập nhật.)*
+- [x] P07.6. Mốc chuẩn bị/gửi/kết quả; crash trước gửi khác sau gửi, không tự nhận lại job có thể đã gửi. *(mốc gửi ghi TRƯỚC khi gửi; chết trước mốc → paused, sau mốc → unknown; không tự nhận lại job có thể đã gửi.)*
+- [x] P07.7. Sau restart liệt kê lịch quá hạn để tiếp tục/bỏ; không phát dồn bài cũ. *(job hẹn trễ hơn `APM_OVERDUE_MINUTES` (mặc định 15) không tự chạy, giao diện cảnh báo và cho "Chạy ngay"/"Bỏ" từng job; không phát dồn bài cũ.)*
+- [x] P07.8. Kiểm tra nhiều đích lỗi xen kẽ: A thành công không ngăn B; mốc lịch theo slot thực tế, không theo số lượt thành công. *(đích lỗi không chặn đích khác; giãn cách `APM_MIN_GAP_SECONDS` (mặc định 60) tính từ mốc gửi thực tế của cùng tài khoản.)*
+- [x] P07.9. Cảnh báo ngăn job tiếp theo; phân biệt dừng một tài khoản và toàn bộ. *(phiên hết hạn/checkpoint/sai danh tính khi gửi chỉ chặn đúng tài khoản đó (job đã xếp sau bị `blocked`, job mới bị từ chối); tạm dừng từng tài khoản hoặc tất cả có từ P03.6.)*
 
 **Đầu ra:** scheduler và state machine chạy trọn với adapter giả.
 

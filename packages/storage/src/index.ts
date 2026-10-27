@@ -6,6 +6,7 @@ export * from './browser-command-repository.ts';
 export * from './lease-repository.ts';
 export * from './content-repository.ts';
 export * from './group-repository.ts';
+export * from './job-query.ts';
 export * from './job-repository.ts';
 export * from './media-store.ts';
 export * from './secret-store.ts';

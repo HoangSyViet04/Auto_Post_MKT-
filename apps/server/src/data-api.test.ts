@@ -199,3 +199,50 @@ test('P03.3: API lệnh trình duyệt — từ chối khi worker chưa chạy/t
   const { 'x-apm-token': _token, ...noToken } = headers;
   assert.equal((await app.inject({ method: 'POST', url: `/api/accounts/${account}/browser`, headers: noToken, payload: { kind: 'login' } })).statusCode, 403);
 });
+
+test('P07: API duyệt và hàng chờ — duyệt cần danh tính, xếp job chống bấm hai lần, tạm dừng/tiếp tục/hủy/đổi lịch, danh sách từ dữ liệu bền', async () => {
+  const { createAccountRepository, createGroupRepository } = await import('#storage');
+  const call = (method: string, url: string, payload?: object) => app.inject({ method: method as 'GET', url, headers, ...(payload ? { payload } : {}) });
+  const accounts = createAccountRepository(db);
+  const account = accounts.create({ label: 'Nick A' }).id;
+  const group = createGroupRepository(db).add({ reference: '123456789012', accountId: account, name: 'Nhóm thử', membership: 'joined', permission: 'allowed' }).id;
+  const workspace_count = (table: string) => Number(db.prepare(`SELECT count(*) AS n FROM ${table}`).get()?.n);
+  const image_ = image;
+  const media = (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' }, payload: image_ })).json().id as string;
+  const made = (await call('POST', '/api/products', { name: 'iPhone 13', condition: 'Đẹp', mediaIds: [media] })).json();
+  const version = (await call('POST', `/api/products/${made.productId}/content-versions`, { revisionId: made.revisionId, caption: 'iPhone 13\nTình trạng: Đẹp', source: 'template', destinationId: group })).json().id as string;
+
+  assert.equal((await call('POST', '/api/approvals', { contentVersionId: version, accountId: account })).statusCode, 409); // chưa đăng nhập, chưa có danh tính
+  accounts.recordIdentity(account, 'vanity:nick.a'); accounts.recordSession(account, 'logged_in');
+  const approval = (await call('POST', '/api/approvals', { contentVersionId: version, accountId: account }));
+  assert.equal(approval.statusCode, 201);
+  const approvalId = approval.json().approvalId as string;
+
+  const now = Date.now();
+  const body = { requestKey: 'khoa-yeu-cau-1', jobs: [{ approvalId, scheduledAt: now + 3_600_000 }] };
+  const first = await call('POST', '/api/jobs', body);
+  assert.equal(first.statusCode, 201); const jobId = first.json().jobIds[0] as string;
+  const replay = await call('POST', '/api/jobs', body); // bấm gửi lần hai cùng mã yêu cầu
+  assert.deepEqual([replay.statusCode, replay.json().replayed, replay.json().jobIds[0]], [200, true, jobId]);
+  assert.equal((await call('POST', '/api/jobs', { ...body, jobs: [{ approvalId, scheduledAt: now + 7_200_000 }] })).statusCode, 409); // cùng mã, khác nội dung
+  assert.equal((await call('POST', '/api/jobs', { requestKey: 'short', jobs: [] })).statusCode, 400);
+  assert.equal(workspace_count('publish_jobs'), 1);
+
+  const listed = (await call('GET', '/api/jobs?pageSize=5')).json();
+  assert.deepEqual([listed.total, listed.items[0].status, listed.items[0].channel, listed.items[0].account.label, listed.items[0].productName, listed.items[0].destination.name],
+    [1, 'queued', 'group', 'Nick A', 'iPhone 13', 'Nhóm thử']);
+  assert.deepEqual([listed.items[0].overdue, listed.items[0].sendStarted, listed.items[0].scheduledAt], [false, false, now + 3_600_000]);
+  assert.equal((await call('GET', `/api/jobs?status=published`)).json().total, 0);
+  assert.equal((await call('GET', '/api/jobs?status=sai')).statusCode, 400);
+
+  assert.equal((await call('POST', `/api/jobs/${jobId}/pause`, {})).json().status, 'paused');
+  assert.equal((await call('POST', `/api/jobs/${jobId}/pause`, {})).statusCode, 409); // đã tạm dừng
+  assert.equal((await call('POST', `/api/jobs/${jobId}/reschedule`, { scheduledAt: now })).json().scheduledAt, now); // chạy ngay khi tiếp tục
+  assert.equal((await call('POST', `/api/jobs/${jobId}/resume`, {})).json().status, 'queued');
+  assert.equal((await call('POST', `/api/jobs/${jobId}/stop`, {})).statusCode, 409); // chưa chạy nên không có gì để dừng
+  assert.equal((await call('POST', `/api/jobs/${jobId}/cancel`, {})).json().status, 'cancelled');
+  assert.equal((await call('POST', `/api/jobs/${jobId}/cancel`, {})).statusCode, 409);
+  assert.equal((await call('POST', `/api/jobs/00000000-0000-4000-8000-000000000000/pause`, {})).statusCode, 404);
+  const { 'x-apm-token': _token, ...noToken } = headers;
+  assert.equal((await app.inject({ method: 'POST', url: '/api/jobs', headers: noToken, payload: body })).statusCode, 403);
+});

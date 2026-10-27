@@ -522,3 +522,18 @@ Mẫu một mục:
   - **Nhập nhóm vào DB thật** (người dùng đã đồng ý bỏ nhóm không ID): `groups:import --label=phu1 --account=phu1 --apply` → 81 nhóm có ID số được tạo, 49 bỏ qua.
 - **Giới hạn:** 1 tài khoản, 1 lần; chưa thử `identity_mismatch`, `network_error`, hủy lệnh đang chạy, `worker_lost` trên Facebook thật (chỉ driver giả); chưa thử hồ sơ thứ hai; cửa sổ Edge luôn hiện (cả khi kiểm tra phiên); người dùng tự mở thư mục hồ sơ ngoài app chưa được xử lý; chưa khởi động lại máy rồi verify. Hồ sơ trình duyệt của app mới (không dùng lại hồ sơ thử P01).
 - **Tiếp theo:** P07 (hàng chờ/lịch với adapter giả, dùng khóa trình duyệt và kiểm tra danh tính trước mỗi job) rồi P08 (adapter đăng nhóm/TCN thật từ mã thử P01).
+
+## 2026-10-27 12:45 — P07 (mô phỏng): hàng chờ, bộ chạy job của worker, API và trang Hàng chờ
+
+- **Quyết định người dùng:** làm P07 (hàng chờ và lịch với adapter giả) trước P08.
+- **Đã làm:**
+  - Lưu trữ: `ClaimOptions` cho `claimNext` (loại job theo tài nguyên bận, bỏ job quá hạn), `renewClaim`, `abandon` (trả job về hàng khi chưa gửi), `reschedule`, `lastSendStartedAt`, `hasRunningJob`, `logActivity`; `createJobQueries().list` (đọc job bền kèm đích/tài khoản/máy/kết quả cuối/quá hạn); `identityId` của tài khoản; cấu hình `APM_MIN_GAP_SECONDS` (mặc định 60), `APM_OVERDUE_MINUTES` (mặc định 15).
+  - Worker: `apps/worker/src/job-runner.ts` — khôi phục job của worker chết; nhận job (tuần tự theo tài khoản, giãn cách, bỏ quá hạn); giữ khóa trình duyệt; kiểm tra ảnh/điều kiện/`prepare`; **ghi mốc gửi rồi mới gửi đúng một lần**; lỗi sau mốc → `unknown`, không thử lại; lỗi phiên/checkpoint/sai danh tính chặn đúng tài khoản đó. Vòng lặp worker chạy cả lệnh trình duyệt lẫn job (chỉ adapter đã chọn: mặc định giả).
+  - Server: `GET /api/jobs`, `POST /api/approvals`, `POST /api/jobs`, `/api/jobs/:id/{pause,resume,cancel,stop,reschedule}`; bản caption theo đích (`destinationId` trong `POST /api/products/:id/content-versions`, P05.6).
+  - Web: trang "Hàng chờ đăng" (giờ Việt Nam, trạng thái tiếng Việt, thao tác theo trạng thái, cảnh báo job quá hạn, báo worker chưa chạy), `job-view.ts`.
+- **Kiểm tra:**
+  - Test phần mới: `job-runner.test.ts` 9 (chạy một lần, chưa đến hạn/quá hạn, unknown/ném lỗi/chờ duyệt không gửi lại, lỗi trước gửi và ảnh mất, dừng trước mốc gửi, khóa bận/giãn cách, phiên hết hạn chỉ chặn tài khoản đó, worker chết trước/sau mốc, đích xen kẽ); `data-api.test.ts` +1 (duyệt cần danh tính, chống bấm hai lần, tạm dừng/tiếp tục/hủy/đổi lịch, danh sách bền); `job-view.test.ts` 3.
+  - **Cổng tổng cuối phase: `npm.cmd test` → 176/176 đạt; typecheck, lint (112 file) đạt.** `build:web` mặc định vẫn vướng `dist` cũ (chưa kiểm lại).
+  - **Chạy thật (mô phỏng, DB tạm, server + worker + web, `APM_MIN_GAP_SECONDS=8`):** 3 job cùng tài khoản: job 1 chạy sau ~2s, job 2 chờ đúng giãn cách rồi chạy (~11s), job 3 quá hạn 1 giờ **không tự chạy**; bấm "Chạy ngay" trên giao diện (Edge điều khiển) → job 3 đã đăng (mô phỏng). Đã xem ảnh chụp; đã tắt server/worker/web.
+- **Giới hạn:** chỉ adapter giả — chưa có bài thật nào đi qua hàng chờ; chưa chạy P07 trên DB thật của người dùng; chưa thử worker bị tắt giữa lúc đang chạy bằng tiến trình thật (chỉ mô phỏng bằng test); Page (khóa `page:`) chưa có khóa riêng; chưa có giới hạn số bài/ngày; chưa có ô nhập lịch trên giao diện.
+- **Tiếp theo:** P08 — chuyển mã thử P01 (đăng nhóm/TCN) thành adapter thật cắm vào bộ chạy job (móc `preflight` xác nhận danh tính trước mỗi job), bắt đầu bằng `APM_INTEGRATIONS=live` cho một đích thử do người dùng chọn rõ.

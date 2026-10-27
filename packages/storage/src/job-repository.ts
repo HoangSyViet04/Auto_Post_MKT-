@@ -15,6 +15,14 @@ export interface EnqueueInput {
   requestKey: string; mode: IntegrationMode;
   jobs: readonly { approvalId: string; scheduledAt: number }[];
 }
+/** Một job đến hạn đang được cân nhắc nhận; dùng để loại job theo tài nguyên đang bận (khóa trình duyệt, giãn cách). */
+export interface ClaimCandidate { jobId: string; accountId: string | null; pageConnectionId: string | null; scheduledAt: number }
+export interface ClaimOptions {
+  /** Trả false thì bỏ qua job này lượt này (job vẫn queued). */
+  eligible?: (candidate: ClaimCandidate) => boolean;
+  /** Job hẹn đã quá hạn hơn ngưỡng này KHÔNG được tự chạy (tránh phát dồn bài cũ sau khi tắt máy); người dùng chọn tiếp tục hoặc bỏ. */
+  overdueAfterMs?: number;
+}
 export interface Completion {
   outcome: 'published' | 'pending_approval' | 'unknown' | 'failed';
   source: 'fake' | 'api_response' | 'ui_observation';
@@ -86,20 +94,25 @@ export function createJobRepository(db: Database, options: RepositoryOptions = {
       });
     },
 
-    claimNext(workerId: string, integrationMode: IntegrationMode = 'fake', leaseMs = 30_000): JobClaim | undefined {
+    claimNext(workerId: string, integrationMode: IntegrationMode = 'fake', leaseMs = 30_000, claimOptions: ClaimOptions = {}): JobClaim | undefined {
       text(workerId, 200); mode(integrationMode);
+      if (claimOptions.overdueAfterMs !== undefined && (!Number.isSafeInteger(claimOptions.overdueAfterMs) || claimOptions.overdueAfterMs < 0)) throw new BusinessError('invalid_input');
       if (!Number.isSafeInteger(leaseMs) || leaseMs < 1 || leaseMs > 300_000) throw new BusinessError('invalid_input');
       return atomic(db, () => {
         const now = clock(); const expires = timestamp(now + leaseMs);
         const due = db.prepare(`SELECT j.id FROM publish_jobs j JOIN approvals a ON a.id=j.approval_id
-          WHERE j.status='queued' AND j.scheduled_at<=? AND a.mode=? ORDER BY j.scheduled_at,j.id LIMIT 100`)
-          .all(now, integrationMode) as { id: string }[];
+          WHERE j.status='queued' AND j.scheduled_at<=? AND j.scheduled_at>=? AND a.mode=? ORDER BY j.scheduled_at,j.id LIMIT 100`)
+          .all(now, claimOptions.overdueAfterMs === undefined ? 0 : Math.max(0, now - claimOptions.overdueAfterMs), integrationMode) as { id: string }[];
         for (const candidate of due) {
           const job = get(candidate.id);
           const problem = readiness(db, snapshot(db, job.approval_id), integrationMode);
           if (problem) {
             db.prepare("UPDATE publish_jobs SET status=? WHERE id=? AND status='queued'").run(problem.status, job.id);
             continue;
+          }
+          if (claimOptions.eligible) {
+            const row = snapshot(db, job.approval_id);
+            if (!claimOptions.eligible({ jobId: job.id, accountId: row.account_id, pageConnectionId: row.page_connection_id, scheduledAt: job.scheduled_at })) continue;
           }
           const changed = db.prepare(`UPDATE publish_jobs SET status='running',claim_owner_id=?,
             claim_generation=claim_generation+1,claimed_at=?,claim_expires_at=? WHERE id=? AND status='queued'`)
@@ -130,6 +143,58 @@ export function createJobRepository(db: Database, options: RepositoryOptions = {
         // Return managed metadata only. MediaStore must resolve/verify actual files later.
         return { jobId: job.id, destinationId: row.destination_id, caption: row.caption,
           mode: row.mode, context, media: selectedMedia(db, row.content_version_id) };
+      });
+    },
+
+    /** Gia hạn quyền nhận job (nhịp sống) khi adapter chạy lâu; mất quyền thì ném claim_lost để dừng ngay. */
+    renewClaim(claim: JobClaim, leaseMs: number): void {
+      if (!Number.isSafeInteger(leaseMs) || leaseMs < 1 || leaseMs > 300_000) throw new BusinessError('invalid_input');
+      atomic(db, () => {
+        const now = clock(); const { job } = owned(claim, now);
+        db.prepare('UPDATE publish_jobs SET claim_expires_at=? WHERE id=? AND claim_generation=?').run(timestamp(now + leaseMs), job.id, claim.generation);
+      });
+    },
+
+    /** Trả job về hàng chờ khi chưa gửi gì (ví dụ không giữ được khóa). Đã có mốc gửi thì không được phép. */
+    abandon(claim: JobClaim): void {
+      atomic(db, () => {
+        const now = clock(); const { job, attempt } = owned(claim, now);
+        if (attempt.send_started_at !== null) throw new BusinessError('invalid_transition');
+        end(job.id, attempt.id, 'queued', now);
+      });
+    },
+
+    /** Đổi giờ hẹn của job chưa gửi (đang chờ hoặc tạm dừng), ví dụ "tiếp tục" job quá hạn: chạy từ bây giờ. */
+    reschedule(jobId: string, scheduledAt: number): StoredJob {
+      timestamp(scheduledAt);
+      return atomic(db, () => {
+        const job = get(jobId);
+        if ((job.status !== 'queued' && job.status !== 'paused')
+          || one(db, 'SELECT id FROM publish_attempts WHERE job_id=? AND send_started_at IS NOT NULL', job.id)) throw new BusinessError('invalid_transition');
+        db.prepare('UPDATE publish_jobs SET scheduled_at=? WHERE id=?').run(scheduledAt, job.id);
+        return get(job.id);
+      });
+    },
+
+    /** Mốc gửi gần nhất của tài khoản (để giãn cách giữa các lần đăng cùng một tài khoản); null nếu chưa gửi lần nào. */
+    lastSendStartedAt(accountId: string): number | null {
+      identifier(accountId);
+      return one<{ t: number | null }>(db, `SELECT MAX(t.send_started_at) AS t FROM publish_attempts t JOIN publish_jobs j ON j.id=t.job_id
+        JOIN approvals a ON a.id=j.approval_id WHERE a.account_id=?`, accountId)?.t ?? null;
+    },
+
+    hasRunningJob(accountId: string): boolean {
+      identifier(accountId);
+      return one(db, `SELECT j.id FROM publish_jobs j JOIN approvals a ON a.id=j.approval_id WHERE j.status='running' AND a.account_id=? LIMIT 1`, accountId) !== undefined;
+    },
+
+    /** Ghi một dòng nhật ký hoạt động có mã cố định (không chứa nội dung bài hay lỗi thô). */
+    logActivity(jobId: string, severity: 'info' | 'warn' | 'error', actionCode: string, reasonCode?: string): void {
+      identifier(jobId);
+      if (!/^[a-z_]{1,60}$/u.test(actionCode) || (reasonCode !== undefined && !/^[a-z_]{1,60}$/u.test(reasonCode))) throw new BusinessError('invalid_input');
+      atomic(db, () => {
+        db.prepare('INSERT INTO activity_log(id,job_id,severity,action_code,reason_code,occurred_at) VALUES(?,?,?,?,?,?)')
+          .run(randomUUID(), jobId, severity, actionCode, reasonCode ?? null, clock());
       });
     },
 

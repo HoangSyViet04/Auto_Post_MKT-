@@ -39,6 +39,24 @@ export function getDatabasePath(): string {
   return join(getDataDir(), 'db', `${getAppEnv()}.sqlite`);
 }
 
+function nonNegativeInt(name: string, fallback: number, max: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0 || value > max) throw new Error(`${name} không hợp lệ: ${raw}`);
+  return value;
+}
+
+/** Giãn cách tối thiểu giữa hai lần đăng của CÙNG một tài khoản (APM_MIN_GAP_SECONDS, mặc định 60). Chính sách vận hành, không phải ngưỡng chống khóa nick. */
+export function getMinGapMs(): number {
+  return nonNegativeInt('APM_MIN_GAP_SECONDS', 60, 86_400) * 1_000;
+}
+
+/** Job hẹn trễ quá ngưỡng này (APM_OVERDUE_MINUTES, mặc định 15) không tự chạy; người dùng chọn tiếp tục hoặc bỏ. */
+export function getOverdueAfterMs(): number {
+  return nonNegativeInt('APM_OVERDUE_MINUTES', 15, 10_080) * 60_000;
+}
+
 /**
  * Điều khiển trình duyệt thật của worker (APM_BROWSER): off (mặc định) hoặc real. Khác APM_INTEGRATIONS: real chỉ cho phép worker
  * mở trình duyệt để người dùng đăng nhập/kiểm tra phiên khi họ bấm nút; không tự đăng bài. Bị cấm khi APM_ENV=test.

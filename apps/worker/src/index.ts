@@ -2,13 +2,14 @@
  * Worker: nhận lệnh trình duyệt, (sau này) scheduler, quét nhóm, thực hiện đăng.
  * Tiến trình DUY NHẤT được điều khiển Playwright/browser profiles.
  * Điều khiển trình duyệt mặc định TẮT (APM_BROWSER=off); chỉ chạy lệnh đăng nhập/kiểm tra phiên do người dùng bấm khi APM_BROWSER=real.
- * Chưa có scheduler (P07): khởi động worker không tạo hay gửi bài nào. `--once`: khởi động, ghi nhịp sống, thoát (dùng cho test).
+ * Chạy job đến hạn bằng adapter đã chọn (APM_INTEGRATIONS=fake: mô phỏng, không gọi Facebook). Khởi động worker không tự tạo job. `--once`: khởi động, ghi nhịp sống, thoát (dùng cho test).
  */
 import { createPlaywrightDriver } from '#browser';
-import { getAppEnv, getBrowserMode, getDatabasePath, getDataDir, getIntegrationMode } from '#config';
+import { getAppEnv, getBrowserMode, getDatabasePath, getDataDir, getIntegrationMode, getMinGapMs, getOverdueAfterMs } from '#config';
 import { createLogger } from '#logging';
-import { migrate, openDatabase, writeWorkerHeartbeat } from '#storage';
+import { createMediaStore, migrate, openDatabase, writeWorkerHeartbeat } from '#storage';
 import { createBrowserCommandRunner } from './browser-commands.ts';
+import { createJobRunner } from './job-runner.ts';
 import { createPublishers } from './publishers.ts';
 
 const HEARTBEAT_MS = 5_000;
@@ -26,7 +27,7 @@ try {
   log.info(
     `[worker] env=${env} integrations=${mode}${simulated ? ' (mô phỏng, không gọi Facebook)' : ''} browser=${browser} channels=${Object.keys(publishers).join(',')}`,
   );
-  log.info('[worker] Chưa có scheduler (P07): không tự đăng bài.');
+  log.info('[worker] Chỉ chạy job do người dùng đã duyệt và xếp lịch; không tự tạo bài.');
 
   const db = openDatabase(getDatabasePath());
   migrate(db);
@@ -39,17 +40,26 @@ try {
     const runner = browser === 'real'
       ? createBrowserCommandRunner({ db, driver: createPlaywrightDriver(), workerId, dataDir: getDataDir(), log })
       : undefined;
+    const jobRunner = createJobRunner({ db, workerId, mode, publishers, media: createMediaStore(db), minGapMs: getMinGapMs(), overdueAfterMs: getOverdueAfterMs(), log });
     if (!runner) log.info('[worker] APM_BROWSER=off: không mở trình duyệt; lệnh đăng nhập/kiểm tra phiên sẽ chờ cho tới khi bật APM_BROWSER=real.');
     const beat = setInterval(() => {
       try { writeWorkerHeartbeat(db, browser); } catch (error) { log.error({ errorName: error instanceof Error ? error.name : 'unknown' }, 'Không ghi được nhịp sống'); }
     }, HEARTBEAT_MS);
     let busy = false;
+    let jobsBusy = false;
     const poll = setInterval(() => {
-      if (!runner || busy) return;
-      busy = true;
-      (async () => { while ((await runner.processNext()) === 'processed') { /* xử lý hết lệnh đang chờ */ } })()
-        .catch((error) => log.error({ errorName: error instanceof Error ? error.name : 'unknown' }, 'Vòng xử lý lệnh trình duyệt lỗi'))
-        .finally(() => { busy = false; });
+      if (runner && !busy) {
+        busy = true;
+        (async () => { while ((await runner.processNext()) === 'processed') { /* xử lý hết lệnh đang chờ */ } })()
+          .catch((error) => log.error({ errorName: error instanceof Error ? error.name : 'unknown' }, 'Vòng xử lý lệnh trình duyệt lỗi'))
+          .finally(() => { busy = false; });
+      }
+      if (!jobsBusy) {
+        jobsBusy = true;
+        (async () => { while ((await jobRunner.processNext()) === 'processed') { /* xử lý hết job đến hạn */ } })()
+          .catch((error) => log.error({ errorName: error instanceof Error ? error.name : 'unknown' }, 'Vòng xử lý job lỗi'))
+          .finally(() => { jobsBusy = false; });
+      }
     }, POLL_MS);
     const shutdown = (signal: string) => {
       log.info(`[worker] Nhận ${signal}, đang dừng`);

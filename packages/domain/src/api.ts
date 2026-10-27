@@ -1,5 +1,6 @@
 /** Kiểu request/response của API cục bộ, dùng chung giữa server và web. */
-import type { IntegrationMode } from './channels.ts';
+import type { Channel, IntegrationMode } from './channels.ts';
+import type { JobStatus } from './job-status.ts';
 
 export type AppEnvName = 'development' | 'test' | 'production';
 
@@ -125,6 +126,36 @@ export interface GroupListResponse {
   total: number;
   page: number;
   pageSize: number;
+}
+
+export interface JobListItem {
+  id: string;
+  status: JobStatus;
+  /** Giờ hẹn (UTC, mili giây). Hiển thị/lập lịch theo múi giờ Asia/Ho_Chi_Minh ở giao diện. */
+  scheduledAt: number;
+  createdAt: number;
+  channel: Channel;
+  mode: IntegrationMode;
+  destination: { id: string; name: string | null; externalId: string | null };
+  /** null với kênh Page (đăng qua kết nối Page, không qua tài khoản trình duyệt). */
+  account: { id: string; label: string } | null;
+  productName: string;
+  attempts: number;
+  /** true nếu đã có mốc bắt đầu gửi: job có thể đã tới Facebook, không được tự gửi lại. */
+  sendStarted: boolean;
+  stopRequested: boolean;
+  /** Quá hạn: còn chờ nhưng giờ hẹn đã qua lâu hơn ngưỡng cho phép tự chạy; cần người dùng chọn tiếp tục hoặc bỏ. */
+  overdue: boolean;
+  lastObservation: { outcome: string; reasonCode: string | null; remoteId: string | null; observedAt: number } | null;
+}
+
+export interface JobListResponse {
+  items: JobListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** Ngưỡng quá hạn đang áp dụng (ms). */
+  overdueAfterMs: number;
 }
 
 export interface ContentVersionItem {

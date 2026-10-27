@@ -55,6 +55,13 @@ export const NAV: NavSection[] = [
         actions: [],
       },
       {
+        id: 'queue',
+        title: 'Hàng chờ đăng',
+        description: 'Các bài đã duyệt và xếp lịch: trạng thái từng đích, tạm dừng, hủy, chạy ngay.',
+        phase: 'P07',
+        actions: [],
+      },
+      {
         id: 'post-group',
         title: 'Đăng bài viết nhóm',
         description: 'Chọn tài khoản và group, cấu hình nội dung, ảnh, lịch; theo dõi kết quả từng group.',
