@@ -434,3 +434,17 @@ Mẫu một mục:
 - **Chưa làm:** đăng thử có ảnh (cố ý hoãn đến khi biết kết quả bài chữ); P01.4 TCN (người dùng chưa xác nhận đích/đối tượng "Chỉ mình tôi"); nhận diện đã gửi/chờ duyệt/từ chối chắc chắn.
 - **Tồn đọng:** người dùng cần tự xóa bài thử trên nhóm (công cụ không xóa). Cần cải thiện nhận diện: tìm marker lâu hơn/cuộn feed, xem mục bài chờ duyệt của quản trị, chỉ coi pending khi thấy marker trong danh sách chờ.
 - **Tiếp theo:** người dùng cho biết bài `APM-TEST-20261027041131` đang ở đâu (đã hiện / chờ duyệt / không có) để hiệu chỉnh nhận diện, rồi mới đăng thử ảnh.
+
+## 2026-10-27 11:30 — P01.5 (một phần): đăng thử thật 2 bài vào group, hiệu chỉnh nhận diện
+
+- **Người dùng đối chiếu:** bài chữ `APM-TEST-20261027041131` **đã hiện** trên nhóm (tài khoản quản trị: bài đăng thẳng, không chờ duyệt); người dùng tự xóa bài thử.
+- **Sai sót của công cụ đã phát hiện nhờ đối chiếu:** lượt đầu báo `pending_approval` (sai). Nguyên nhân: coi "không thấy bài trong 6 giây + có chữ đang chờ/pending ở đâu đó trên trang" là chờ duyệt, trong khi quản trị luôn có mục đó. Đã bỏ suy luận này: chỉ `published` khi thấy dấu vết của bài, ngược lại `unknown`; chờ duyệt chưa được hỗ trợ.
+- **Đã làm (spikes/fb-group-post.ts):** thêm lệnh `find` (chỉ đọc, tìm lại bài theo dấu vết, cuộn tối đa 6 lần); đăng thử bài thứ hai (chữ + 2 ảnh PNG tự tạo, marker `APM-TEST-20261027041940`): đúng một lần bấm Đăng, hộp thoại đóng, `find` thấy bài (`published`).
+- **Kết quả không đáng tin (ghi để không dùng nhầm):**
+  - `postId`: lần đầu cả hai bài cùng ra `1690702521676856` → lấy nhầm liên kết của bài khác; sau khi chỉ chấp nhận khi tầng gần nhất có đúng một ID thì không đọc được (`khong_doc_duoc`).
+  - Đếm ảnh: `8` cho bài chỉ có chữ (khối quá rộng), `3` trên trang riêng của một ID sai → bỏ. Số ảnh đính kèm chỉ được xác nhận **trong hộp thoại trước khi đăng** (đúng 2); chưa xác nhận trong bài đã đăng.
+  - Bài chữ lần `find` thứ hai không thấy nữa (`unknown`, cuộn 6 lần) — khớp với việc người dùng xóa bài; không dùng làm bằng chứng về độ ổn định.
+- **Kiểm tra:** `npm.cmd run typecheck`, `npm.cmd run lint` (91 file) đạt. Không chạy cổng tổng. Chốt an toàn: thiếu `--confirm-post`/`--expect-title` bị từ chối; `--expect-title` sai tên nhóm → dừng.
+- **Giới hạn:** 1 nhóm, 1 nick quản trị, giao diện tiếng Việt, 2 bài, chưa lặp lại sau khởi động lại; chưa thử nick thường (pending/từ chối), chưa thử TCN (P01.4: người dùng chưa xác nhận đối tượng "Chỉ mình tôi").
+- **Tồn đọng:** người dùng tự xóa bài thử thứ hai (marker `APM-TEST-20261027041940`). Cần cách đọc ID bài và đếm ảnh đáng tin (P01.9), cách nhận diện chờ duyệt/từ chối, thử lại sau restart.
+- **Tiếp theo:** (1) người dùng xác nhận bài 2 hiện đủ 2 ảnh rồi xóa; (2) quyết định có thử TCN không (cần đặt đối tượng mặc định "Chỉ mình tôi"); (3) thử nick không phải quản trị nếu muốn kiểm chứng pending/từ chối.

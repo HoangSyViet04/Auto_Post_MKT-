@@ -31,13 +31,15 @@ const flags = new Map(rest.map((arg) => {
   const [key = '', ...value] = arg.replace(/^--/u, '').split('=');
   return [key, value.join('=') || 'true'] as const;
 }));
-if (command !== 'prepare' && command !== 'post') fail(USAGE);
+if (command !== 'prepare' && command !== 'post' && command !== 'find') fail(USAGE);
 if (getAppEnv() === 'test') fail('Không chạy trong APM_ENV=test.');
 const label = flags.get('label') ?? '';
 if (!/^[a-z0-9_-]{1,30}$/u.test(label)) fail('--label không hợp lệ.');
 const groupId = flags.get('group') ?? '';
 if (!/^\d{10,25}$/u.test(groupId)) fail('--group phải là ID số của nhóm.');
-if (command === 'prepare' && !flags.has('confirm-real')) fail(`Thiếu --confirm-real.\n${USAGE}`);
+if ((command === 'prepare' || command === 'find') && !flags.has('confirm-real')) fail(`Thiếu --confirm-real.\n${USAGE}`);
+const findMarker = flags.get('marker') ?? '';
+if (command === 'find' && !/^APM-TEST-\d{14}$/u.test(findMarker)) fail('--marker phải có dạng APM-TEST-<14 số>.');
 const dryRun = flags.has('dry-run');
 const mode = flags.get('mode') ?? '';
 const expectTitle = (flags.get('expect-title') ?? '').trim();
@@ -86,7 +88,6 @@ async function readIdentity(page: Page): Promise<string | null> {
 const COMPOSER = /viết gì đi|bạn đang nghĩ gì|write something|what'?s on your mind/i; // Playwright không nhận cờ u khi dựng selector
 const POST_BUTTON = /^(đăng|post)$/i;
 const PHOTO_BUTTON = /ảnh\/video|photo\/video|ảnh|photo/i;
-const PENDING_TEXT = /đang chờ|chờ phê duyệt|chờ duyệt|pending/i;
 
 const firstLine = (text: string) => text.slice(0, text.search(/[\r\n]/u) === -1 ? text.length : text.search(/[\r\n]/u));
 
@@ -103,19 +104,47 @@ async function makeImages(): Promise<string[]> {
   return paths;
 }
 
-/** Tìm bài có dấu vết duy nhất trong feed nhóm; trả ID bài nếu đọc được. */
 /** Đếm ảnh nội dung (bỏ icon/avatar nhỏ). */
 const bigImages = (scope: Locator): Promise<number> => scope.locator('img').evaluateAll((nodes) => nodes.filter((node) => (node as unknown as { naturalWidth: number }).naturalWidth >= 150).length);
 
-async function findPost(page: Page, marker: string): Promise<{ found: boolean; postId: string | null; pendingNotice: boolean; images: number }> {
+/**
+ * Tìm bài theo dấu vết duy nhất trong feed nhóm (cuộn tối đa 6 lần). Chỉ coi là thấy khi chính dấu vết xuất hiện trên trang;
+ * KHÔNG suy ra "chờ duyệt" từ chữ chung trên trang (quản trị luôn có mục đó). Chờ duyệt chỉ kết luận khi thấy dấu vết trong
+ * danh sách chờ — chưa hỗ trợ, nên không thấy bài thì là unknown.
+ */
+async function findPost(page: Page, marker: string): Promise<{ found: boolean; postId: string | null; images: number; scrolls: number }> {
   await page.goto(`https://www.facebook.com/groups/${groupId}`, { waitUntil: 'load', timeout: 45_000 });
-  await page.waitForTimeout(6_000);
-  const pendingNotice = (await page.getByText(PENDING_TEXT).count()) > 0;
-  const article = page.locator('[role="article"]').filter({ hasText: marker }).first();
-  if ((await article.count()) === 0) return { found: false, postId: null, pendingNotice, images: 0 };
-  const hrefs = await article.locator('a[href*="/posts/"], a[href*="/permalink/"]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('href') ?? ''));
-  const match = hrefs.map((href) => /\/(?:posts|permalink)\/(\d{6,25})/u.exec(href)?.[1]).find(Boolean);
-  return { found: true, postId: match ?? null, pendingNotice, images: await bigImages(article) };
+  await page.waitForTimeout(5_000);
+  const text = page.getByText(marker).first();
+  let scrolls = 0;
+  while ((await page.getByText(marker).count()) === 0 && scrolls < 6) {
+    await page.mouse.wheel(0, 1_500);
+    await page.waitForTimeout(2_000);
+    scrolls += 1;
+  }
+  if ((await page.getByText(marker).count()) === 0) return { found: false, postId: null, images: 0, scrolls };
+  // Đi lên từ dòng chữ tới tầng gần nhất có liên kết bài viết; chỉ tin khi tầng đó có ĐÚNG MỘT ID (nhiều ID = lẫn bài khác).
+  const ids = await text.evaluate((element) => {
+    // Chạy trong trình duyệt: mô tả tối thiểu các API DOM cần dùng (tsconfig Node không có kiểu DOM).
+    type Walk = { parentElement: Walk | null; querySelectorAll(selector: string): ArrayLike<{ getAttribute(name: string): string | null }> };
+    let node = element as unknown as Walk | null;
+    for (let level = 0; node && level < 14; level += 1) {
+      const found = new Set<string>();
+      for (const link of Array.from(node.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"]'))) {
+        const hit = /\/(?:posts|permalink)\/(\d{6,25})/.exec(link.getAttribute('href') ?? '');
+        if (hit?.[1]) found.add(hit[1]);
+      }
+      if (found.size > 0) return Array.from(found);
+      node = node.parentElement;
+    }
+    return [] as string[];
+  });
+  const match = ids.length === 1 ? ids[0] : undefined;
+  if (!match) return { found: true, postId: null, images: -1, scrolls };
+  // Đếm ảnh trên trang riêng của bài (khối trong feed bao quanh quá rộng nên đếm sai).
+  await page.goto(`https://www.facebook.com/groups/${groupId}/posts/${match}`, { waitUntil: 'load', timeout: 45_000 });
+  await page.waitForTimeout(5_000);
+  return { found: true, postId: match, images: await bigImages(page.locator('[role="main"]').first()), scrolls };
 }
 
 const context = await chromium.launchPersistentContext(join(base, 'profiles', label), { channel: 'msedge', headless: false, viewport: null });
@@ -147,7 +176,11 @@ try {
         const count = await composers.count();
         say({ event: 'o_soan_bai', soLuongKhop: count });
         if (count !== 1) { say({ event: 'ket_thuc', status: count === 0 ? 'composer_not_found' : 'composer_ambiguous' }); exitCode = 7; }
-        else if (command === 'prepare') say({ event: 'ket_thuc', status: 'composer_found', visible: await composers.first().isVisible() });
+        else if (command === 'find') {
+          // Chỉ đọc: tìm lại một bài thử đã đăng theo dấu vết, để hiệu chỉnh cách nhận diện.
+          const seen = await findPost(page, findMarker);
+          say({ event: 'ket_thuc', status: seen.found ? 'published' : 'unknown', postId: seen.postId ?? 'khong_doc_duoc', anhTrongBai: seen.images, cuon: seen.scrolls });
+        } else if (command === 'prepare') say({ event: 'ket_thuc', status: 'composer_found', visible: await composers.first().isVisible() });
         else {
           const marker = `APM-TEST-${new Date().toISOString().replace(/\D/gu, '').slice(0, 14)}`;
           const caption = `[${marker}] Bài thử nghiệm của ứng dụng, sẽ được xóa.`;
@@ -187,8 +220,8 @@ try {
               say({ event: 'da_bam_dang', marker });
               const closed = await dialogs.first().waitFor({ state: 'hidden', timeout: 60_000 }).then(() => true, () => false);
               const seen = await findPost(page, marker);
-              const status = seen.found ? 'published' : seen.pendingNotice ? 'pending_approval' : 'unknown';
-              say({ event: 'ket_thuc', status, hopThoaiDong: closed, postId: seen.postId ?? 'khong_doc_duoc', anhTrongBai: seen.images, marker });
+              const status = seen.found ? 'published' : 'unknown'; // chưa nhận diện được chờ duyệt (xem findPost)
+              say({ event: 'ket_thuc', status, hopThoaiDong: closed, postId: seen.postId ?? 'khong_doc_duoc', anhTrongBai: seen.images, cuon: seen.scrolls, marker });
               mkdirSync(join(base, 'evidence'), { recursive: true });
               writeFileSync(join(base, 'evidence', `group-post-${marker}.json`), JSON.stringify({ marker, mode, status, postId: seen.postId, images: seen.images, groupId, observedAt: new Date().toISOString() }, null, 2));
               if (status === 'unknown') exitCode = 9;
