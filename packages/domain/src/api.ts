@@ -49,6 +49,23 @@ export interface ProductListResponse {
   pageSize: number;
 }
 
+export type SessionStatus = 'unknown' | 'logged_in' | 'login_required' | 'verification_required' | 'network_error';
+
+export interface AccountSummary {
+  id: string;
+  label: string;
+  slot: 1 | 2;
+  sessionStatus: SessionStatus;
+  paused: boolean;
+  createdAt: number;
+  /** null: chưa xác nhận được danh tính Facebook (xác nhận thuộc P03.3/P03.4). */
+  identity: { remoteId: string; displayName: string | null; confirmedAt: number } | null;
+  proxy: { id: string; label: string } | null;
+  /** Đếm từ các tác vụ đã lưu, không ước lượng. */
+  queuedJobs: number;
+  runningJobs: number;
+}
+
 export interface ContentVersionItem {
   id: string;
   revisionId: string;

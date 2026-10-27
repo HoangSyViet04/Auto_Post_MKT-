@@ -314,3 +314,47 @@ button.link {
   padding: 6px 10px;
   font-size: 13px;
 }
+
+.inline-input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  min-width: 260px;
+}
+
+.inline-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.inline-form button,
+.row-actions button {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font: inherit;
+  cursor: pointer;
+}
+
+.row-actions button {
+  margin: 0 6px 6px 0;
+}
+
+.row-actions .field-warning {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.row-actions button:disabled,
+.inline-form button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+button.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

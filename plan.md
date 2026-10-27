@@ -157,7 +157,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P00 | Nền dự án, môi trường Windows | README/plan | Hoàn thành (P00.1–P00.8) |
 | P01 | Bằng chứng khả thi các tích hợp | P00 | Đang chuẩn bị offline; chưa kiểm chứng thật |
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Offline xong (P02.1–P02.8); tích hợp thật chờ P01 |
-| P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
+| P03 | Quản lý tài khoản | P01, P02 | Offline: P03.1/P03.2/P03.6 làm một phần (bảng, thêm/đổi nhãn/tạm dừng/gỡ); P03.3–P03.5, P03.7 cần trình duyệt/P01 |
 | P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Offline xong phần làm được: P05.1–P05.4, P05.8; P05.5/P05.6/P05.7 làm một phần (chờ tài khoản/đích/lịch từ P03/P06/P07) |
 | P06 | Quét nhóm và danh sách đích | P01–P04 | Chưa bắt đầu |
@@ -230,12 +230,12 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Mục tiêu:** quản lý hai phiên Facebook đúng danh tính.
 
-- [ ] P03.1. Bảng nhãn, UID/link khi quan sát được, tên/avatar, trạng thái, proxy, lần kiểm tra, tác vụ hiện tại; thống kê có căn cứ.
-- [ ] P03.2. Thêm/sửa nhãn/mở/đóng phiên/gỡ; ngăn vượt phạm vi hai tài khoản.
+- [ ] P03.1. Bảng nhãn, UID/link khi quan sát được, tên/avatar, trạng thái, proxy, lần kiểm tra, tác vụ hiện tại; thống kê có căn cứ. *(Đã có bảng: nhãn/chỗ, danh tính (hiện "Chưa xác nhận" tới khi có P03.3–P03.4), trạng thái phiên, proxy, số tác vụ đang chạy/chờ đếm từ DB, tạm dừng. Chưa có: avatar và "lần kiểm tra phiên" — chưa có nguồn dữ liệu.)*
+- [ ] P03.2. Thêm/sửa nhãn/mở/đóng phiên/gỡ; ngăn vượt phạm vi hai tài khoản. *(Đã có: thêm, đổi nhãn (không trùng, không phân biệt hoa/thường), gỡ có xác nhận, tối đa hai tài khoản kèm hồ sơ trình duyệt riêng. Chưa có: mở/đóng phiên — cần trình duyệt, P03.3.)*
 - [ ] P03.3. Tích hợp đăng nhập thủ công và mở lại profile P01; không lưu mật khẩu/2FA vào bảng.
 - [ ] P03.4. Kiểm tra danh tính trước tác vụ; không xác nhận được hoặc khác mong đợi thì dừng.
 - [ ] P03.5. Khóa profile đang dùng; mở thủ công phải tạm dừng/nhường quyền, không tranh điều khiển worker.
-- [ ] P03.6. Tạm dừng từng tài khoản/toàn bộ; gỡ tài khoản thì dừng lịch phụ thuộc, không chuyển sang tài khoản còn lại.
+- [ ] P03.6. Tạm dừng từng tài khoản/toàn bộ; gỡ tài khoản thì dừng lịch phụ thuộc, không chuyển sang tài khoản còn lại. *(Đã có ở tầng dữ liệu + UI và đã test với tác vụ giả: tạm dừng chặn nhận/gửi (readiness) và yêu cầu dừng tác vụ đang chạy; gỡ thu hồi bản duyệt, hủy tác vụ chưa gửi. Chưa thử với worker/scheduler thật — P07.)*
 - [ ] P03.7. Phân biệt mất mạng, cần đăng nhập, cần xác minh, chưa rõ; không suy bị khóa từ một lần lỗi trang.
 
 **Đầu ra:** trang tài khoản và BrowserProfileManager.
@@ -495,6 +495,7 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 27/10/2026 | P02.7 | Upload/read media bằng bytes/ID, product create/list, strict schemas/body bounds/pagination, ADR0010 | 3/3 API tests; typecheck đạt; full gate cùng P02.8 | P02.8 test runner/fixtures, sau đó phần độc lập P03/P05 |
 | 27/10/2026 | P05.1–P05.4 | Trang Quản lý máy: form ảnh/thứ tự/thumbnail, sửa = revision mới, đã bán/ngừng bán, caption mẫu + chỉnh tay (chưa lưu) | 133/133 test, typecheck/lint đạt; chạy thật server+Vite+Edge headless; build:web vướng quyền dist cũ (build tạm đạt) | P05.5 lưu/duyệt phiên bản, P05.7, P05.8 |
 | 27/10/2026 | P05.5–P05.8 | Lưu bản caption theo phiên bản máy, cảnh báo giống nội dung, dọn ảnh mồ côi an toàn | Test theo phần mới; cổng tổng cuối phase: 139/139 test, typecheck/lint đạt, build web ra thư mục tạm đạt | P03/P04/P06 hoặc P01 thật khi có đầu vào |
+| 27/10/2026 | P03.1/P03.2/P03.6 (một phần) | Trang Quản lý tài khoản: thêm/đổi nhãn/tạm dừng/gỡ, tối đa hai, hồ sơ trình duyệt riêng | Test theo phần mới (repository 2, API 7 trong file); chạy thật Edge headless; chưa chạy cổng tổng | P03.3+ cần trình duyệt/P01; P04 proxy |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 

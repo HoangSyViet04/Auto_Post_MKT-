@@ -336,3 +336,19 @@ Mẫu một mục:
 - **Quyết định:** không migration, không dependency. Chọn "giải phóng file + giữ dòng" thay vì thêm trạng thái `archived` cho media (cần dựng lại bảng, ADR 0002).
 - **Tồn đọng / lưu ý:** P05.5 (duyệt), P05.6 (bản theo đích), P05.7 (UI bài/lịch cần kiểm tra) mở vì phụ thuộc tài khoản/đích/lịch. File `.part` mồ côi trong `media/staging` sau crash vẫn chưa được quét. `apps/web/dist` vẫn cần xóa bằng quyền admin.
 - **Tiếp theo:** các phần còn làm được không cần Facebook thật: P03.1–P03.2 (bảng tài khoản, thêm/sửa/gỡ, giới hạn hai tài khoản) và P04.1 (form proxy, mật khẩu qua DPAPI) — hai phần này mở khóa duyệt/đích cho P05. P01 thật vẫn chờ người dùng chọn tài khoản/đích/phạm vi.
+
+## 2026-10-27 10:01 — P03 (offline, một phần): trang Quản lý tài khoản
+
+- **Đã làm:**
+  - `createAccountRepository` (`packages/storage/src/account-repository.ts`): `list/get/create/rename/setPaused/setAllPaused/remove`. Tối đa hai tài khoản đang dùng (mã lỗi mới `account_limit`); mỗi tài khoản tạo kèm `browser_profiles` riêng (chưa có proxy, chưa đăng nhập); nhãn gọn khoảng trắng và không trùng (không phân biệt hoa/thường). Tạm dừng: đặt cờ `paused` (readiness đã chặn nhận/gửi) + yêu cầu dừng tác vụ đang chạy của đúng tài khoản đó. Gỡ: lưu trữ tài khoản (giữ lịch sử/danh tính), giải phóng chỗ, thu hồi bản duyệt, hủy tác vụ chưa gửi, yêu cầu dừng tác vụ đang chạy; không chuyển sang tài khoản khác.
+  - API `apps/server/src/accounts-api.ts`: `GET/POST /api/accounts`, `PUT /api/accounts/:id`, `POST /api/accounts/:id/pause`, `POST /api/accounts/pause-all`, `POST /api/accounts/:id/remove`. Không trả đường dẫn hồ sơ hay bí mật.
+  - Web: `AccountsPage.tsx` thay trang khung (bảng, thêm, đổi nhãn tại chỗ, tạm dừng/tiếp tục từng cái và tất cả, gỡ có xác nhận, báo rõ nhãn trùng); các nút "Mở trình duyệt để đăng nhập"/"Kiểm tra phiên" vẫn bị khóa kèm lý do. Tách `http.ts` dùng chung cho hai trang.
+- **Kiểm tra (chỉ test phần mới):**
+  - `node scripts/test.ts packages/storage/src/account-repository.test.ts` → 2/2 đạt. Lần đầu **lỗi thật**: `lower()` của SQLite không hạ chữ hoa có dấu nên nhãn "MÁY…" không bị phát hiện trùng; đã chuyển so sánh sang JavaScript (`toLocaleLowerCase('vi')`) rồi chạy lại đạt.
+  - `node scripts/test.ts apps/server/src/data-api.test.ts` → 7/7 đạt (test API tài khoản: giới hạn hai, trùng nhãn 409, thiếu token 403, gỡ lần hai 404).
+  - `npm.cmd run typecheck`, `npm.cmd run lint` (79 file) → đạt. **Không** chạy cổng tổng lượt này.
+  - Chạy thật (server + Vite + Edge headless, dữ liệu tạm): thêm hai tài khoản, ô thêm bị khóa khi đủ hai, đổi nhãn, tạm dừng một và tất cả, hỏi xác nhận trước khi gỡ, gỡ xong ô thêm mở lại; đã xem ảnh chụp. Đã tắt server/Vite.
+  - Chưa thử trên UI sau khi thêm thông báo trùng nhãn ở form (mới typecheck/lint; server vẫn có kiểm tra).
+- **Quyết định:** không dependency/migration. Danh tính/phiên/proxy hiển thị đúng dữ liệu hiện có (chưa có thì ghi "Chưa xác nhận"/"Chưa kiểm tra"/"Không dùng"), không giả số liệu.
+- **Tồn đọng / lưu ý:** P03.1 thiếu avatar và "lần kiểm tra phiên"; P03.2 thiếu mở/đóng phiên; P03.3–P03.5, P03.7 cần Playwright/profile thật (P01). Gỡ tài khoản chưa xóa profile/cookie trên đĩa (chưa tồn tại). Tạm dừng/gỡ mới thử với tác vụ giả ở tầng DB, chưa có worker/scheduler thật.
+- **Tiếp theo:** P04.1 (form proxy; mật khẩu qua DPAPI, gán proxy cho tài khoản) để hoàn thiện cột Proxy, rồi quay lại P05.5/P05.6 khi có đích (P06). P01 thật vẫn chờ người dùng chọn tài khoản/đích/phạm vi.

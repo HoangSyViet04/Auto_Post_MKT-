@@ -1,6 +1,7 @@
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } from 'react';
-import { type ApiError, type ContentVersionItem, findSimilarCaptions, type ProductDetail, type ProductListResponse, type ProductStatus } from '#domain';
+import { type ContentVersionItem, findSimilarCaptions, type ProductDetail, type ProductListResponse, type ProductStatus } from '#domain';
 import { apiFetch } from './api.ts';
+import { networkMessage, readError } from './http.ts';
 import {
   emptyForm,
   type FormErrors,
@@ -21,18 +22,6 @@ const STATUS_LABEL: Record<ProductStatus, string> = { selling: 'Đang bán', sol
 type View = { kind: 'list' } | { kind: 'form'; productId: string | null };
 
 const thumbUrl = (id: string) => `/api/media/${id}?size=thumb`;
-
-async function readError(response: Response): Promise<string> {
-  try {
-    const body = (await response.json()) as Partial<ApiError>;
-    if (typeof body.message === 'string') return body.message;
-  } catch {
-    // Không đọc được nội dung lỗi: dùng thông báo chung bên dưới.
-  }
-  return `Yêu cầu không thành công (HTTP ${response.status}).`;
-}
-
-const networkMessage = (error: unknown) => (error instanceof Error ? error.message : 'Không kết nối được server cục bộ.');
 
 export function ProductsPage() {
   const [view, setView] = useState<View>({ kind: 'list' });

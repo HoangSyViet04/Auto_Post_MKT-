@@ -12,6 +12,7 @@ const MESSAGES = {
   media_too_large: 'Ảnh vượt giới hạn dung lượng hoặc số điểm ảnh.',
   media_missing: 'Ảnh trong kho không còn tồn tại.',
   media_io: 'Không thể đọc hoặc ghi ảnh trong kho.',
+  account_limit: 'Đã đủ hai tài khoản đang dùng. Gỡ một tài khoản trước khi thêm.',
   secret_unavailable: 'Bí mật chưa sẵn sàng hoặc đã bị thu hồi.',
   secret_lost: 'Không thể mở bí mật. Cần kết nối lại.',
 } as const;

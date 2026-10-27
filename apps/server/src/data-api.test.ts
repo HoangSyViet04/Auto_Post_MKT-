@@ -126,3 +126,24 @@ test('P05.8: POST /api/media/cleanup cần token, không dọn ảnh còn mới,
   assert.equal(done.statusCode, 200); assert.deepEqual(done.json(), { purged: 0 }); // vừa tải lên, chưa đủ 24 giờ
   assert.equal((await app.inject({ method: 'GET', url: `/api/media/${saved.id}`, headers })).statusCode, 200);
 });
+
+test('P03: API tài khoản — thêm, giới hạn hai, đổi nhãn, tạm dừng, gỡ; thiếu token bị chặn', async () => {
+  const call = (method: string, url: string, payload?: object) => app.inject({ method: method as 'GET', url, headers, ...(payload ? { payload } : {}) });
+  const a = (await call('POST', '/api/accounts', { label: 'Bán hàng 1' })).json();
+  const b = (await call('POST', '/api/accounts', { label: 'Bán hàng 2' })).json();
+  assert.deepEqual([a.slot, b.slot], [1, 2]);
+  assert.equal((await call('POST', '/api/accounts', { label: 'Thứ ba' })).statusCode, 409);
+  assert.equal((await call('POST', '/api/accounts', { label: 'bán hàng 1' })).statusCode, 409);
+  assert.equal((await call('POST', '/api/accounts', { label: 'x', extra: 1 })).statusCode, 400);
+  assert.equal((await call('PUT', `/api/accounts/${a.id}`, { label: 'Đổi tên' })).json().label, 'Đổi tên');
+  assert.equal((await call('POST', `/api/accounts/${a.id}/pause`, { paused: true })).json().paused, true);
+  const all = (await call('POST', '/api/accounts/pause-all', { paused: false })).json();
+  assert.deepEqual(all.items.map((x: { paused: boolean }) => x.paused), [false, false]); assert.equal(all.limit, 2);
+  assert.equal((await call('POST', `/api/accounts/${a.id}/remove`, {})).statusCode, 204);
+  assert.equal((await call('POST', `/api/accounts/${a.id}/remove`, {})).statusCode, 404);
+  const listed = (await call('GET', '/api/accounts')).json();
+  assert.deepEqual(listed.items.map((x: { id: string }) => x.id), [b.id]);
+  assert.ok(!JSON.stringify(listed).includes('directory') && !JSON.stringify(listed).includes('secret'));
+  const { 'x-apm-token': _token, ...noToken } = headers;
+  assert.equal((await app.inject({ method: 'POST', url: '/api/accounts', headers: noToken, payload: { label: 'Lén' } })).statusCode, 403);
+});

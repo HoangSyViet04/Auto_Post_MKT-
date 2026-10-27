@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DEFAULT_PAGE_ID, findPage, findSection, NAV, type PageDef } from './nav.ts';
+import { AccountsPage } from './AccountsPage.tsx';
 import { ProductsPage } from './ProductsPage.tsx';
 import { type HealthState, useHealth } from './useHealth.ts';
 
@@ -73,7 +74,7 @@ export function App() {
             Chế độ mô phỏng: dùng adapter giả, không gửi gì tới Facebook.
           </div>
         )}
-        {page.id === 'products' ? <ProductsPage /> : <PlaceholderPage page={page} />}
+        {page.id === 'products' ? <ProductsPage /> : page.id === 'accounts' ? <AccountsPage /> : <PlaceholderPage page={page} />}
       </main>
     </div>
   );
