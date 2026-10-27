@@ -162,7 +162,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P05 | Ba đầu vào, mẫu bài, phiên bản | P02 | Offline xong phần làm được: P05.1–P05.4, P05.8; P05.5/P05.6/P05.7 làm một phần (chờ tài khoản/đích/lịch từ P03/P06/P07) |
 | P06 | Quét nhóm và danh sách đích | P01–P03 (P04 hoãn: kết nối trực tiếp) | Offline: P06.1, P06.6, P06.7 xong (nhập tay); P06.2–P06.4, P06.8 chờ P01; P06.5 một phần |
 | P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Xong phần mô phỏng (P07.1, P07.3–P07.9); P07.2 còn ô nhập lịch (P10) và giới hạn/ngày |
-| P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Chưa bắt đầu |
+| P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Mã xong và đạt offline (trang Facebook giả); **chưa có bằng chứng chạy thật qua ứng dụng**, nên chưa đóng P08.2–P08.8 |
 | P09 | Kết nối và đăng fanpage | P01, P02, P05, P07 | Chưa bắt đầu |
 | P10 | Ba trang đăng tích hợp | P05–P09 | Chưa bắt đầu |
 | P11 | Nhật ký, đối chiếu, phục hồi | P07–P10 | Chưa bắt đầu |
@@ -317,14 +317,14 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Mục tiêu:** chuyển P01 thành bộ đăng có kiểm tra và trạng thái đầy đủ.
 
-- [ ] P08.1. Chia browser session/danh tính/composer dùng chung, đặc thù TCN/group riêng.
-- [ ] P08.2. Trước gửi xác nhận đúng người đăng và link/ID đích; kiểm tra điều kiện nhóm qua dữ liệu hiện có và UI.
-- [ ] P08.3. Điền caption, đủ ảnh đúng thứ tự, chờ upload có căn cứ; lỗi ảnh/selector thì dừng trước gửi.
-- [ ] P08.4. Ghi mốc gửi, chỉ gửi một lần theo lượt; xác nhận bằng bằng chứng quan sát được.
-- [ ] P08.5. Group phân biệt pending/published; thiếu căn cứ thì trả unknown/trạng thái thích hợp, không giả thành công.
-- [ ] P08.6. Nhận diện lỗi phiên/cảnh báo/UI thay đổi theo phạm vi P01; không tự giải CAPTCHA/checkpoint.
-- [ ] P08.7. Dừng/hủy kiểm tra trước gửi; phần đã phát đi được ghi trung thực khi không hủy trước gửi được.
-- [ ] P08.8. Kiểm tra offline bằng fixture UI/lỗi mô phỏng; thử thật theo đích được chọn và đối chiếu người đăng/nội dung/ảnh.
+- [x] P08.1. Chia browser session/danh tính/composer dùng chung, đặc thù TCN/group riêng. *(Phần dùng chung trong `#browser` (`launchProfile`, `facebook-ui`, `createBrowserPublisher`); phần riêng trong `#fb-group` và `#fb-profile` (URL đích, xác nhận đích, hai bước Tiếp/Đăng của trang cá nhân, đối tượng bài).)*
+- [ ] P08.2. Trước gửi xác nhận đúng người đăng và link/ID đích; kiểm tra điều kiện nhóm qua dữ liệu hiện có và UI. *(Đã có và đạt trên trang Facebook giả: kiểm tra phiên, checkpoint, so danh tính người đăng, xác nhận đúng nhóm/đúng trang cá nhân; sai thì dừng trước khi gửi. Chưa chạy thật qua ứng dụng.)*
+- [ ] P08.3. Điền caption, đủ ảnh đúng thứ tự, chờ upload có căn cứ; lỗi ảnh/selector thì dừng trước gửi. *(Đã có và đạt trên trang giả: điền caption, đính đúng số ảnh theo thứ tự đã duyệt và chờ xem trước, lỗi ảnh/ô soạn bài → dừng trước gửi. Chưa chạy thật qua ứng dụng.)*
+- [ ] P08.4. Ghi mốc gửi, chỉ gửi một lần theo lượt; xác nhận bằng bằng chứng quan sát được. *(Đã có và đạt trên trang giả: mốc gửi do bộ chạy job ghi trước khi `submit`, bấm Đăng đúng một lần, xác nhận bằng bài mới trong feed (số lần đoạn chữ xuất hiện tăng). Chưa chạy thật qua ứng dụng.)*
+- [ ] P08.5. Group phân biệt pending/published; thiếu căn cứ thì trả unknown/trạng thái thích hợp, không giả thành công. *(Group: chỉ `published` khi thấy bài mới, ngược lại `unknown`; chưa nhận diện chờ duyệt/từ chối (không đoán).)*
+- [ ] P08.6. Nhận diện lỗi phiên/cảnh báo/UI thay đổi theo phạm vi P01; không tự giải CAPTCHA/checkpoint. *(Đã có theo phạm vi P01: phiên hết hạn/checkpoint/sai danh tính/mạng/giao diện đổi (`ui_changed`) → mã lý do riêng và dừng trước gửi; không giải CAPTCHA.)*
+- [ ] P08.7. Dừng/hủy kiểm tra trước gửi; phần đã phát đi được ghi trung thực khi không hủy trước gửi được. *(stop() đóng phiên chưa bấm Đăng và chặn việc sau; yêu cầu dừng trước mốc gửi do bộ chạy job xử lý; phần đã bấm Đăng được ghi trung thực (không giả đã hủy).)*
+- [ ] P08.8. Kiểm tra offline bằng fixture UI/lỗi mô phỏng; thử thật theo đích được chọn và đối chiếu người đăng/nội dung/ảnh. *(Offline: 9 test với Facebook giả chạy trên Edge ngầm, chặn mọi yêu cầu ra ngoài. Thử thật qua ứng dụng: **chưa chạy** — bị chặn quyền ở phiên này; có sẵn `scripts/live-test-post.ts` (cần `--confirm-post`, server/worker ở chế độ live).)*
 
 **Đầu ra:** hai adapter cùng hàng chờ P07, báo cáo khả năng/giới hạn.
 

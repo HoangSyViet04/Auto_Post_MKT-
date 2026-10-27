@@ -400,3 +400,13 @@ button.primary:disabled {
 .table select {
   max-width: 150px;
 }
+
+.live-banner {
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 14px;
+  font-weight: 600;
+}

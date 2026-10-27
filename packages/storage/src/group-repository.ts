@@ -156,6 +156,29 @@ export function createGroupRepository(db: Database, options: RepositoryOptions =
       return counts;
     },
 
+    /**
+     * Đích "trang cá nhân" của chính tài khoản: một bản ghi mỗi danh tính (ID ngoài = tham chiếu danh tính đã xác nhận). Cần tài khoản
+     * đã đăng nhập và xác nhận danh tính. Quyền đăng lên trang của chính mình là mặc định cho phép; đối tượng của bài (công khai/bạn bè...)
+     * do cấu hình worker kiểm tra khi đăng. Chạy lại không tạo trùng.
+     */
+    ensureProfileDestination(accountId: string): { id: string; created: boolean } {
+      activeAccount(accountId);
+      return atomic(db, () => {
+        const identity = one<{ remote_identity_id: string }>(db, `SELECT i.remote_identity_id FROM accounts a JOIN account_identities i
+          ON i.id=a.current_identity_id AND i.account_id=a.id WHERE a.id=?`, accountId);
+        if (!identity) throw new BusinessError('not_ready');
+        const existing = one<{ id: string }>(db, "SELECT id FROM destinations WHERE channel='profile' AND external_id=?", identity.remote_identity_id);
+        const id = existing?.id ?? randomUUID();
+        if (!existing) {
+          db.prepare("INSERT INTO destinations(id,channel,external_id,name,approval_required,created_at) VALUES(?,'profile',?,'Trang cá nhân','not_required',?)")
+            .run(id, identity.remote_identity_id, clock());
+        }
+        db.prepare(`INSERT INTO account_destinations(account_id,destination_id,channel,membership_status,posting_permission,source,checked_at)
+          VALUES(?,?,'profile','not_applicable','allowed','manual',?) ON CONFLICT(account_id,destination_id) DO NOTHING`).run(accountId, id, clock());
+        return { id, created: !existing };
+      });
+    },
+
     /** Sửa thông tin do người dùng ghi nhận. Không đổi được ID/link (danh tính bất biến). */
     update(destinationId: string, patch: GroupProfileInput): void {
       objectInput(patch);

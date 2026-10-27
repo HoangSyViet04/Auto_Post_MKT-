@@ -72,6 +72,11 @@ export function App() {
         <HealthBadge health={health} />
       </aside>
       <main className="content">
+        {health.kind === 'ok' && health.data.integrations === 'live' && (
+          <div className="live-banner" role="status">
+            Chế độ THẬT: bài đã duyệt sẽ được đăng lên Facebook bằng trình duyệt. Kiểm tra kỹ tài khoản, đích và nội dung trước khi xếp lịch.
+          </div>
+        )}
         {health.kind === 'ok' && health.data.integrations === 'fake' && (
           <div className="sim-banner" role="status">
             Chế độ mô phỏng: dùng adapter giả, không gửi gì tới Facebook.

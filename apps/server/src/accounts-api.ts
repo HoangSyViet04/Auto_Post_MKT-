@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { BusinessError, type BrowserCommandKind } from '#domain';
-import { createAccountRepository, createBrowserCommandRepository, type Database, MAX_ACTIVE_ACCOUNTS, readWorkerStatus } from '#storage';
+import { createAccountRepository, createBrowserCommandRepository, createGroupRepository, type Database, MAX_ACTIVE_ACCOUNTS, readWorkerStatus } from '#storage';
 
 const UUID = '^[a-fA-F0-9]{8}-(?:[a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}$';
 const idParams = { type: 'object', additionalProperties: false, required: ['id'], properties: { id: { type: 'string', pattern: UUID } } } as const;
@@ -13,6 +13,7 @@ const emptyBody = { type: 'object', additionalProperties: false, properties: {} 
 export function installAccountsApi(app: FastifyInstance, db: Database): void {
   const accounts = createAccountRepository(db);
   const browserCommands = createBrowserCommandRepository(db);
+  const destinations = createGroupRepository(db);
 
   app.get('/api/accounts', async () => ({ items: accounts.list(), limit: MAX_ACTIVE_ACCOUNTS }));
 
@@ -38,6 +39,10 @@ export function installAccountsApi(app: FastifyInstance, db: Database): void {
     accounts.get(request.params.id); // 404 nếu không có/đã gỡ
     return reply.code(202).send(browserCommands.enqueue(request.params.id, request.body.kind));
   });
+
+  // Đích "trang cá nhân" của chính tài khoản (cần đã đăng nhập và có danh tính xác nhận).
+  app.post<{ Params: { id: string } }>('/api/accounts/:id/profile-destination', { schema: { params: idParams, body: emptyBody } },
+    async (request, reply) => reply.code(201).send(destinations.ensureProfileDestination(request.params.id)));
 
   app.post<{ Params: { id: string } }>('/api/browser-commands/:id/cancel', { schema: { params: idParams, body: emptyBody } },
     async (request) => ({ state: browserCommands.requestCancel(request.params.id) }));

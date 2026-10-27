@@ -18,8 +18,14 @@ describe('worker publishers', () => {
     for (const p of Object.values(publishers)) assert.equal(p.capabilities.simulated, true);
   });
 
-  test('live bị từ chối khi chưa có adapter thật', () => {
-    assert.throws(() => createPublishers('live'), /Chưa có adapter Facebook thật/);
+  test('live cần cấu hình trình duyệt; có thì nhóm/TCN là adapter thật, fanpage bị tắt rõ ràng và dừng trước khi gửi', async () => {
+    assert.throws(() => createPublishers('live'), /APM_BROWSER=real/);
+    const live = createPublishers('live', { profileDirFor: (accountId) => `x/${accountId}` });
+    assert.deepEqual([live.group.capabilities.simulated, live.profile.capabilities.simulated, live.group.capabilities.level], [false, false, 'automatic']);
+    assert.deepEqual([live.page.capabilities.level, live.page.capabilities.simulated], ['unsupported', false]);
+    const request = { jobId: 'j', destinationId: 'd', caption: 'x', mediaPaths: ['a'] };
+    assert.deepEqual(await live.page.prepare(request), { ok: false, reasonCode: 'unsupported', reason: 'Kênh page chưa được hỗ trợ.' });
+    assert.equal((await live.page.submit(request)).status, 'failed'); // không giả thành công
   });
 
   test('khởi động worker mặc định chạy mô phỏng và không tự đăng', () => {

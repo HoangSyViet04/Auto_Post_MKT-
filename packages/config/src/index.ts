@@ -57,6 +57,13 @@ export function getOverdueAfterMs(): number {
   return nonNegativeInt('APM_OVERDUE_MINUTES', 15, 10_080) * 60_000;
 }
 
+/** Đối tượng bắt buộc cho bài trên trang cá nhân (APM_PROFILE_AUDIENCE, ví dụ "Công khai"); không đặt thì chỉ ghi lại, không kiểm tra. */
+export function getProfileAudience(): string | undefined {
+  const value = process.env.APM_PROFILE_AUDIENCE?.trim();
+  if (value && (value.length < 3 || value.length > 60)) throw new Error('APM_PROFILE_AUDIENCE không hợp lệ');
+  return value || undefined;
+}
+
 /**
  * Điều khiển trình duyệt thật của worker (APM_BROWSER): off (mặc định) hoặc real. Khác APM_INTEGRATIONS: real chỉ cho phép worker
  * mở trình duyệt để người dùng đăng nhập/kiểm tra phiên khi họ bấm nút; không tự đăng bài. Bị cấm khi APM_ENV=test.

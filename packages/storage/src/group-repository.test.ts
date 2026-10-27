@@ -116,3 +116,17 @@ test('nhập kết quả đọc nhóm đã tham gia: đặt joined + nguồn joi
   assert.equal(groups.list({ accountId: b }).total, 0); // không lẫn sang tài khoản khác
   assert.throws(() => groups.importObserved('00000000-0000-4000-8000-000000000000', items), code('not_found'));
 });
+
+test('đích trang cá nhân: cần danh tính đã xác nhận, mỗi danh tính một bản ghi, chạy lại không trùng, không lẫn trong danh sách nhóm', () => {
+  assert.throws(() => groups.ensureProfileDestination(a), code('not_ready')); // chưa đăng nhập/xác nhận danh tính
+  accounts.recordIdentity(a, 'vanity:nick.a');
+  accounts.recordIdentity(b, 'vanity:nick.b');
+  const first = groups.ensureProfileDestination(a);
+  assert.deepEqual([first.created, groups.ensureProfileDestination(a).id, groups.ensureProfileDestination(a).created], [true, first.id, false]);
+  assert.notEqual(groups.ensureProfileDestination(b).id, first.id);
+  const row = workspace.db.prepare('SELECT channel,external_id FROM destinations WHERE id=?').get(first.id);
+  assert.deepEqual([row?.channel, row?.external_id], ['profile', 'vanity:nick.a']);
+  const relation = workspace.db.prepare('SELECT membership_status,posting_permission FROM account_destinations WHERE account_id=? AND destination_id=?').get(a, first.id);
+  assert.deepEqual([relation?.membership_status, relation?.posting_permission], ['not_applicable', 'allowed']);
+  assert.equal(groups.list().total, 0); // danh sách nhóm không chứa đích trang cá nhân
+});

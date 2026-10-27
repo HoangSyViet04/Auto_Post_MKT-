@@ -5,9 +5,10 @@
  * Chạy job đến hạn bằng adapter đã chọn (APM_INTEGRATIONS=fake: mô phỏng, không gọi Facebook). Khởi động worker không tự tạo job. `--once`: khởi động, ghi nhịp sống, thoát (dùng cho test).
  */
 import { createPlaywrightDriver } from '#browser';
-import { getAppEnv, getBrowserMode, getDatabasePath, getDataDir, getIntegrationMode, getMinGapMs, getOverdueAfterMs } from '#config';
+import { getAppEnv, getBrowserMode, getDatabasePath, getDataDir, getIntegrationMode, getMinGapMs, getOverdueAfterMs, getProfileAudience } from '#config';
+import { join } from 'node:path';
 import { createLogger } from '#logging';
-import { createMediaStore, migrate, openDatabase, writeWorkerHeartbeat } from '#storage';
+import { createAccountRepository, createMediaStore, migrate, openDatabase, writeWorkerHeartbeat } from '#storage';
 import { createBrowserCommandRunner } from './browser-commands.ts';
 import { createJobRunner } from './job-runner.ts';
 import { createPublishers } from './publishers.ts';
@@ -22,15 +23,21 @@ try {
   log = createLogger({ env, name: 'worker' });
   const mode = getIntegrationMode();
   const browser = getBrowserMode();
-  const publishers = createPublishers(mode);
+  if (mode === 'live' && browser !== 'real') throw new Error('APM_INTEGRATIONS=live cần APM_BROWSER=real');
+  const dataDir = getDataDir();
+  const db = openDatabase(getDatabasePath());
+  migrate(db);
+  const accountRepo = createAccountRepository(db);
+  const profileAudience = getProfileAudience();
+  const publishers = createPublishers(mode, mode === 'live'
+    ? { profileDirFor: (accountId) => join(dataDir, 'profiles', accountRepo.profileKey(accountId)), ...(profileAudience ? { profileAudience } : {}) }
+    : undefined);
   const simulated = Object.values(publishers).every((p) => p.capabilities.simulated);
   log.info(
     `[worker] env=${env} integrations=${mode}${simulated ? ' (mô phỏng, không gọi Facebook)' : ''} browser=${browser} channels=${Object.keys(publishers).join(',')}`,
   );
   log.info('[worker] Chỉ chạy job do người dùng đã duyệt và xếp lịch; không tự tạo bài.');
 
-  const db = openDatabase(getDatabasePath());
-  migrate(db);
   writeWorkerHeartbeat(db, browser);
 
   if (process.argv.includes('--once')) {
@@ -38,7 +45,7 @@ try {
   } else {
     const workerId = `worker-${process.pid}`;
     const runner = browser === 'real'
-      ? createBrowserCommandRunner({ db, driver: createPlaywrightDriver(), workerId, dataDir: getDataDir(), log })
+      ? createBrowserCommandRunner({ db, driver: createPlaywrightDriver(), workerId, dataDir, log })
       : undefined;
     const jobRunner = createJobRunner({ db, workerId, mode, publishers, media: createMediaStore(db), minGapMs: getMinGapMs(), overdueAfterMs: getOverdueAfterMs(), log });
     if (!runner) log.info('[worker] APM_BROWSER=off: không mở trình duyệt; lệnh đăng nhập/kiểm tra phiên sẽ chờ cho tới khi bật APM_BROWSER=real.');
