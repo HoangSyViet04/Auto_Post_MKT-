@@ -199,7 +199,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [ ] P01.3. Thử trực tiếp/proxy do người dùng cung cấp; ghi giao thức/xác thực hỗ trợ, lỗi mạng và cách đổi cấu hình.
 - [ ] P01.4. Thử TCN: caption, nhiều ảnh, đúng danh tính, đúng đích được chọn; lấy kết quả/link khi đủ căn cứ.
 - [ ] P01.5. Thử group: quyền tham gia/đăng, caption/ảnh, phân biệt đã gửi, chờ duyệt, từ chối và unknown. *(Đang làm: trên group người dùng chỉ định — đúng nick, tìm thấy 1 ô soạn bài, soạn chữ/2 ảnh bằng dry-run đạt, đã đăng thử 1 bài chữ. Đã đăng thử 2 bài (chữ; chữ + 2 ảnh) bằng quản trị nick phụ: bài chữ người dùng xác nhận đã hiện. Nhận diện `published`, `postId` và số ảnh đã khớp đáp án thật cho nick quản trị. Còn thiếu: chờ duyệt/từ chối (cần nick không phải quản trị hoặc nhóm bật duyệt), ID bài của nick thường, lặp lại sau restart — nên chưa tick.)*
-- [ ] P01.6. Thử đọc nhóm đã tham gia theo tài khoản và tìm theo từ khóa; ghi trường đọc được, kết quả một phần và điều kiện dừng.
+- [ ] P01.6. Thử đọc nhóm đã tham gia theo tài khoản và tìm theo từ khóa; ghi trường đọc được, kết quả một phần và điều kiện dừng. *(Đã thử đọc nhóm đã tham gia của nick `phu1`: 130 nhóm, 81 có ID số, 49 chỉ có tên rút gọn, dừng khi không còn nhóm mới; chưa đối chiếu tổng số thật. Chưa thử tìm theo từ khóa.)*
 - [ ] P01.7. Chuẩn bị ứng dụng Meta, kiểm tra quyền/token/Page, phiên bản API và callback nếu cần; thử chữ/một ảnh/nhiều ảnh trên Page đã chọn. Token hợp lệ chưa đủ chứng minh quyền đăng.
 - [ ] P01.8. Kiểm tra dừng trước gửi và phiên hết hạn; mô phỏng checkpoint/cảnh báo/lỗi nguy hiểm, không cố gây vi phạm để thử.
 - [ ] P01.9. Ghi selector, ngôn ngữ/UI và dấu hiệu xác nhận; không tự bấm nhiều nút mơ hồ nếu không tìm được phần tử đúng.

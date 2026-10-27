@@ -458,3 +458,15 @@ Mẫu một mục:
 - **Giới hạn (không được khái quát):** chỉ 1 nhóm, 1 nick quản trị, 1 bài có ảnh được đối chiếu; ID bài chữ của nick thường chưa có cách đọc; chờ duyệt/từ chối chưa nhận diện; chưa lặp lại sau restart; chưa thử TCN (P01.4). Cách đọc ID phụ thuộc cấu trúc trang hiện tại của Facebook và có thể hỏng khi giao diện đổi.
 - **Quyết định:** theo yêu cầu người dùng chuyển sang phần tiếp theo; P01.4 và các phần còn thiếu của P01.5 để mở, ghi rõ ở `plan.md` và `docs/feasibility.md`.
 - **Tiếp theo:** P01.6 đọc nhóm đã tham gia của nick `phu1` (chỉ đọc, có giới hạn và điều kiện dừng).
+
+## 2026-10-27 11:40 — P01.6 (một phần): đọc danh sách nhóm đã tham gia của nick phụ
+
+- **Phạm vi:** nick `phu1` đã đăng nhập; chỉ đọc trang nhóm đã tham gia, không bấm, không tham gia/rời nhóm, không đăng. Kết quả đầy đủ (tên, link) nằm ngoài repo ở `%LOCALAPPDATA%\AutoPostMKT\spikes\evidence\phu1-joined-groups.json`; màn hình/log chỉ in số lượng.
+- **Đã làm:** `spikes/fb-common.ts` (mở profile đã đăng nhập, bắt buộc phiên còn hiệu lực và danh tính khớp) và `spikes/fb-groups-read.ts joined --label --limit --expect-group --confirm-real`: cuộn trang, gom liên kết nhóm, chuẩn hóa bằng `normalizeGroupReference` (cùng quy tắc với trang Nhóm), điều kiện dừng: đủ giới hạn / 3 vòng không thêm nhóm / mất phiên / tối đa 40 vòng. Kết quả luôn ghi `complete: false`.
+- **Kết quả thật:**
+  - `--limit=50`: dừng vì chạm giới hạn (50 nhóm: 29 có ID số, 21 chỉ có tên rút gọn); nhóm đã biết chưa nằm trong 50 đầu.
+  - `--limit=200`: **130 nhóm**, 81 có ID số, 49 chỉ có tên rút gọn, dừng `no_more_results_seen` sau 13 vòng, **có chứa nhóm đã biết** (`1357510931662685`).
+- **Đánh giá trung thực:** chưa đối chiếu 130 với số nhóm thật của nick nên chưa biết đủ hay thiếu, và chưa biết trang có lẫn nhóm gợi ý hay không. Có thể bị cắt do tải chậm ở vòng cuối. Khoảng 38% nhóm chỉ có tên rút gọn → không đăng được cho tới khi biết ID số (cần bước làm giàu: mở từng nhóm để đọc ID, chưa làm).
+- **Kiểm tra:** `npm.cmd run typecheck`, `npm.cmd run lint` (93 file) đạt; chốt an toàn thiếu `--confirm-real` bị từ chối. Không chạy cổng tổng. Chưa lặp lại sau restart.
+- **Chưa làm:** tìm nhóm theo từ khóa (P01.6 nửa sau); làm giàu ID cho nhóm tên rút gọn; nhập kết quả vào DB/trang Nhóm.
+- **Tiếp theo:** người dùng cho biết số nhóm thật của `phu1` (khoảng bao nhiêu) để đối chiếu; sau đó thử tìm theo từ khóa hoặc làm giàu ID.
