@@ -399,3 +399,15 @@ Mẫu một mục:
   - Playwright mặc định bật cờ tự động hóa của trình duyệt; Facebook có thể phản ứng khác (checkpoint). Không che giấu cờ này; nếu bị checkpoint thì dừng và ghi nhận vào kết luận P01.
   - Chưa có driver đăng bài/đọc nhóm (P01.4–P01.6): cần người dùng nêu rõ đích.
 - **Tiếp theo:** người dùng đăng nhập `phu1` → `verify` → ghi kết quả vào `docs/feasibility.md`; sau đó người dùng nêu đích (TCN hoặc 1 group và nội dung thử) để làm P01.4/P01.5.
+
+## 2026-10-27 10:50 — P01.2 (một phần): đăng nhập tay nick phụ và xác nhận danh tính — ĐẠT một profile
+
+- **Đã làm:** Người dùng chọn nick phụ `phu1` và tự đăng nhập (quyết định không ghi mật khẩu vào `.env`: giữ nguyên nguyên tắc tự đăng nhập, không lưu mật khẩu/2FA; mình không đọc `.env`). Chạy `npm run spike:fb -- login --label=phu1 --confirm-real` rồi `verify` ở tiến trình mới. Không đăng bài, không đọc nhóm.
+- **Kết quả thật:**
+  - `login`: trạng thái đi `login_required` → `verification_required` (Facebook đòi xác minh, người dùng tự xử lý trong cửa sổ, công cụ chỉ chờ) → `logged_in` → lưu danh tính (băm `29b814f0…`, bản che `vanity:vie****** (9 ký tự)`).
+  - `verify` (tiến trình mới, mở lại cùng profile): `status: match`, exit 0.
+- **Kiểm tra / giới hạn:** Mới **một** profile và **một** lần chạy; chưa thử mở lại sau khi khởi động lại máy, chưa thử profile thứ hai, chưa thử hai tiến trình cùng profile trên Facebook thật (khóa profile đã có test riêng). Một lần đạt không đủ kết luận ổn định.
+- **Phát hiện đáng chú ý:** lần đăng nhập đầu bằng Edge do Playwright điều khiển bị Facebook yêu cầu xác minh. Cần ghi vào kết luận P01.10; với bản dùng thật, nên coi bước đăng nhập/xác minh là thủ công một lần cho mỗi profile.
+- **Bằng chứng:** nằm ngoài repo ở `%LOCALAPPDATA%\AutoPostMKT\spikes\` (profile, `evidence/phu1-identity.json` chỉ chứa băm và bản che). Không có cookie/mật khẩu/ảnh chụp trong repo hay log.
+- **Cập nhật tài liệu:** `docs/feasibility.md` (P01.2 đạt một phần), `plan.md` (ghi chú P01.2, chưa tick).
+- **Tiếp theo:** người dùng nêu rõ đích (TCN hoặc 1 group, nội dung thử) để làm P01.4/P01.5; hoặc chỉ làm P01.6 đọc nhóm đã tham gia (chỉ đọc) nếu người dùng đồng ý. Có thể lặp lại `verify` sau khi khởi động lại máy để tăng bằng chứng P01.2.
