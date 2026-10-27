@@ -27,7 +27,8 @@
     "test": "node --env-file=tests/test.env --test \"{apps,packages,tests}/**/*.test.ts\"",
     "db:migrate": "node --env-file-if-exists=.env scripts/db-migrate.ts",
     "lint": "biome lint --error-on-warnings .",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build:web"
+    "check": "npm run typecheck && npm run lint && npm test && npm run build:web",
+    "spike:offline": "node --env-file-if-exists=.env spikes/run.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",

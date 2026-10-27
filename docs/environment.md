@@ -41,3 +41,11 @@ Log qua `#logging`: development dễ đọc, test/production là JSON. Bộ lọ
 - `vite preview` chỉ phục vụ kiểm tra cục bộ với server development. Chưa có cơ chế phục vụ web production; sau này phải cùng origin server hoặc thiết kế lại boundary có kiểm tra.
 
 Lớp này giảm rủi ro CSRF/DNS rebinding từ website khác, không chống tiến trình độc hại chạy dưới cùng tài khoản Windows hoặc XSS trên origin được phép. Xem [ADR 0004](adr/0004-local-api-security.md).
+
+## Công cụ thử offline P01
+
+```sh
+npm run spike:offline -- --scenario=unknown --channel=group
+```
+
+Phải chọn rõ scenario; không có lựa chọn thì không chạy. Chỉ fake, không network/browser/profile/Graph API. Các kết quả đều gắn `simulated: true`, `realCapability: not_tested`; không dùng làm bằng chứng Facebook thật. Xem [spikes/README.md](../spikes/README.md) và [ma trận khả thi](feasibility.md).

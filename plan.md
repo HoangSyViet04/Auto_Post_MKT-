@@ -155,7 +155,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | Phần | Đầu ra | Phụ thuộc | Trạng thái |
 | --- | --- | --- | --- |
 | P00 | Nền dự án, môi trường Windows | README/plan | Hoàn thành (P00.1–P00.8) |
-| P01 | Bằng chứng khả thi các tích hợp | P00 | Chưa bắt đầu |
+| P01 | Bằng chứng khả thi các tích hợp | P00 | Đang chuẩn bị offline; chưa kiểm chứng thật |
 | P02 | DB, media, bí mật, giao ước | P00, kết luận P01 | Chưa bắt đầu |
 | P03 | Quản lý tài khoản | P01, P02 | Chưa bắt đầu |
 | P04 | Quản lý proxy | P02, P03 | Chưa bắt đầu |
@@ -194,7 +194,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Mục tiêu:** xác định phần làm được của từng kênh trước khi xây đầy đủ.
 
-- [ ] P01.1. Viết công cụ thử trong `spikes/`, chạy từng bước chủ động; log/bằng chứng không chứa cookie/token.
+- [ ] P01.1. Viết công cụ thử trong `spikes/`, chạy từng bước chủ động; log/bằng chứng không chứa cookie/token. *(Đã có `npm run spike:offline -- --scenario=...`, 7 fixture fake-only và 5 test; chưa có driver Facebook thật nên chưa đóng mục. Xem docs/feasibility.md.)*
 - [ ] P01.2. Tạo hai profile riêng, người dùng đăng nhập thủ công; mở lại và xác nhận danh tính. Không mở cùng thư mục profile bằng hai tiến trình.
 - [ ] P01.3. Thử trực tiếp/proxy do người dùng cung cấp; ghi giao thức/xác thực hỗ trợ, lỗi mạng và cách đổi cấu hình.
 - [ ] P01.4. Thử TCN: caption, nhiều ảnh, đúng danh tính, đúng đích được chọn; lấy kết quả/link khi đủ căn cứ.
@@ -485,6 +485,7 @@ Tự động hóa kiểm tra quy tắc/dữ liệu/lỗi mô phỏng. Chỉ th�
 | 26/10/2026 | P00.6 | Cấu hình env (`APM_INTEGRATIONS`), giao ước publisher phác thảo + adapter giả, banner mô phỏng | 27/27 test; worker/server thật chạy fake, `live` bị từ chối | P00.7 lint/build/log lọc bí mật |
 | 26/10/2026 | P00.7 | Biome + lệnh check tổng; logger chung lọc bí mật, dev pretty; ADR 0003 | typecheck/lint/build đạt, 34/34 test; lint từ chối 4 cú pháp/import sai; smoke server/worker/migration thật trên dữ liệu tạm | P00.8 origin/CSRF và truy cập cục bộ |
 | 27/10/2026 | P00.8 | Guard API cục bộ + client session trong bộ nhớ, ADR 0004 | 11 server tests + 7 client tests; real server/Vite proxy và raw Host trùng bị chặn | P01 tooling và kiểm chứng tích hợp |
+| 27/10/2026 | P01.1 chuẩn bị offline | CLI chủ động fake-only và ma trận khả thi P01 | 5/5 harness tests; unknown chỉ submit1 lần, stop/block không submit; chưa driver/kiểm chứng thật | Chuẩn bị driver và đầu vào thử thật; tiếp tục module offline độc lập |
 
 Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọng) ghi trong [report_daily.md](report_daily.md).
 
@@ -492,7 +493,7 @@ Nhật ký chi tiết từng lượt (có giờ, lệnh kiểm tra, tồn đọn
 
 - [x] Kiểm tra môi trường/đường dẫn tại `D:/Project/Auto_Post_MKT` (hai máy đồng bộ qua git; đã bỏ OneDrive — ADR 0001).
 - [x] P00: khung bốn mục, API health, SQLite tối thiểu, adapter giả.
-- [ ] Chuẩn bị P01 và liệt kê đầu vào người dùng cần cung cấp: đăng nhập hai tài khoản, đích thử, proxy nếu dùng.
+- [x] Chuẩn bị P01 và liệt kê đầu vào người dùng cần cung cấp: đăng nhập hai tài khoản, đích thử, proxy nếu dùng. *(docs/feasibility.md; đây là chuẩn bị, chưa nghiệm thu P01.)*
 - [ ] Chưa bật lịch đăng thật trước khi adapter và dừng/đối chiếu đạt yêu cầu.
 
 Hiện tại chỉ lập kế hoạch; các thư mục, công cụ và chức năng trên sẽ được tạo khi bắt đầu triển khai.
