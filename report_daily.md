@@ -566,3 +566,14 @@ Mẫu một mục:
   - Chạy thật trên giao diện (mô phỏng, DB tạm, server + worker + web; Edge điều khiển): caption mẫu tự điền đúng, 2 ảnh theo thứ tự, nhóm chưa có quyền bị khóa kèm lý do, nút bị khóa tới khi chọn nhóm; chọn 2 nhóm, sửa riêng caption nhóm 2, bấm xếp lịch → 2 job chạy xong "Đã đăng" (mô phỏng, không có bài thật). Đã xem ảnh chụp; đã tắt server/worker/web.
 - **Giới hạn:** chưa chạy chế độ THẬT qua trang này (chờ người dùng cho phép); trang chưa thử với >100 nhóm/trang kết quả dài; ô giờ hẹn mới thử qua test logic, chưa thử trên giao diện thật; chưa có chọn lại caption từ bản đã lưu; bản sửa layout ô lịch chưa chụp lại.
 - **Tiếp theo:** (1) đăng thử thật bằng chính trang này (cần người dùng có mặt/cho phép; chạy server+worker `APM_INTEGRATIONS=live`, `APM_BROWSER=real`); (2) P10.3 trang cá nhân (dùng lại `/api/posts` với đích `profile-destination`); (3) P11 đối chiếu job `unknown`.
+
+## 2026-10-28 10:10 — P10.3: trang "Đăng bài viết cá nhân"
+
+- **Quyết định người dùng:** "triển khai đi" sau khi mình nêu 3 hướng; mình chọn hướng 2 (trang cá nhân). Không push (chỉ commit trên máy).
+- **Đã làm:** `PostProfilePage.tsx`: chọn 1–2 tài khoản đủ điều kiện (lý do khóa hiển thị), máy (ảnh theo thứ tự), caption chung + sửa riêng từng tài khoản, lịch, xem trước "Trang cá nhân của <tài khoản>" kèm danh tính, cảnh báo cùng caption giữa hai tài khoản, xác nhận bắt buộc ở chế độ THẬT, kết quả từng tài khoản tự cập nhật. Với mỗi tài khoản: `POST /api/accounts/:id/profile-destination` rồi `POST /api/posts` (mã yêu cầu riêng, giữ nguyên khi nội dung không đổi nên bấm lại/mất phản hồi không tạo job trùng). Ghi chú trên trang: đối tượng bài theo cài đặt Facebook; `APM_PROFILE_AUDIENCE` làm worker dừng khi khác.
+- **Kiểm tra:**
+  - Test mới: `data-api.test.ts` +1 — đích TCN cần danh tính xác nhận, mỗi danh tính một đích, chạy lại không trùng, danh sách nhóm không chứa TCN, hai tài khoản hai job riêng `profile`, dùng TCN của người khác làm đích → 409.
+  - **Cổng tổng: `npm run check` → 197/197 test đạt, lint 124 file sạch, build web đạt.**
+  - Chạy thật trên giao diện (mô phỏng, DB tạm; Edge điều khiển): chọn 2 tài khoản + máy → cảnh báo trùng caption; sửa riêng caption Nick B → cảnh báo mất; bấm xếp lịch → 2 job `profile` tới đúng `vanity:nick.a`/`vanity:nick.b`, cả hai "Đã đăng (mô phỏng)". Đã tắt server/worker/web. Chưa xem ảnh chụp lần này.
+- **Giới hạn:** chưa đăng thật qua trang này; chưa hiển thị đối tượng bài thực tế (chỉ biết khi worker đọc lúc chuẩn bị); ô hẹn giờ chưa thử trên giao diện; một tài khoản lỗi giữa chừng không dừng tài khoản kia (có chủ ý, báo từng tài khoản).
+- **Tiếp theo:** đăng thử thật (nhóm/TCN) bằng các trang này khi người dùng cho phép; P11 đối chiếu job `unknown`/nhật ký/sao lưu; P10.5 preset; P10.9 máy sửa/đã bán phản ánh vào bài/lịch.

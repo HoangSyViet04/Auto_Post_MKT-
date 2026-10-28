@@ -164,7 +164,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Xong phần mô phỏng (P07.1, P07.3–P07.9); P07.2 còn ô nhập lịch (P10) và giới hạn/ngày |
 | P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Mã xong và đạt offline (trang Facebook giả); **chưa có bằng chứng chạy thật qua ứng dụng**, nên chưa đóng P08.2–P08.8 |
 | P09 | Kết nối và đăng fanpage | P01, P02, P05, P07 | Chưa bắt đầu |
-| P10 | Ba trang đăng tích hợp | P05–P09 | Trang đăng nhóm xong (P10.2/6/7/8) và đạt mô phỏng; còn trang cá nhân (P10.3), fanpage (P10.4), preset (P10.5), máy sửa/đã bán phản ánh ở bài/lịch (P10.9) |
+| P10 | Ba trang đăng tích hợp | P05–P09 | Trang đăng nhóm và trang cá nhân xong (P10.2/3/6/7/8), đạt mô phỏng; còn fanpage (P10.4), preset (P10.5), máy sửa/đã bán phản ánh ở bài/lịch (P10.9) |
 | P11 | Nhật ký, đối chiếu, phục hồi | P07–P10 | Chưa bắt đầu |
 | P12 | Kiểm thử tổng thể, chạy Windows, bàn giao | P00–P11 | Chưa bắt đầu |
 | P13 | LLM theo ngữ cảnh | P12 | Chưa bắt đầu |
@@ -353,7 +353,7 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 - [ ] P10.1. Composer chung: máy, ảnh, caption/phiên bản, tài khoản/đích/lịch; không mất nội dung khi đổi màn hình. *(Phần cho kênh nhóm xong: máy, ảnh theo thứ tự, caption mẫu/sửa tay, tài khoản, nhóm, lịch; bản nháp đang soạn được giữ khi chuyển trang trong phiên. Chưa có phiên bản chọn lại từ bản đã lưu, trang cá nhân và fanpage dùng lại sau.)*
 - [x] P10.2. Đăng nhóm nhận P06 hoặc link/ID, hiển thị điều kiện/nội quy từng nhóm. *(Trang "Đăng bài viết nhóm" nhận nhóm đã chọn từ trang Nhóm; liệt kê nhóm theo tài khoản kèm nội quy, duyệt bài, lý do chưa đăng được; nhóm chưa đủ điều kiện bị khóa. Thêm nhóm bằng link/ID làm ở trang Nhóm.)*
-- [ ] P10.3. Đăng cá nhân chọn một/hai tài khoản, hiển thị đúng TCN; không tự dùng danh sách group làm đích.
+- [x] P10.3. Đăng cá nhân chọn một/hai tài khoản, hiển thị đúng TCN; không tự dùng danh sách group làm đích. *(Trang "Đăng bài viết cá nhân": chọn một hoặc hai tài khoản (chỉ tài khoản đã đăng nhập, có danh tính, không tạm dừng); đích luôn là trang cá nhân của CHÍNH tài khoản đó (`profile-destination`), xem trước hiển thị đúng trang/danh tính; mỗi tài khoản một job và một kết quả riêng; cảnh báo cùng caption giữa hai tài khoản (P10.6); không dùng danh sách nhóm làm đích. Mới đạt mô phỏng; chưa đăng thật.)*
 - [ ] P10.4. Đăng fanpage chọn Page có quyền; trạng thái kết nối tách khỏi browser.
 - [ ] P10.5. Preset theo cặp tài khoản–đích/mẫu/lịch; hai tài khoản không mặc định nhân đôi mọi group.
 - [x] P10.6. Preview từng phiên bản, đủ ảnh/thứ tự/đích/giờ; cảnh báo trùng giữa hai tài khoản. *(Xem trước từng nhóm: ảnh theo thứ tự, caption (sửa riêng được), giờ hẹn theo giờ Việt Nam, chế độ mô phỏng/THẬT; cảnh báo cùng caption cho nhiều nhóm và giống bản đã lưu cho cùng nhóm. Cảnh báo trùng giữa hai tài khoản chưa có (chỉ một tài khoản mỗi lần).)*

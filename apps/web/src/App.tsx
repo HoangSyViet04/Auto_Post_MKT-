@@ -4,6 +4,7 @@ import { AccountsPage } from './AccountsPage.tsx';
 import { GroupsPage } from './GroupsPage.tsx';
 import { JobsPage } from './JobsPage.tsx';
 import { PostGroupPage } from './PostGroupPage.tsx';
+import { PostProfilePage } from './PostProfilePage.tsx';
 import { clearHandoff, getHandoff } from './handoff.ts';
 import { ProductsPage } from './ProductsPage.tsx';
 import { type HealthState, useHealth } from './useHealth.ts';
@@ -88,6 +89,7 @@ export function App() {
           : page.id === 'scan-joined' ? <GroupsPage />
           : page.id === 'queue' ? <JobsPage />
           : page.id === 'post-group' ? <PostGroupPage />
+          : page.id === 'post-profile' ? <PostProfilePage />
           : <PlaceholderPage page={page} />}
       </main>
     </div>

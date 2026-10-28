@@ -277,3 +277,30 @@ test('P10: POST /api/posts — một lần gửi tạo bản caption riêng, duy
   const { 'x-apm-token': _token, ...noToken } = headers;
   assert.equal((await app.inject({ method: 'POST', url: '/api/posts', headers: noToken, payload: body(items, 'khoa-khong-token-1') })).statusCode, 403);
 });
+
+test('P10.3: đăng trang cá nhân — đích là TCN của chính tài khoản, mỗi tài khoản một job riêng, không lẫn với nhóm', async () => {
+  const { createAccountRepository, createGroupRepository } = await import('#storage');
+  const call = (method: string, url: string, payload?: object) => app.inject({ method: method as 'GET', url, headers, ...(payload ? { payload } : {}) });
+  const accounts = createAccountRepository(db);
+  const [a, b] = ['Nick A', 'Nick B'].map((label) => accounts.create({ label }).id) as [string, string];
+  assert.equal((await call('POST', `/api/accounts/${a}/profile-destination`, {})).statusCode, 409); // chưa có danh tính xác nhận
+  accounts.recordIdentity(a, 'vanity:nick.a'); accounts.recordSession(a, 'logged_in');
+  accounts.recordIdentity(b, 'vanity:nick.b'); accounts.recordSession(b, 'logged_in');
+  createGroupRepository(db).add({ reference: '111111111111', accountId: a, name: 'Nhóm', membership: 'joined', permission: 'allowed' });
+  const destA = (await call('POST', `/api/accounts/${a}/profile-destination`, {})).json().id as string;
+  const destB = (await call('POST', `/api/accounts/${b}/profile-destination`, {})).json().id as string;
+  assert.notEqual(destA, destB);
+  assert.equal((await call('POST', `/api/accounts/${a}/profile-destination`, {})).json().id, destA); // chạy lại không tạo trùng
+  assert.equal((await call('GET', '/api/groups')).json().total, 1); // danh sách nhóm không chứa trang cá nhân
+
+  const media = (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' }, payload: image })).json().id as string;
+  const product = (await call('POST', '/api/products', { name: 'iPhone 13', condition: 'Đẹp', mediaIds: [media] })).json();
+  const post = (accountId: string, destinationId: string, key: string) => call('POST', '/api/posts', { requestKey: key, accountId, productId: product.productId,
+    scheduledAt: Date.now(), items: [{ destinationId, caption: 'Bán iPhone 13' }] });
+  assert.equal((await post(a, destA, 'khoa-tcn-nick-a-1')).statusCode, 201);
+  assert.equal((await post(b, destB, 'khoa-tcn-nick-b-1')).statusCode, 201);
+  assert.equal((await post(a, destB, 'khoa-tcn-lech-doi-1')).statusCode, 409); // TCN của người khác không phải đích của tài khoản này
+  const listed = (await call('GET', '/api/jobs')).json();
+  assert.deepEqual(listed.items.map((job: { channel: string }) => job.channel), ['profile', 'profile']);
+  assert.deepEqual(listed.items.map((job: { account: { label: string } }) => job.account.label).sort(), ['Nick A', 'Nick B']);
+});
