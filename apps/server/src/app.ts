@@ -8,6 +8,7 @@ import { installAccountsApi } from './accounts-api.ts';
 import { installDataApi } from './data-api.ts';
 import { installGroupsApi } from './groups-api.ts';
 import { installJobsApi } from './jobs-api.ts';
+import { installPagesApi } from './pages-api.ts';
 import { installPresetsApi } from './presets-api.ts';
 import { installSalesApi } from './sales-api.ts';
 import { installStaticUi } from './static-ui.ts';
@@ -42,6 +43,7 @@ export function buildApp({ db, env, integrations, logger = true, security, media
   installGroupsApi(app, db, integrations);
   installJobsApi(app, db, integrations, overdueAfterMs);
   installPresetsApi(app, db);
+  installPagesApi(app, db, integrations);
   installSalesApi(app, db);
   if (webDistDir && !installStaticUi(app, webDistDir)) app.log.warn('Chưa có bản build giao diện (apps/web/dist): chạy npm run build:web; giao diện chưa được phục vụ.');
   app.setErrorHandler((error, request, reply) => {

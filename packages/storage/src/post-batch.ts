@@ -16,6 +16,17 @@ export interface PostBatchInput {
   items: ReadonlyArray<{ destinationId: string; caption: string; source?: 'template' | 'manual' }>;
 }
 
+export interface PagePostInput {
+  /** Mã yêu cầu cho MỖI lần bấm gửi (chống bấm hai lần). */
+  requestKey: string;
+  /** Kết nối Page (không phải tài khoản trình duyệt). */
+  pageConnectionId: string;
+  productId: string;
+  scheduledAt: number;
+  caption: string;
+  source?: 'template' | 'manual';
+}
+
 export type PostBatchResult =
   | { ok: true; requestId: string; replayed: boolean; jobs: Array<{ jobId: string; destinationId: string }> }
   | { ok: false; failures: Array<{ destinationId: string; code: BusinessErrorCode }> };
@@ -33,7 +44,58 @@ export function createPostBatchService(db: Database, deps: { mode: IntegrationMo
   const accounts = createAccountRepository(db, clockOptions);
   const jobs = createJobRepository(db, clockOptions);
 
+  /** Gửi lại cùng mã yêu cầu: trả kết quả cũ (kể cả khi lần trước mất phản hồi); nội dung khác thì từ chối. */
+  function replay(requestKey: string, fingerprint: string): PostBatchResult | undefined {
+    const previous = one<{ payload_fingerprint: string }>(db, "SELECT payload_fingerprint FROM command_requests WHERE scope='post_batch' AND request_key=?", requestKey);
+    if (!previous) return undefined;
+    if (previous.payload_fingerprint !== fingerprint) throw new BusinessError('idempotency_conflict');
+    const request = one<{ id: string }>(db, "SELECT id FROM command_requests WHERE scope='publish' AND request_key=?", requestKey);
+    if (!request) throw new BusinessError('conflict');
+    const rows = db.prepare(`SELECT j.id AS job_id,a.destination_id FROM publish_jobs j JOIN approvals a ON a.id=j.approval_id
+      WHERE j.request_id=? ORDER BY a.destination_id`).all(request.id) as Array<{ job_id: string; destination_id: string }>;
+    return { ok: true, requestId: request.id, replayed: true, jobs: rows.map((row) => ({ jobId: row.job_id, destinationId: row.destination_id })) };
+  }
+
   return {
+    /**
+     * Một bài lên MỘT fanpage (P09.5): bản caption riêng cho đích Page, duyệt theo kết nối Page (không cần tài khoản trình duyệt) và xếp một job.
+     * Cùng quy tắc chống bấm hai lần và "tất cả hoặc không gì" như đăng nhóm. Kết nối chưa đủ quyền/token mất thì bị chặn lúc duyệt.
+     */
+    submitPage(input: PagePostInput): PostBatchResult {
+      objectInput(input);
+      text(input.requestKey, 200);
+      identifier(input.pageConnectionId);
+      identifier(input.productId);
+      timestamp(input.scheduledAt);
+      text(input.caption);
+      if (input.source !== undefined && input.source !== 'template' && input.source !== 'manual') throw new BusinessError('invalid_input');
+      const source = input.source ?? 'manual';
+      const fingerprint = createHash('sha256').update(JSON.stringify({ mode: deps.mode, pageConnectionId: input.pageConnectionId, productId: input.productId,
+        scheduledAt: input.scheduledAt, caption: input.caption })).digest('hex');
+      const replayed = replay(input.requestKey, fingerprint);
+      if (replayed) return replayed;
+
+      const product = content.getProduct(input.productId);
+      if (one<{ status: string }>(db, 'SELECT status FROM products WHERE id=?', input.productId)?.status !== 'selling') throw new BusinessError('not_ready');
+      const connection = one<{ destination_id: string }>(db, 'SELECT destination_id FROM page_connections WHERE id=? AND archived_at IS NULL', input.pageConnectionId);
+      if (!connection) throw new BusinessError('not_found');
+
+      let approvalId: string;
+      try {
+        const versionId = content.createVersion({ productRevisionId: product.revisionId, destinationId: connection.destination_id, caption: input.caption, mediaIds: product.mediaIds, source });
+        approvalId = content.approve({ contentVersionId: versionId, mode: deps.mode, pageConnectionId: input.pageConnectionId });
+      } catch (error) {
+        if (!(error instanceof BusinessError)) throw error;
+        return { ok: false, failures: [{ destinationId: connection.destination_id, code: error.code }] };
+      }
+      const queued = jobs.enqueue({ requestKey: input.requestKey, mode: deps.mode, jobs: [{ approvalId, scheduledAt: input.scheduledAt }] });
+      atomic(db, () => {
+        db.prepare("INSERT INTO command_requests(id,scope,request_key,payload_fingerprint,created_at) VALUES(?,'post_batch',?,?,?)")
+          .run(randomUUID(), input.requestKey, fingerprint, clock());
+      });
+      return { ok: true as const, requestId: queued.requestId, replayed: false, jobs: queued.jobs.map((job) => ({ jobId: job.id, destinationId: connection.destination_id })) };
+    },
+
     submit(input: PostBatchInput): PostBatchResult {
       objectInput(input);
       text(input.requestKey, 200);
@@ -53,16 +115,8 @@ export function createPostBatchService(db: Database, deps: { mode: IntegrationMo
         scheduledAt: input.scheduledAt, items: [...items].sort((a, b) => a.destinationId.localeCompare(b.destinationId))
           .map(({ destinationId, caption }) => ({ destinationId, caption })) })).digest('hex');
 
-      // Gửi lại cùng mã yêu cầu: trả kết quả cũ (kể cả khi lần trước mất phản hồi); nội dung khác thì từ chối.
-      const previous = one<{ payload_fingerprint: string }>(db, "SELECT payload_fingerprint FROM command_requests WHERE scope='post_batch' AND request_key=?", input.requestKey);
-      if (previous) {
-        if (previous.payload_fingerprint !== fingerprint) throw new BusinessError('idempotency_conflict');
-        const request = one<{ id: string }>(db, "SELECT id FROM command_requests WHERE scope='publish' AND request_key=?", input.requestKey);
-        if (!request) throw new BusinessError('conflict');
-        const rows = db.prepare(`SELECT j.id AS job_id,a.destination_id FROM publish_jobs j JOIN approvals a ON a.id=j.approval_id
-          WHERE j.request_id=? ORDER BY a.destination_id`).all(request.id) as Array<{ job_id: string; destination_id: string }>;
-        return { ok: true, requestId: request.id, replayed: true, jobs: rows.map((row) => ({ jobId: row.job_id, destinationId: row.destination_id })) };
-      }
+      const replayed = replay(input.requestKey, fingerprint);
+      if (replayed) return replayed;
 
       const product = content.getProduct(input.productId);
       if (one<{ status: string }>(db, 'SELECT status FROM products WHERE id=?', input.productId)?.status !== 'selling') throw new BusinessError('not_ready'); // máy đã bán/ngừng bán không tạo bài mới

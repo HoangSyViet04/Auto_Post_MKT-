@@ -18,6 +18,20 @@ export type GraphErrorCode =
 
 export type GraphResult<T> = { ok: true; value: T } | { ok: false; code: GraphErrorCode; status: number | null; fbCode: number | null };
 
+/** Ảnh cục bộ sẵn sàng tải lên (đã kiểm tra là ảnh thật). */
+export interface PhotoUpload {
+  bytes: Uint8Array;
+  filename: string;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+}
+
+export interface PostSummary {
+  id: string;
+  message: string | null;
+  createdTime: string | null;
+  permalinkUrl: string | null;
+}
+
 export interface PageInfo {
   id: string;
   name: string;
@@ -34,6 +48,9 @@ export interface GraphClientOptions {
   version?: string;
   fetch?: typeof fetch;
   timeoutMs?: number;
+  /** Thời gian chờ khi tải ảnh lên (mặc định 90 giây) và khi tạo bài (mặc định 45 giây). */
+  uploadTimeoutMs?: number;
+  feedTimeoutMs?: number;
 }
 
 /** Phiên bản Graph API mặc định. Chưa đối chiếu với tài liệu hiện hành của Meta (P09.8): đổi bằng APM_GRAPH_VERSION nếu cần. */
@@ -69,20 +86,24 @@ export function createGraphClient(options: GraphClientOptions = {}) {
   if (!VERSION.test(version)) throw new Error('Phiên bản Graph API không hợp lệ');
   const doFetch = options.fetch ?? globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? 15_000;
+  const uploadTimeoutMs = options.uploadTimeoutMs ?? 90_000;
+  const feedTimeoutMs = options.feedTimeoutMs ?? 45_000;
 
-  async function call(method: 'GET' | 'POST', path: string, init: { token?: string; query?: Record<string, string>; form?: Record<string, string> } = {}): Promise<GraphResult<Record<string, unknown>>> {
+  async function call(method: 'GET' | 'POST' | 'DELETE', path: string, init: { token?: string; query?: Record<string, string>; form?: Record<string, string>; multipart?: FormData; timeoutMs?: number } = {}): Promise<GraphResult<Record<string, unknown>>> {
     const url = new URL(`${base}/${version}/${path}`);
     for (const [key, value] of Object.entries(init.query ?? {})) url.searchParams.set(key, value); // chỉ tham số KHÔNG nhạy cảm
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (init.token) headers.Authorization = `Bearer ${init.token}`;
-    let body: string | undefined;
+    let body: string | FormData | undefined;
     if (init.form) {
       headers['Content-Type'] = 'application/x-www-form-urlencoded';
       body = new URLSearchParams(init.form).toString();
+    } else if (init.multipart) {
+      body = init.multipart; // fetch tự đặt Content-Type kèm ranh giới (boundary)
     }
     let response: Response;
     try {
-      response = await doFetch(url, { method, headers, ...(body === undefined ? {} : { body }), redirect: 'error', signal: AbortSignal.timeout(timeoutMs) });
+      response = await doFetch(url, { method, headers, ...(body === undefined ? {} : { body }), redirect: 'error', signal: AbortSignal.timeout(init.timeoutMs ?? timeoutMs) });
     } catch {
       return { ok: false, code: 'network', status: null, fbCode: null };
     }
@@ -134,6 +155,58 @@ export function createGraphClient(options: GraphClientOptions = {}) {
         if (!after) break;
       }
       return { ok: true, value: pages };
+    },
+
+    /**
+     * Tải MỘT ảnh lên Page ở trạng thái CHƯA xuất bản (published=false): chưa ai thấy. Trả ID ảnh để đính vào bài. Đi bằng dữ liệu file,
+     * không cần link công khai.
+     */
+    async uploadUnpublishedPhoto(pageId: string, pageToken: string, photo: PhotoUpload): Promise<GraphResult<{ id: string }>> {
+      if (!PAGE_ID.test(pageId) || !pageToken || photo.bytes.byteLength === 0) return { ok: false, code: 'invalid_request', status: null, fbCode: null };
+      const form = new FormData();
+      form.append('published', 'false');
+      form.append('source', new Blob([photo.bytes], { type: photo.mimeType }), photo.filename);
+      const result = await call('POST', `${pageId}/photos`, { token: pageToken, multipart: form, timeoutMs: uploadTimeoutMs });
+      if (!result.ok) return result;
+      const id = text(result.value.id);
+      return id && /^\d+$/u.test(id) ? { ok: true, value: { id } } : { ok: false, code: 'bad_response', status: null, fbCode: null };
+    },
+
+    /**
+     * Tạo bài trên Page với các ảnh đã tải (theo ĐÚNG thứ tự đưa vào). Gọi ĐÚNG MỘT LẦN cho mỗi bài. Kết quả `network`/`temporary`/`bad_response`
+     * nghĩa là CHƯA BIẾT bài đã tạo hay chưa: người gọi phải coi là "chưa rõ", không gọi lại.
+     */
+    async createFeedPost(pageId: string, pageToken: string, input: { message: string; photoIds: readonly string[] }): Promise<GraphResult<{ id: string }>> {
+      if (!PAGE_ID.test(pageId) || !pageToken || input.photoIds.length === 0 || input.photoIds.some((id) => !/^\d+$/u.test(id))) return { ok: false, code: 'invalid_request', status: null, fbCode: null };
+      const form: Record<string, string> = { message: input.message };
+      for (const [index, id] of input.photoIds.entries()) form[`attached_media[${index}]`] = JSON.stringify({ media_fbid: id });
+      const result = await call('POST', `${pageId}/feed`, { token: pageToken, form, timeoutMs: feedTimeoutMs });
+      if (!result.ok) return result;
+      const id = text(result.value.id);
+      return id && /^\d+(?:_\d+)?$/u.test(id) ? { ok: true, value: { id } } : { ok: false, code: 'bad_response', status: null, fbCode: null };
+    },
+
+    /** Xóa một ảnh chưa xuất bản đã tải lên (dọn khi hủy giữa chừng). Cố gắng hết sức; không ném lỗi. */
+    async deletePhoto(photoId: string, pageToken: string): Promise<GraphResult<true>> {
+      if (!/^\d+$/u.test(photoId) || !pageToken) return { ok: false, code: 'invalid_request', status: null, fbCode: null };
+      const result = await call('DELETE', photoId, { token: pageToken });
+      return result.ok ? { ok: true, value: true } : result;
+    },
+
+    /** Các bài gần đây của Page (chỉ đọc), để đối chiếu một bài chưa rõ kết quả. */
+    async listRecentPosts(pageId: string, pageToken: string, limit = 25): Promise<GraphResult<PostSummary[]>> {
+      if (!PAGE_ID.test(pageId) || !pageToken) return { ok: false, code: 'invalid_request', status: null, fbCode: null };
+      const result = await call('GET', `${pageId}/posts`, { token: pageToken, query: { fields: 'id,message,created_time,permalink_url', limit: String(Math.min(100, Math.max(1, limit))) } });
+      if (!result.ok) return result;
+      const data = Array.isArray(result.value.data) ? result.value.data : [];
+      const posts: PostSummary[] = [];
+      for (const item of data) {
+        if (!isObject(item)) continue;
+        const id = text(item.id);
+        if (!id) continue;
+        posts.push({ id, message: text(item.message), createdTime: text(item.created_time), permalinkUrl: text(item.permalink_url) });
+      }
+      return { ok: true, value: posts };
     },
 
     /** Kiểm tra một Page token còn dùng được và đúng Page (chỉ đọc). */

@@ -76,9 +76,22 @@ Chọn một hoặc hai tài khoản, máy, caption (sửa riêng từng tài kh
 
 Ở trang đăng nhóm, ô **Cấu hình thường dùng** lưu lại cặp tài khoản–nhóm, mẫu caption (chỗ trống như `{ten}`, `{gia}`; dòng thiếu dữ kiện tự bỏ) và giờ hẹn hằng ngày. Áp dụng chỉ điền sẵn form; bạn vẫn xem trước và duyệt.
 
-### Fanpage và proxy
+### Đăng fanpage
 
-- **Fanpage: chưa hỗ trợ** (cần ứng dụng Meta được cấp quyền). Trang "Đăng bài fanpage" mới là khung.
+Fanpage đăng qua **Graph API chính thức của Meta**, không điều khiển trình duyệt. Bài **luôn có ảnh** (tối đa 10 ảnh, theo thứ tự bạn đã sắp) và **hiển thị công khai** trên Page.
+
+**Kết nối một lần** (cần bạn là quản trị Page và đã tạo ứng dụng Meta ở chế độ Phát triển; chi tiết và những điều chưa kiểm chứng ở [fanpage.md](fanpage.md)):
+1. Ở Graph API Explorer: chọn ứng dụng, **User Token**, thêm quyền `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, bấm **Generate Access Token** và chọn đúng Page. Copy token (đừng chụp màn hình).
+2. Lấy **App Secret** ở Cài đặt ứng dụng → Cơ bản.
+3. Chạy `npm run page:connect -- --app-id <App ID>` và dán App Secret rồi token khi được hỏi (hiện dấu `*`, không hiện nội dung). Có thể đặt tạm `APM_META_APP_SECRET` và `APM_META_USER_TOKEN` trong `.env`; lệnh tự xóa hai dòng đó sau khi lưu thành công.
+4. Lệnh chỉ đọc từ Meta, lưu token Page **mã hóa theo Windows** và không đăng gì. App Secret và token tạm không được lưu.
+
+**Đăng bài:** trang **Đăng fanpage**: chọn Page, chọn máy, sửa caption, chọn giờ, xem trước, tick xác nhận đăng thật rồi **Duyệt và xếp lịch**. Quy tắc giống các kênh khác: bấm hai lần không tạo bài trùng; ứng dụng gửi đúng một lần; nếu mạng đứt hoặc Meta không trả lời sau khi gửi thì bài hiện **"Chưa rõ kết quả"**, bạn kiểm tra trên Page rồi đối chiếu ở Hàng chờ đăng, ứng dụng **không tự gửi lại**.
+
+**Khi token hết hạn hoặc bị Meta thu hồi:** Page chuyển sang "chưa đăng được", các bài sau bị chặn (không thử mãi). Chạy lại `npm run page:connect` để kết nối lại. **Gỡ Page** (nút ở trang đăng fanpage) thu hồi token và hủy các bài chưa gửi của Page đó.
+
+### Proxy
+
 - **Proxy: chưa có** (hoãn có chủ đích). Ứng dụng dùng kết nối mạng trực tiếp của máy.
 
 ## 6. Hàng chờ và kết quả

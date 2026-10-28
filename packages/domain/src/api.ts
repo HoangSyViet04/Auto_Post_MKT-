@@ -277,3 +277,21 @@ export interface SalesSummary {
   /** Theo nơi đăng; destination null = không rõ nguồn. */
   bySource: Array<SalesSummaryRow & { destination: { id: string; channel: Channel; name: string | null; externalId: string | null } | null }>;
 }
+
+/** Kết nối fanpage (P09): chỉ metadata và trạng thái. Token Page không bao giờ có ở đây. */
+export interface PageConnectionItem {
+  id: string;
+  destinationId: string;
+  pageId: string;
+  name: string | null;
+  permissionStatus: 'unknown' | 'allowed' | 'denied' | 'expired';
+  secretStatus: 'unconfigured' | 'available' | 'lost' | 'revoked' | null;
+  checkedAt: number | null;
+  createdAt: number;
+  /** Đủ điều kiện để đăng: quyền được phép VÀ token còn dùng được. */
+  canPost: boolean;
+}
+
+export interface PageListResponse {
+  items: PageConnectionItem[];
+}

@@ -85,9 +85,9 @@ export const NAV: NavSection[] = [
       {
         id: 'post-page',
         title: 'Đăng bài fanpage',
-        description: 'Đăng qua Graph API lên các Page đã được cấp quyền.',
-        phase: 'P09–P10',
-        actions: ['Kết nối Page', 'Chọn Page', 'Đăng ngay', 'Đặt lịch'],
+        description: 'Đăng bài (chữ + ảnh) lên một Page đã kết nối qua Graph API; bài công khai trên fanpage.',
+        phase: 'P09',
+        actions: [],
       },
     ],
   },

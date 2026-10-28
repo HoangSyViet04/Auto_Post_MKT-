@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { BusinessError } from '#domain';
+import { BusinessError, type PageConnectionItem } from '#domain';
 import type { Database } from './db.ts';
 import { atomic, identifier, one, type RepositoryOptions, timestamp } from './repository-common.ts';
 import type { createSecretStore } from './secret-store.ts';
+
+export type { PageConnectionItem } from '#domain';
 
 export interface PageConnectInput {
   /** ID số của Page do Meta cấp. */
@@ -12,20 +14,6 @@ export interface PageConnectInput {
   token: string;
   /** Các `tasks` Meta trả về cho người dùng trên Page này; cần CREATE_CONTENT để đăng. */
   tasks: readonly string[];
-}
-
-/** Chỉ metadata và trạng thái: KHÔNG có token. Đây là thứ duy nhất được phép ra API/giao diện. */
-export interface PageConnectionItem {
-  id: string;
-  destinationId: string;
-  pageId: string;
-  name: string | null;
-  permissionStatus: 'unknown' | 'allowed' | 'denied' | 'expired';
-  secretStatus: 'unconfigured' | 'available' | 'lost' | 'revoked' | null;
-  checkedAt: number | null;
-  createdAt: number;
-  /** Đủ điều kiện để đăng: quyền được phép VÀ token còn dùng được. */
-  canPost: boolean;
 }
 
 const PAGE_ID = /^\d{5,25}$/u;
@@ -119,13 +107,25 @@ export function createPageRepository(db: Database, deps: { secrets: ReturnType<t
       });
     },
 
-    /** Gỡ kết nối: lưu trữ (không xóa lịch sử) và thu hồi token. Không đổi sang Page khác. */
-    async disconnect(connectionId: string): Promise<void> {
+    /**
+     * Gỡ kết nối (P09.7): lưu trữ (không xóa lịch sử), thu hồi token và DỪNG các job phụ thuộc: job chưa gửi (chờ/tạm dừng/bị chặn/cần xem lại)
+     * bị hủy, job đang chạy được yêu cầu dừng (kết quả thực tế vẫn được ghi), job đã có kết quả giữ nguyên. Không bao giờ đổi sang Page khác.
+     * Trả số job đã hủy.
+     */
+    async disconnect(connectionId: string): Promise<{ cancelledJobs: number }> {
       identifier(connectionId);
       const row = one<{ secret_ref_id: string | null }>(db, 'SELECT secret_ref_id FROM page_connections WHERE id=? AND archived_at IS NULL', connectionId);
       if (!row) throw new BusinessError('not_found');
-      atomic(db, () => { db.prepare('UPDATE page_connections SET archived_at=? WHERE id=?').run(clock(), connectionId); });
+      const dependent = 'SELECT id FROM approvals WHERE page_connection_id=?';
+      const cancelledJobs = atomic(db, () => {
+        const now = clock();
+        db.prepare('UPDATE page_connections SET archived_at=? WHERE id=?').run(now, connectionId);
+        const cancelled = db.prepare(`UPDATE publish_jobs SET status='cancelled' WHERE approval_id IN (${dependent}) AND status IN ('queued','paused','blocked','needs_review')`).run(connectionId);
+        db.prepare(`UPDATE publish_jobs SET stop_requested_at=COALESCE(stop_requested_at,?) WHERE approval_id IN (${dependent}) AND status='running'`).run(now, connectionId);
+        return Number(cancelled.changes);
+      });
       if (row.secret_ref_id) await deps.secrets.revoke(row.secret_ref_id);
+      return { cancelledJobs };
     },
   };
 }

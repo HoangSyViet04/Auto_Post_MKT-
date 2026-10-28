@@ -54,9 +54,10 @@ export function createJobRunner(deps: JobRunnerDeps) {
   const claimLeaseMs = deps.claimLeaseMs ?? 60_000;
   const browserLeaseMs = deps.browserLeaseMs ?? 180_000;
   const minGapMs = deps.minGapMs ?? 0;
-  const source: Completion['source'] = deps.mode === 'fake' ? 'fake' : 'ui_observation';
+  /** Nguồn bằng chứng: giả; fanpage qua API của Meta; nhóm/trang cá nhân qua quan sát trình duyệt. */
+  const sourceFor = (channel: Channel): Completion['source'] => (deps.mode === 'fake' ? 'fake' : channel === 'page' ? 'api_response' : 'ui_observation');
 
-  function toCompletion(result: SubmitResult): Completion {
+  function toCompletion(result: SubmitResult, source: Completion['source']): Completion {
     switch (result.status) {
       case 'published': return { outcome: 'published', source, remoteId: result.remoteId, ...(result.evidence?.remoteUrl ? { remoteUrl: result.evidence.remoteUrl } : {}) };
       case 'pending_approval': return { outcome: 'pending_approval', source, ...(result.remoteId ? { remoteId: result.remoteId } : {}) };
@@ -82,6 +83,7 @@ export function createJobRunner(deps: JobRunnerDeps) {
         if (error instanceof BusinessError) { jobs.abandon(claim); deps.log?.info({ code: error.code }, 'Job không còn đủ điều kiện, trả về hàng chờ'); return; }
         throw error;
       }
+      const source = sourceFor(snapshot.context.destination.channel);
       const accountId = snapshot.context.expectedIdentity.kind === 'account' ? snapshot.context.expectedIdentity.localId : null;
       if (accountId) {
         try {
@@ -125,7 +127,7 @@ export function createJobRunner(deps: JobRunnerDeps) {
       jobs.logActivity(claim.jobId, 'info', 'send_started');
       let completion: Completion;
       try {
-        completion = toCompletion(await publisher.submit(request)); // đúng MỘT lần
+        completion = toCompletion(await publisher.submit(request), source); // đúng MỘT lần
       } catch {
         completion = { outcome: 'unknown', source, reasonCode: 'unknown' }; // có thể đã gửi: không thử lại, chờ đối chiếu
       }

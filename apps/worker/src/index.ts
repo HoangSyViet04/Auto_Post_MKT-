@@ -9,7 +9,8 @@ import { getAppEnv, getBrowserMode, getDatabasePath, getDataDir, getDiagnosticCa
 import { join } from 'node:path';
 import { createLogger } from '#logging';
 import { watchParent } from '#ops';
-import { createAccountRepository, createMediaStore, migrate, openDatabase, writeWorkerHeartbeat } from '#storage';
+import { createGraphClient, createPagePublisher } from '#fb-page';
+import { createAccountRepository, createMediaStore, createPageRepository, createSecretStore, migrate, openDatabase, writeWorkerHeartbeat } from '#storage';
 import { createBrowserCommandRunner } from './browser-commands.ts';
 import { createJobRunner } from './job-runner.ts';
 import { createPublishers } from './publishers.ts';
@@ -41,9 +42,20 @@ try {
     log.warn(`[worker] Thu ảnh chụp chẩn đoán: BẬT (APM_DIAG_CAPTURE=on). Khi một lần đăng dừng vì lỗi sẽ lưu ảnh màn hình trình duyệt vào thư mục "diagnostics" trong dữ liệu vận hành, giữ ${Math.round(diagnostic.retentionMs / 3_600_000)} giờ rồi tự xóa. Ảnh có thể chứa thông tin cá nhân; không chia sẻ.`);
     if (mode !== 'live') log.info('[worker] Chế độ mô phỏng không mở trình duyệt đăng bài nên sẽ không có ảnh chụp.');
   }
+  /** Fanpage qua Graph API: token Page lấy từ kho bí mật chỉ khi cần đăng; Meta từ chối token/quyền thì kết nối bị đánh dấu để job sau bị chặn. */
+  function livePagePublisher() {
+    const pages = createPageRepository(db, { secrets: createSecretStore(db) });
+    return createPagePublisher({
+      graph: createGraphClient(),
+      tokenFor: (connectionId) => pages.revealToken(connectionId),
+      onConnectionProblem: (connectionId, status) => {
+        try { pages.markChecked(connectionId, status); } catch (error) { log.error({ errorName: error instanceof Error ? error.name : 'unknown' }, 'Không ghi được trạng thái kết nối Page'); }
+      },
+    });
+  }
   const publishers = createPublishers(mode, mode === 'live'
     ? { profileDirFor: (accountId) => join(dataDir, 'profiles', accountRepo.profileKey(accountId)), ...(profileAudience ? { profileAudience } : {}),
-      ...(diagnostic.enabled ? { diagnostics: captures.capture } : {}) }
+      ...(diagnostic.enabled ? { diagnostics: captures.capture } : {}), page: livePagePublisher() }
     : undefined);
   const simulated = Object.values(publishers).every((p) => p.capabilities.simulated);
   log.info(

@@ -2,3 +2,4 @@
 export * from './connect-flow.ts';
 export * from './graph-client.ts';
 export * from './secret-input.ts';
+export * from './page-publisher.ts';
