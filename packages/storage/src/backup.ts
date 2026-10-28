@@ -41,7 +41,9 @@ export async function createBackup(db: Database, options: { dataDir: string; out
   await backup(db, dbFile);
   const media: BackupManifest['media'] = [];
   const missing: string[] = [];
-  const rows = db.prepare("SELECT storage_key FROM media WHERE state='ready' ORDER BY storage_key").all() as Array<{ storage_key: string }>;
+  // Sao lưu TRƯỚC khi cập nhật thì DB có thể còn ở schema cũ chưa có bảng media (chưa có ảnh nào để sao lưu).
+  const hasMedia = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='media'").get() !== undefined;
+  const rows = hasMedia ? db.prepare("SELECT storage_key FROM media WHERE state='ready' ORDER BY storage_key").all() as Array<{ storage_key: string }> : [];
   for (const row of rows) {
     const source = join(options.dataDir, 'media', 'objects', `${row.storage_key}.blob`);
     if (!existsSync(source)) { missing.push(row.storage_key); continue; }

@@ -104,3 +104,26 @@ export function getDiagnosticCapture(): DiagnosticCaptureConfig {
   if (hours < 1) throw new Error('APM_DIAG_RETENTION_HOURS phải từ 1 đến 168');
   return { enabled: value === 'on', retentionMs: hours * 3_600_000 };
 }
+
+/**
+ * Cho server phục vụ giao diện đã build (apps/web/dist) để dùng một cổng duy nhất, không cần Vite (APM_SERVE_WEB). Mặc định off: khi phát triển
+ * giao diện do Vite phục vụ. Launcher của người vận hành bật on. Server vẫn chỉ nghe 127.0.0.1.
+ */
+export function getServeWeb(): boolean {
+  const value = (process.env.APM_SERVE_WEB ?? '').trim().toLowerCase();
+  if (value !== '' && value !== 'on' && value !== 'off') throw new Error(`APM_SERVE_WEB không hợp lệ: ${value} (chỉ nhận "on" hoặc "off")`);
+  return value === 'on';
+}
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+/**
+ * Mức log tối thiểu (APM_LOG_LEVEL); không đặt thì để logger tự chọn theo môi trường. Launcher của người vận hành đặt `warn` để cửa sổ
+ * không bị ngập log từng request; đặt `info` hoặc `debug` khi cần chẩn đoán. Log luôn được lọc bí mật bất kể mức.
+ */
+export function getLogLevel(): LogLevel | undefined {
+  const value = (process.env.APM_LOG_LEVEL ?? '').trim().toLowerCase();
+  if (value === '') return undefined;
+  if (value !== 'debug' && value !== 'info' && value !== 'warn' && value !== 'error') throw new Error(`APM_LOG_LEVEL không hợp lệ: ${value}`);
+  return value;
+}

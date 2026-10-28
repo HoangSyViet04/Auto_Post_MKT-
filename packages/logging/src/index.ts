@@ -1,6 +1,6 @@
 import pino, { type DestinationStream } from 'pino';
 import pretty from 'pino-pretty';
-import type { AppEnv } from '#config';
+import { type AppEnv, getLogLevel } from '#config';
 import { redactSecrets } from './redact.ts';
 
 export { redactSecrets, REDACTED } from './redact.ts';
@@ -28,5 +28,5 @@ export function createLogger({ env, name, destination }: LoggerOptions) {
       }
     },
   };
-  return pino({ name, level: env === 'production' ? 'info' : 'debug' }, safeDestination);
+  return pino({ name, level: getLogLevel() ?? (env === 'production' ? 'info' : 'debug') }, safeDestination);
 }

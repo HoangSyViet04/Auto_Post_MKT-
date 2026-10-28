@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, test } from 'node:test';
-import { getAppEnv, getDatabasePath, getDataDir, getDiagnosticCapture, getIntegrationMode } from './index.ts';
+import { getAppEnv, getDatabasePath, getDataDir, getDiagnosticCapture, getIntegrationMode, getLogLevel, getServeWeb } from './index.ts';
 
-const KEYS = ['APM_ENV', 'APM_DATA_DIR', 'APM_INTEGRATIONS', 'APM_DIAG_CAPTURE', 'APM_DIAG_RETENTION_HOURS'] as const;
+const KEYS = ['APM_ENV', 'APM_DATA_DIR', 'APM_INTEGRATIONS', 'APM_DIAG_CAPTURE', 'APM_DIAG_RETENTION_HOURS', 'APM_SERVE_WEB', 'APM_LOG_LEVEL'] as const;
 let saved: Record<string, string | undefined>;
 
 beforeEach(() => {
@@ -19,6 +19,17 @@ afterEach(() => {
 });
 
 describe('config', () => {
+  test('APM_SERVE_WEB và APM_LOG_LEVEL: mặc định tắt/không đặt, chỉ nhận giá trị hợp lệ', () => {
+    assert.equal(getServeWeb(), false);
+    assert.equal(getLogLevel(), undefined);
+    process.env.APM_SERVE_WEB = 'ON';
+    assert.equal(getServeWeb(), true);
+    for (const bad of ['1', 'true', 'yes']) { process.env.APM_SERVE_WEB = bad; assert.throws(getServeWeb, /APM_SERVE_WEB không hợp lệ/u, bad); }
+    process.env.APM_LOG_LEVEL = ' Warn ';
+    assert.equal(getLogLevel(), 'warn');
+    for (const bad of ['verbose', 'trace', '3']) { process.env.APM_LOG_LEVEL = bad; assert.throws(getLogLevel, /APM_LOG_LEVEL không hợp lệ/u, bad); }
+  });
+
   test('ảnh chụp chẩn đoán: TẮT mặc định, chỉ bật khi đặt rõ "on", hạn lưu 1–168 giờ (mặc định 24), giá trị lạ bị từ chối', () => {
     assert.deepEqual(getDiagnosticCapture(), { enabled: false, retentionMs: 24 * 3_600_000 });
     for (const value of ['off', '', ' OFF ']) { process.env.APM_DIAG_CAPTURE = value; assert.equal(getDiagnosticCapture().enabled, false, value); }

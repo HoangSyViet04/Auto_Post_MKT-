@@ -9,6 +9,9 @@ Cấu hình đọc từ biến môi trường (`packages/config`). `npm run dev:
 | `APM_SERVER_PORT` | `4317` | Server chỉ nghe `127.0.0.1`; Vite proxy `/api` dùng cùng cổng. |
 | `APM_INTEGRATIONS` | `fake` | `fake`: adapter giả, không gọi Facebook/LLM. `live`: adapter thật — chưa có (P08/P09), worker từ chối chạy. `live` bị cấm khi `APM_ENV=test`. |
 | `APM_BROWSER` | `off` | `off`: worker không mở trình duyệt. `real`: worker được mở Edge (hồ sơ riêng từng tài khoản, ngoài repo) để **người dùng tự đăng nhập** và kiểm tra phiên khi bấm nút ở trang Quản lý tài khoản. Không đăng bài. Bị cấm khi `APM_ENV=test`. Cần chạy cả `npm run dev:server`, `npm run dev:worker` (với `APM_BROWSER=real`) và `npm run dev:web`. |
+| `APM_SERVE_WEB` | `off` | `on`: server phục vụ giao diện đã build (`apps/web/dist`) trên cùng cổng API, không cần Vite. Chỉ `on`/`off`. Launcher (`npm start`, `Auto-Post-MKT.cmd`) tự bật; khi phát triển giao diện do `npm run dev:web` phục vụ. Chỉ phục vụ `/` và file phẳng trong `/assets/` (không `.map`, không file khác). |
+| `APM_LOG_LEVEL` | theo môi trường (`debug` ở dev/test, `info` ở production) | `debug`/`info`/`warn`/`error`. Launcher đặt `warn` nếu bạn không đặt, để cửa sổ không bị ngập log từng request. Log luôn được lọc bí mật. |
+| `APM_PARENT_PID` | _(launcher tự đặt)_ | PID của launcher. Server/worker tự dừng khi tiến trình này biến mất (đóng cửa sổ, kết thúc đột ngột) để không còn worker nhận việc ngầm. Không đặt tay. |
 | `APM_DIAG_CAPTURE` | `off` | `on`: khi một lần đăng THẬT dừng vì lỗi (hoặc kết quả chưa rõ), worker lưu một ảnh chụp màn hình trình duyệt vào `<dataDir>diagnostics`. **Mặc định tắt** vì ảnh có thể chứa thông tin cá nhân (tên, tin nhắn, bài viết). Chỉ nhận `on`/`off`. Không bao giờ ghi trace. Ảnh không nằm trong bản sao lưu và không có trong báo cáo `npm run diagnostics` (chỉ đếm số ảnh). |
 | `APM_DIAG_RETENTION_HOURS` | `24` | Hạn lưu ảnh chụp (1–168 giờ). Worker xóa ảnh quá hạn khi khởi động và mỗi 10 phút, kể cả khi đã tắt `APM_DIAG_CAPTURE`. Dọn ngay: `npm run diagnostics -- --purge-captures`. |
 
@@ -89,3 +92,9 @@ Helper chỉ chạy trên Windows, không thay đổi ExecutionPolicy/ACL thư m
 | GET /api/products?page=1&pageSize=20 | Page1..1triệu, pageSize1..100; trả items/total/page/pageSize, không path/secrets |
 
 Mutation vẫn cần Origin đúng + X-APM-Token; chỉ POST/media được dùng image Content-Type thay JSON. apiFetch hỗ trợ ngoại lệ này. Sai schema/field dư/payload lớn bị chặn; không echo payload trong lỗi. Chưa có UI, delete file API hoặc endpoint đọc plaintext secrets. Xem [ADR0010](adr/0010-data-api-validation.md).
+
+## Chạy cho người vận hành
+
+- `npm start` hoặc nhấp đúp `Auto-Post-MKT.cmd`: kiểm tra môi trường (Node, thư viện, cổng, thư mục dữ liệu, Edge, worker đang chạy), tự build giao diện nếu thiếu, bật server + worker, mở trình duyệt. `--check` chỉ kiểm tra; `--no-open` không mở trình duyệt.
+- `npm run update` hoặc `Cap-nhat-Auto-Post-MKT.cmd`: cập nhật an toàn (sao lưu đã kiểm tra → `git pull --ff-only` → migration → build). Xem [huong-dan.md](huong-dan.md).
+- Hướng dẫn sử dụng: [huong-dan.md](huong-dan.md). Báo cáo nghiệm thu: [nghiem-thu.md](nghiem-thu.md).

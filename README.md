@@ -362,10 +362,36 @@ Dữ liệu cần tách rõ: sản phẩm/máy, tài khoản, cấu hình proxy,
 - Chạy 24/7 khi máy Windows tắt; phương án máy chủ cần được thiết kế riêng nếu phát sinh nhu cầu.
 - SaaS nhiều cửa hàng, phân quyền doanh nghiệp, thu phí và các kênh bán hàng khác.
 
-## 11. Tình trạng triển khai
+## 11. Tình trạng triển khai và cách chạy
 
-Đã hoàn thành nền dự án P00.1–P00.8: khung React/Vite, Fastify health trên loopback, SQLite WAL/migration, cấu hình môi trường và adapter giả mặc định, lint/typecheck/test/build, log lọc bí mật và bảo vệ API cục bộ theo Host/Origin/token. Chưa có kết quả kiểm thử đăng Facebook thật; các chức năng nghiệp vụ/UI còn là khung theo tiến độ trong [plan.md](plan.md).
+Các mục từ 1 đến 10 phía trên mô tả **mục tiêu và thiết kế**; mục này mô tả **hành vi thực tế hiện nay**. Bằng chứng từng tình huống: [docs/nghiem-thu.md](docs/nghiem-thu.md). Tiến độ chi tiết: `plan.md` và `report_daily.md`.
 
-Phần offline đã có schema/migration (P02.1–P02.2), repository phiên bản/job (P02.3), MediaStore JPEG/PNG/WebP (P02.4), secrets Windows DPAPI (P02.5), publisher/scanner fake (P02.6) và API nền upload/đọc ảnh/tạo/liệt kê sản phẩm có validation (P02.7). Có công cụ thử chủ động và hàm caption từ dữ kiện. Chưa có scheduler hoặc UI nhập máy/soạn/xem trước; fake không chứng minh khả năng Facebook thật. Xem [mô hình dữ liệu](docs/data-model.md) và [ma trận khả thi](docs/feasibility.md).
+### Đã dùng được
 
-Máy mới cài Node 24, chạy `npm ci` rồi `npm run check` (PowerShell có thể dùng `npm.cmd`). Lệnh check chạy typecheck → lint → test → build web. Xem [docs/environment.md](docs/environment.md) để cấu hình/chạy dev. Việc tiếp theo là chuẩn bị công cụ P01 rồi thực hiện các thử nghiệm được người dùng chọn rõ tài khoản/đích.
+- Quản lý tối đa hai tài khoản (đăng nhập tay trong Edge, kiểm tra phiên), quản lý máy (ảnh, tên, tình trạng; giá và thông số tùy chọn), danh sách nhóm nhập bằng link/ID.
+- Đăng **nhóm** và **trang cá nhân** qua hàng chờ: xem trước từng đích, duyệt theo phiên bản, lịch giờ Việt Nam, chống bấm hai lần, kết quả riêng từng đích, cấu hình thường dùng. Đã đăng thật một lần cho mỗi kênh (28/10/2026) và được người dùng xác nhận.
+- Kết quả chưa rõ **không tự gửi lại**: đối chiếu bằng xác nhận thủ công; lịch quá hạn không phát dồn; máy sửa/đã bán được phản ánh vào các bài đã xếp.
+- Ghi nhận **thủ công** khách hỏi và đơn hàng (không tự đọc tương tác từ Facebook).
+- Sao lưu/phục hồi có kiểm tra mã băm, cập nhật an toàn, báo cáo chẩn đoán lọc bí mật, ảnh chụp lỗi chỉ khi bật rõ và có hạn lưu.
+- Launcher Windows một cổng (`127.0.0.1`), chạy được từ đường dẫn có dấu và khoảng trắng.
+
+### Chưa có hoặc chưa bàn giao
+
+- **Fanpage** (cần ứng dụng Meta được cấp quyền) — chưa làm; **proxy** — hoãn có chủ đích; **LLM** — chưa làm (bản cơ bản không cần AI).
+- Đọc tự động danh sách nhóm đã tham gia / tìm nhóm theo từ khóa: chưa bàn giao.
+- Chưa nghiệm thu một chu trình thật qua launcher; chưa thử nhóm kiểm duyệt thật, nick không phải quản trị, hai nick đồng thời.
+
+### Chạy ứng dụng
+
+Yêu cầu: Windows, Node 24, Edge. **Đừng đặt thư mục dự án trong OneDrive.**
+
+```
+npm ci                # một lần
+Auto-Post-MKT.cmd     # hoặc: npm start  → mở http://127.0.0.1:4317/
+```
+
+- **Máy phải bật, không ngủ, có mạng và cửa sổ launcher phải đang mở thì lịch đăng cục bộ mới chạy.** Tắt cửa sổ là ngừng nhận việc; khi mở lại, các bài hẹn đã quá hạn không tự đăng dồn mà chờ bạn quyết định, bài chưa rõ kết quả hiện để đối chiếu.
+- Mặc định là **chế độ mô phỏng** (không gửi gì tới Facebook). Đăng thật phải bật rõ bằng `APM_INTEGRATIONS=live` trong `.env` và tick xác nhận ở từng lần xếp lịch.
+- Hướng dẫn đầy đủ (tài khoản, máy, nhóm, đăng, hàng chờ, sao lưu, cập nhật, sự cố): [docs/huong-dan.md](docs/huong-dan.md).
+
+Dành cho người phát triển: `npm run check` (typecheck → lint → test → build web), `npm run dev:server` / `dev:worker` / `dev:web`; cấu hình môi trường ở [docs/environment.md](docs/environment.md); quyết định kỹ thuật ở `docs/adr/`.

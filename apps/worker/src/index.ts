@@ -8,6 +8,7 @@ import { acquireProfileLock, createDiagnosticCapture, createPlaywrightDriver } f
 import { getAppEnv, getBrowserMode, getDatabasePath, getDataDir, getDiagnosticCapture, getIntegrationMode, getMinGapMs, getOverdueAfterMs, getProfileAudience } from '#config';
 import { join } from 'node:path';
 import { createLogger } from '#logging';
+import { watchParent } from '#ops';
 import { createAccountRepository, createMediaStore, migrate, openDatabase, writeWorkerHeartbeat } from '#storage';
 import { createBrowserCommandRunner } from './browser-commands.ts';
 import { createJobRunner } from './job-runner.ts';
@@ -102,6 +103,7 @@ try {
     };
     process.once('SIGINT', () => shutdown('SIGINT'));
     process.once('SIGTERM', () => shutdown('SIGTERM'));
+    watchParent(process.env, () => shutdown('mất launcher')); // launcher chết đột ngột thì worker tự dừng, không nhận việc ngầm
   }
 } catch (error) {
   log.error(error);

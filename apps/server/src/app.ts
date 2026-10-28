@@ -10,6 +10,7 @@ import { installGroupsApi } from './groups-api.ts';
 import { installJobsApi } from './jobs-api.ts';
 import { installPresetsApi } from './presets-api.ts';
 import { installSalesApi } from './sales-api.ts';
+import { installStaticUi } from './static-ui.ts';
 
 export interface AppDeps {
   db: Database;
@@ -23,10 +24,12 @@ export interface AppDeps {
   uploadLimitBytes?: number;
   /** Ngưỡng job hẹn trễ không tự chạy (hiển thị "quá hạn"); mặc định 15 phút, khớp cấu hình worker. */
   overdueAfterMs?: number;
+  /** Thư mục giao diện đã build để server phục vụ (APM_SERVE_WEB=on); không đặt thì chỉ có API (Vite phục vụ giao diện khi phát triển). */
+  webDistDir?: string;
 }
 
 /** Tạo Fastify app (chưa listen) để server và test dùng chung. */
-export function buildApp({ db, env, integrations, logger = true, security, mediaStore, uploadLimitBytes, overdueAfterMs = 15 * 60_000 }: AppDeps): FastifyInstance {
+export function buildApp({ db, env, integrations, logger = true, security, mediaStore, uploadLimitBytes, overdueAfterMs = 15 * 60_000, webDistDir }: AppDeps): FastifyInstance {
   const app = Fastify({
     ajv: { customOptions: { removeAdditional: false } },
     ...(logger === false ? { logger: false } : {
@@ -40,6 +43,7 @@ export function buildApp({ db, env, integrations, logger = true, security, media
   installJobsApi(app, db, integrations, overdueAfterMs);
   installPresetsApi(app, db);
   installSalesApi(app, db);
+  if (webDistDir && !installStaticUi(app, webDistDir)) app.log.warn('Chưa có bản build giao diện (apps/web/dist): chạy npm run build:web; giao diện chưa được phục vụ.');
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof BusinessError) {
       const status = error.code === 'not_found' ? 404 : error.code === 'invalid_input' ? 400

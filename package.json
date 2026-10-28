@@ -17,9 +17,12 @@
     "#fb-group": "./packages/integrations/facebook-group/src/index.ts",
     "#fb-page": "./packages/integrations/facebook-page/src/index.ts",
     "#logging": "./packages/logging/src/index.ts",
+    "#ops": "./packages/ops/src/index.ts",
     "#test-support": "./tests/helpers/index.ts"
   },
   "scripts": {
+    "start": "node scripts/launch.ts",
+    "update": "node scripts/update.ts",
     "dev:server": "node --env-file-if-exists=.env --watch apps/server/src/index.ts",
     "dev:worker": "node --env-file-if-exists=.env --watch apps/worker/src/index.ts",
     "dev:web": "vite --config apps/web/vite.config.ts",
