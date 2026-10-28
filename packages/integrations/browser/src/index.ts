@@ -7,3 +7,4 @@ export * from './playwright-driver.ts';
 export * from './profile-lock.ts';
 export * from './profile-session.ts';
 export * from './session.ts';
+export * from './joined-groups.ts';

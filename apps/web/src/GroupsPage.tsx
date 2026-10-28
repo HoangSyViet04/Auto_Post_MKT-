@@ -13,6 +13,7 @@ import { normalizeGroupReference } from '#domain';
 import { apiFetch } from './api.ts';
 import { setHandoff } from './handoff.ts';
 import { networkMessage, readError } from './http.ts';
+import { JoinedScanPanel } from './JoinedScanPanel.tsx';
 
 const PAGE_SIZE = 20;
 const MEMBERSHIP: Record<GroupMembership, string> = { unknown: 'Chưa rõ', joined: 'Đã tham gia', not_joined: 'Chưa tham gia' };
@@ -148,12 +149,11 @@ export function GroupsPage() {
     <section>
       <header className="page-header">
         <h1>Nhóm đã tham gia</h1>
-        <span className="tag">P06 · nhập tay</span>
+        <span className="tag">Nhập tay · quét nhóm đã tham gia</span>
       </header>
       <p className="notice">
-        Ứng dụng <strong>chưa tự đọc</strong> danh sách nhóm từ Facebook. Nhóm ở đây do bạn nhập tay hoặc nhập từ kết quả công cụ thử đọc nhóm
-        (chạy ngoài ứng dụng, chỉ là một phần danh sách, nhãn "đọc từ Facebook"). "Đã tham gia" có thể đến từ lần đọc đó; "được đăng" luôn do bạn
-        xác nhận. Không có thao tác nào ở trang này gửi tới Facebook.
+        Nhóm có thể nhập tay hoặc quét từ Facebook bằng tài khoản bạn chọn. “Đã tham gia” không đồng nghĩa được phép đăng bán hàng;
+        “được đăng” do bạn xác nhận sau khi kiểm tra nội quy.
       </p>
 
       <div className="actions">
@@ -169,6 +169,8 @@ export function GroupsPage() {
           Chuyển sang Đăng nhóm ({picked.length})
         </button>
       </div>
+
+      <JoinedScanPanel key={accountId} account={chosenAccount} onRefresh={load} />
 
       {adding && (
         <form className="product-form" onSubmit={add} noValidate>

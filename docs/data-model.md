@@ -74,3 +74,11 @@ Bảng `sales_events`: mỗi dòng là một lần **người dùng tự ghi nh�
 - `amount_vnd` chỉ cho đơn hàng. Thời điểm không được ở tương lai (cho lệch 5 phút).
 - Bất biến: không xóa; chỉ được đánh dấu hủy một lần bằng `voided_at` (trigger). Tổng hợp bỏ qua dòng đã hủy.
 - Tên khách và ghi chú là dữ liệu cá nhân do người dùng nhập: có trong bản sao lưu, không có trong báo cáo chẩn đoán.
+
+## Quét nhóm đã tham gia trong ứng dụng (migration 0006)
+
+`scan_runs` bổ sung `claimed_by`, `heartbeat_at`, `cancel_requested_at`, `without_id_count` và chỉ mục duy nhất cho một lượt joined đang chờ/chạy trên mỗi tài khoản. Lượt quét gắn danh tính tại thời điểm yêu cầu; đổi danh tính/tạm dừng/gỡ tài khoản làm dừng thu thập.
+
+Mỗi vòng đọc lưu các nhóm có ID số và `scan_results` trong cùng transaction, nguồn `joined_scan`, membership `joined`, giữ nguyên quyền đăng/nội quy/ưu tiên có sẵn. Không suy quyền đăng từ membership. `scan_results` duy nhất theo lượt–đích; nhóm vắng không bị cập nhật trạng thái đã rời. Các kết quả chưa có ID số chỉ được đếm, chưa nhập vào danh sách đích.
+
+Lượt đọc giao diện luôn kết thúc `partial` (hoặc stopped/blocked/failed), không tuyên bố đã đọc toàn bộ. Heartbeat mất quá 180 giây → partial/worker_lost, không tự chạy lại. API chỉ trả trạng thái, số lượng, giới hạn, mã lý do; không trả profile path, chủ lease hay tham chiếu danh tính.

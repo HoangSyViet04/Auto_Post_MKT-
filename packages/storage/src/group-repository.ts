@@ -115,7 +115,7 @@ export function createGroupRepository(db: Database, options: RepositoryOptions =
         approval: input.approvalRequired === undefined ? 'unknown' : member(input.approvalRequired, APPROVALS),
         curation: input.curation === undefined ? 'normal' : member(input.curation, CURATIONS),
       };
-      return atomic(db, () => {
+      const write = () => {
         const existing = normalized.externalId
           ? one<{ id: string }>(db, "SELECT id FROM destinations WHERE channel='group' AND external_id=?", normalized.externalId)
           : one<{ id: string }>(db, "SELECT id FROM destinations WHERE channel='group' AND canonical_url=?", normalized.canonicalUrl);
@@ -133,7 +133,9 @@ export function createGroupRepository(db: Database, options: RepositoryOptions =
         }
         upsertRelation(id, input.accountId, membership, permission, source);
         return { id, created: !existing };
-      });
+      };
+      // A scan persists the observation and its group in the same transaction.
+      return db.isTransaction ? write() : atomic(db, write);
     },
 
     /**

@@ -4,7 +4,7 @@
  * Điều khiển trình duyệt mặc định TẮT (APM_BROWSER=off); chỉ chạy lệnh đăng nhập/kiểm tra phiên do người dùng bấm khi APM_BROWSER=real.
  * Chạy job đến hạn bằng adapter đã chọn (APM_INTEGRATIONS=fake: mô phỏng, không gọi Facebook). Khởi động worker không tự tạo job. `--once`: khởi động, ghi nhịp sống, thoát (dùng cho test).
  */
-import { acquireProfileLock, createDiagnosticCapture, createPlaywrightDriver } from '#browser';
+import { acquireProfileLock, createDiagnosticCapture, createJoinedGroupScanner, createPlaywrightDriver } from '#browser';
 import { getAppEnv, getBrowserMode, getDatabasePath, getDataDir, getDiagnosticCapture, getIntegrationMode, getMinGapMs, getOverdueAfterMs, getProfileAudience } from '#config';
 import { join } from 'node:path';
 import { createLogger } from '#logging';
@@ -13,6 +13,7 @@ import { createAccountRepository, createMediaStore, migrate, openDatabase, write
 import { createBrowserCommandRunner } from './browser-commands.ts';
 import { createJobRunner } from './job-runner.ts';
 import { createPublishers } from './publishers.ts';
+import { createJoinedScanRunner } from './joined-scans.ts';
 
 const HEARTBEAT_MS = 5_000;
 const POLL_MS = 2_000;
@@ -69,6 +70,8 @@ try {
       ? createBrowserCommandRunner({ db, driver: createPlaywrightDriver(), workerId, dataDir, log })
       : undefined;
     const jobRunner = createJobRunner({ db, workerId, mode, publishers, media: createMediaStore(db), minGapMs: getMinGapMs(), overdueAfterMs: getOverdueAfterMs(), log });
+    const scanRunner = mode === 'live' && browser === 'real'
+      ? createJoinedScanRunner({ db, workerId, dataDir, scan: createJoinedGroupScanner() }) : undefined;
     if (!runner) log.info('[worker] APM_BROWSER=off: không mở trình duyệt; lệnh đăng nhập/kiểm tra phiên sẽ chờ cho tới khi bật APM_BROWSER=real.');
     const beat = setInterval(() => {
       try { writeWorkerHeartbeat(db, browser); } catch (error) { log.error({ errorName: error instanceof Error ? error.name : 'unknown' }, 'Không ghi được nhịp sống'); }
@@ -78,7 +81,12 @@ try {
     }, PURGE_MS);
     let busy = false;
     let jobsBusy = false;
+    let scansBusy = false;
     const poll = setInterval(() => {
+      if (scanRunner && !scansBusy) {
+        scansBusy = true;
+        scanRunner.processNext().catch(() => log.error({ code: 'scan_error' }, 'Vòng quét nhóm lỗi')).finally(() => { scansBusy = false; });
+      }
       if (runner && !busy) {
         busy = true;
         (async () => { while ((await runner.processNext()) === 'processed') { /* xử lý hết lệnh đang chờ */ } })()

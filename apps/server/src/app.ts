@@ -39,7 +39,7 @@ export function buildApp({ db, env, integrations, logger = true, security, media
   installLocalAccess(app, env, security);
   installDataApi(app, db, mediaStore ?? createMediaStore(db), uploadLimitBytes);
   installAccountsApi(app, db);
-  installGroupsApi(app, db);
+  installGroupsApi(app, db, integrations);
   installJobsApi(app, db, integrations, overdueAfterMs);
   installPresetsApi(app, db);
   installSalesApi(app, db);

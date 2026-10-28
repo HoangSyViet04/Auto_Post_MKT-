@@ -25,8 +25,8 @@ describe('migrate', () => {
     const db = openDatabase(dbPath());
     try {
       const result = migrate(db);
-      assert.deepEqual(result.applied, [1, 2, 3, 4, 5]);
-      assert.equal(result.currentVersion, 5);
+      assert.deepEqual(result.applied, loadMigrations().map((migration) => migration.version));
+      assert.equal(result.currentVersion, loadMigrations().at(-1)?.version);
       assert.ok(db.prepare("SELECT value FROM app_meta WHERE key = 'created_at'").get()?.value);
     } finally {
       db.close();

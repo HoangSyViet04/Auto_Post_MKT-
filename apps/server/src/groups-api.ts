@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
-import type { GroupMembership } from '#domain';
-import { type AddGroupInput, createGroupRepository, type Database, type GroupFilter, type GroupProfileInput } from '#storage';
+import { BusinessError, type GroupMembership, type IntegrationMode } from '#domain';
+import { type AddGroupInput, createGroupRepository, createJoinedScanRepository, type Database, type GroupFilter, type GroupProfileInput, readWorkerStatus } from '#storage';
 
 const UUID = '^[a-fA-F0-9]{8}-(?:[a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}$';
 const uuid = { type: 'string', pattern: UUID } as const;
@@ -15,11 +15,29 @@ const profile = {
 } as const;
 
 /**
- * Danh sách nhóm đã lưu (P06.1/P06.5–P06.7). Dữ liệu do người dùng nhập tay; chưa có đọc tự động từ Facebook.
- * Không có thao tác nào ở đây gửi gì tới Facebook hay tạo hàng chờ.
+ * Danh sách nhóm đã lưu và yêu cầu quét joined (P06). Server chỉ ghi yêu cầu; worker giữ khóa hồ sơ và đọc Facebook.
+ * Quét không tự cấp quyền đăng và không tạo tác vụ đăng bài.
  */
-export function installGroupsApi(app: FastifyInstance, db: Database): void {
+export function installGroupsApi(app: FastifyInstance, db: Database, mode: IntegrationMode = 'fake'): void {
   const groups = createGroupRepository(db);
+  const scans = createJoinedScanRepository(db);
+  const accountParams = { type: 'object', additionalProperties: false, required: ['accountId'], properties: { accountId: uuid } } as const;
+  app.get<{ Params: { accountId: string } }>('/api/accounts/:accountId/joined-scan', {
+    schema: { params: accountParams },
+  }, async (request) => ({ scan: scans.latest(request.params.accountId) }));
+  app.post<{ Params: { accountId: string }; Body: { limit: number } }>('/api/accounts/:accountId/joined-scan', {
+    schema: { params: accountParams, body: { type: 'object', additionalProperties: false, required: ['limit'], properties: {
+      limit: { type: 'integer', minimum: 1, maximum: 1000 },
+    } } },
+  }, async (request, reply) => {
+    if (mode !== 'live') throw new BusinessError('mode_mismatch');
+    const worker = readWorkerStatus(db);
+    if (!worker.alive || worker.browser !== 'real') throw new BusinessError('worker_unavailable');
+    return reply.code(202).send(scans.enqueue(request.params.accountId, request.body.limit));
+  });
+  app.post<{ Params: { id: string } }>('/api/joined-scans/:id/cancel', {
+    schema: { params: idParams, body: { type: 'object', additionalProperties: false, properties: {} } },
+  }, async (request, reply) => { scans.cancel(request.params.id); return reply.code(204).send(); });
 
   app.get<{ Querystring: GroupFilter }>('/api/groups', {
     schema: { querystring: { type: 'object', additionalProperties: false, properties: {

@@ -33,6 +33,7 @@ import {
 } from './post-plan.ts';
 import { PresetPanel } from './PresetPanel.tsx';
 import { formFromDetail, previewCaption } from './product-form.ts';
+import { selectGroupCount } from './group-selection.ts';
 
 const BLOCKER_LABEL: Record<GroupBlocker, string> = {
   no_external_id: 'chưa có ID số của nhóm',
@@ -78,6 +79,7 @@ export function PostGroupPage() {
   const [versions, setVersions] = useState<ContentVersionItem[]>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [filter, setFilter] = useState('');
+  const [wantedCount, setWantedCount] = useState('30');
   const [templateText, setTemplateText] = useState('');
   const [liveConfirm, setLiveConfirm] = useState(false);
   const [message, setMessage] = useState('');
@@ -289,6 +291,17 @@ export function PostGroupPage() {
                 <input className="inline-input" aria-label="Lọc nhóm" placeholder="Lọc theo tên, ID, khu vực, nội quy…" value={filter} onChange={(event) => setFilter(event.target.value)} />
                 <button type="button" onClick={() => set({ selected: [...new Set([...draft.selected, ...eligibleVisible.map((group) => group.id)])] })}>Chọn tất cả đủ điều kiện ({eligibleVisible.length})</button>
                 <button type="button" onClick={() => set({ selected: [] })}>Bỏ chọn hết</button>
+              </div>
+              <div className="actions">
+                <label>Số nhóm muốn đăng <input type="number" aria-label="Số nhóm muốn đăng" min={1} max={100} value={wantedCount} onChange={(event) => setWantedCount(event.target.value)} /></label>
+                <button type="button" onClick={() => {
+                  try {
+                    const result = selectGroupCount(visible, draft.accountId, Number(wantedCount));
+                    set({ selected: result.selected }); setLiveConfirm(false);
+                    setMessage(`Đã chọn ${result.selected.length}/${Number(wantedCount)} nhóm trong bộ lọc hiện tại (${result.available} nhóm đủ điều kiện). Ưu tiên nhóm đánh dấu ưu tiên, sau đó theo tên. Danh sách chọn cũ được thay thế; xem trước rồi duyệt để xếp lịch. Chưa tạo tác vụ nào.`);
+                  } catch (error) { setMessage(networkMessage(error)); }
+                }}>Chọn theo số lượng</button>
+                <a href="#/scan-joined">Quét / cập nhật nhóm đã tham gia</a>
               </div>
               {groups.length === 0 && <span className="muted">Tài khoản này chưa có nhóm nào. Thêm ở trang "Nhóm đã tham gia".</span>}
               <table className="table">

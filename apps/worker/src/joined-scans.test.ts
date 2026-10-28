@@ -1,0 +1,97 @@
+import assert from 'node:assert/strict';
+import { afterEach, beforeEach, test } from 'node:test';
+import { join } from 'node:path';
+import type { JoinedGroupScanner } from '#browser';
+import { createAccountRepository, createGroupRepository, createJoinedScanRepository, createLeaseRepository } from '#storage';
+import { createTestWorkspace } from '#test-support';
+import { createJoinedScanRunner } from './joined-scans.ts';
+
+let ws: ReturnType<typeof createTestWorkspace>;
+let accountId: string;
+const observation = { reference: 'https://www.facebook.com/groups/123456789012', name: 'Nhóm điện thoại' };
+beforeEach(() => {
+  ws = createTestWorkspace();
+  const accounts = createAccountRepository(ws.db);
+  accountId = accounts.create({ label: 'Nick A' }).id;
+  accounts.recordIdentity(accountId, 'vanity:nick.a'); accounts.recordSession(accountId, 'logged_in');
+});
+afterEach(() => ws.dispose());
+const run = (scan: JoinedGroupScanner) => createJoinedScanRunner({ db: ws.db, workerId: 'test-worker', dataDir: ws.dataDir, scan }).processNext();
+test('quét lưu tiến độ, loại trùng, không tự cấp quyền đăng; quét lại giữ nội quy và nhóm vắng', async () => {
+  const scans = createJoinedScanRepository(ws.db);
+  const groups = createGroupRepository(ws.db);
+  const absent = groups.add({ accountId, reference: '998877665544', membership: 'joined', permission: 'allowed' });
+  scans.enqueue(accountId, 100);
+  assert.throws(() => scans.enqueue(accountId, 30), { code: 'conflict' });
+  await run(async (input) => {
+    assert.equal(input.profileDir, join(ws.dataDir, 'profiles', createAccountRepository(ws.db).profileKey(accountId)));
+    assert.equal(input.expectedIdentity, 'vanity:nick.a');
+    input.onBatch([observation, observation, { reference: 'https://www.facebook.com/groups/slug-only', name: 'slug' }]);
+    assert.equal(scans.latest(accountId)?.observedCount, 1);
+    return { status: 'partial', reason: 'no_more_results_seen' };
+  });
+  assert.equal(scans.latest(accountId)?.status, 'partial');
+  assert.equal(scans.latest(accountId)?.withoutIdCount, 1);
+  const found = groups.list({ accountId }).items.find((item) => item.externalId === '123456789012');
+  assert.equal(found?.accounts[0]?.permission, 'unknown');
+  assert.equal(found?.accounts[0]?.source, 'joined_scan');
+  assert.equal(groups.list({ accountId }).items.find((item) => item.id === absent.id)?.accounts[0]?.permission, 'allowed');
+  assert.ok(found);
+  groups.update(found.id, { rulesNote: 'Chỉ bán điện thoại', curation: 'preferred' });
+  groups.setRelation(found.id, accountId, { permission: 'allowed' });
+  scans.enqueue(accountId, 30);
+  await run(async (input) => { input.onBatch([observation]); return { status: 'partial', reason: 'result_limit' }; });
+  const again = groups.list({ accountId }).items.find((item) => item.id === found.id);
+  assert.equal(again?.rulesNote, 'Chỉ bán điện thoại'); assert.equal(again?.accounts[0]?.permission, 'allowed');
+  assert.equal(groups.list({ accountId }).total, 2);
+});
+test('dừng giữ kết quả đã lưu; khóa hồ sơ dùng chung; không lẫn dữ liệu sang tài khoản B', async () => {
+  const scans = createJoinedScanRepository(ws.db);
+  const leases = createLeaseRepository(ws.db);
+  scans.enqueue(accountId, 30);
+  const held = leases.acquireBrowser(accountId, 'other-owner', 10000);
+  assert.equal(await run(async () => { throw new Error('must not run'); }), 'idle');
+  leases.release(held);
+  await run(async (input) => {
+    input.onBatch([observation]);
+    assert.throws(() => leases.acquireBrowser(accountId, 'test-worker', 10000), { code: 'conflict' });
+    const scan = scans.latest(accountId); assert.ok(scan); scans.cancel(scan.id);
+    assert.equal(input.shouldCancel(), true);
+    input.onBatch([{ reference: '667788990011', name: 'not saved after cancellation' }]);
+    return { status: 'stopped', reason: 'cancelled' };
+  });
+  assert.equal(scans.latest(accountId)?.status, 'stopped');
+  assert.equal(scans.latest(accountId)?.observedCount, 1);
+  assert.equal(leases.isBrowserBusy(accountId), false);
+  const b = createAccountRepository(ws.db).create({ label: 'B' }).id;
+  assert.equal(createGroupRepository(ws.db).list({ accountId: b }).total, 0);
+});
+test('mất mạng sau một phần kết quả vẫn giữ nhóm; sai danh tính chặn; tài khoản tạm dừng không mở profile', async () => {
+  const scans = createJoinedScanRepository(ws.db);
+  const accounts = createAccountRepository(ws.db);
+  scans.enqueue(accountId, 30);
+  await run(async (input) => { input.onBatch([observation]); return { status: 'blocked', reason: 'identity_mismatch' }; });
+  assert.equal(accounts.get(accountId).sessionStatus, 'unknown');
+  assert.equal(scans.latest(accountId)?.observedCount, 1);
+  accounts.recordSession(accountId, 'logged_in');
+  scans.enqueue(accountId, 30);
+  await run(async (input) => { input.onBatch([observation]); throw new Error('driver crash'); });
+  assert.equal(scans.latest(accountId)?.reasonCode, 'scan_error');
+  assert.equal(scans.latest(accountId)?.observedCount, 1);
+  scans.enqueue(accountId, 30); accounts.setPaused(accountId, true);
+  await run(async () => { throw new Error('must not open'); });
+  assert.equal(scans.latest(accountId)?.reasonCode, 'account_changed');
+});
+test('khôi phục scan mất worker không chạy lại; hủy trước nhận và từ chối kết quả của chủ cũ', () => {
+  let clock = Date.now();
+  const scans = createJoinedScanRepository(ws.db, { clock: () => clock });
+  const first = scans.enqueue(accountId, 30);
+  const claim = scans.claimNext('old'); assert.ok(claim);
+  clock += 181000;
+  assert.equal(scans.claimNext('new'), undefined);
+  assert.equal(scans.latest(accountId)?.reasonCode, 'worker_lost');
+  assert.throws(() => scans.saveBatch(first.id, 'old', [observation]), { code: 'claim_lost' });
+  const second = scans.enqueue(accountId, 30); scans.cancel(second.id);
+  assert.equal(scans.latest(accountId)?.status, 'stopped');
+  assert.equal(scans.claimNext('new'), undefined);
+});

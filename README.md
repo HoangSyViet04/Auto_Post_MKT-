@@ -1,7 +1,7 @@
 # Auto Post MKT — Ứng dụng hỗ trợ bán điện thoại trên Facebook
 
-> Trạng thái: đặc tả ý tưởng và phạm vi phát triển. Ứng dụng chưa được triển khai.
-> Cập nhật: 26/10/2026.
+> Trạng thái: MVP nội bộ Windows đã có luồng quản lý máy, duyệt/xếp lịch, đăng nhóm/trang cá nhân và theo dõi kết quả. Một lần đăng thật mỗi kênh đã được ghi nhận; chưa nghiệm thu đầy đủ vận hành. Các phần dự kiến bên dưới cần đối chiếu `plan.md` và `report_daily.md` để biết trạng thái triển khai.
+> Cập nhật: 28/10/2026. Hướng dẫn mới: [Quét nhóm đã tham gia và chọn số nhóm muốn đăng](docs/joined-groups.md).
 
 ## 1. Tổng quan bài toán
 

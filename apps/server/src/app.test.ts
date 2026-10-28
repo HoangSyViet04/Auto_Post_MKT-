@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { type Database, migrate, openDatabase } from '#storage';
+import { type Database, loadMigrations, migrate, openDatabase } from '#storage';
 import { buildApp } from './app.ts';
 import { createLogger } from '#logging';
 
@@ -23,7 +23,7 @@ describe('server API', () => {
     const body = res.json();
     assert.equal(body.status, 'ok');
     assert.equal(body.env, 'test');
-    assert.equal(body.schemaVersion, 5);
+    assert.equal(body.schemaVersion, loadMigrations().at(-1)?.version);
     assert.equal(body.integrations, 'fake');
     assert.ok(!Number.isNaN(Date.parse(body.startedAt)));
   });

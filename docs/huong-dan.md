@@ -56,14 +56,14 @@ Phiên đăng nhập nằm trong hồ sơ trình duyệt riêng của từng tà
 
 **Quản lý máy:** tạo máy chỉ cần **ảnh, tên máy và tình trạng**; giá, dung lượng, pin, bảo hành, khu vực là tùy chọn. Ứng dụng chỉ đưa vào bài những gì bạn đã nhập, không tự thêm giá hay thông số. Thứ tự ảnh bạn sắp xếp là thứ tự đăng.
 
-**Nhóm:** ở trang **Nhóm đã tham gia**, thêm nhóm bằng link hoặc ID số, ghi nội quy, khu vực, nhóm có duyệt bài hay không. Nhóm chưa có ID số, chưa tham gia, chưa xác nhận được phép đăng hoặc đã đánh dấu không phù hợp sẽ **bị khóa**, không đăng được. (Đọc tự động danh sách nhóm đã tham gia chưa nằm trong bản bàn giao này.)
+**Nhóm:** ở trang **Nhóm đã tham gia**, thêm nhóm bằng link hoặc ID số, hoặc chọn tài khoản rồi bấm **Quét nhóm đã tham gia** (chế độ thật, worker bật trình duyệt). Có giới hạn số nhóm đọc, tiến độ và nút dừng; kết quả một phần đã đọc được giữ lại. Quét không tự cấp quyền đăng: kiểm tra nội quy rồi chọn **Quyền đăng → Được đăng** cho nhóm phù hợp. Nhóm chưa có ID số, chưa tham gia, chưa xác nhận được phép đăng hoặc đã đánh dấu không phù hợp sẽ **bị khóa**, không đăng được. Xem [hướng dẫn quét và chọn số lượng](joined-groups.md); phần quét mới đã kiểm thử offline, còn nghiệm thu Facebook thật.
 
 ## 5. Đăng bài
 
 ### Đăng nhóm — trang "Đăng bài viết nhóm"
 
 1. Chọn **tài khoản** và **máy**; caption mẫu tự điền, bạn sửa được.
-2. Tick các **nhóm** (nút "Chọn tất cả đủ điều kiện" nếu cần). Mỗi nhóm là một bài và một kết quả riêng.
+2. Tick các **nhóm**, hoặc nhập **Số nhóm muốn đăng** (ví dụ 30) rồi bấm **Chọn theo số lượng**. App thay lựa chọn cũ bằng tối đa số nhóm yêu cầu trong bộ lọc, chỉ lấy nhóm đủ điều kiện của đúng tài khoản, ưu tiên nhóm đánh dấu ưu tiên rồi theo tên. Thiếu nhóm thì báo số thực có (ví dụ 23/30). Mỗi nhóm là một bài và một kết quả riêng; chọn chưa tạo tác vụ đăng.
 3. **Lịch**: bắt đầu ngay, hoặc hẹn giờ (giờ Việt Nam).
 4. **Xem trước từng nhóm**: ảnh theo thứ tự, caption (sửa riêng từng nhóm được), nội quy, cảnh báo nếu nhiều nhóm cùng một caption (dễ bị coi là lặp).
 5. Bấm **Duyệt và xếp lịch**. Nếu có nhóm không đủ điều kiện, **không job nào được xếp**; bỏ chọn nhóm bị đánh dấu rồi bấm lại. Bấm hai lần không tạo bài trùng.
