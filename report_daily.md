@@ -740,3 +740,11 @@ Mẫu một mục:
 - **Làm việc song song:** phiên khác vừa commit "gom dữ liệu vào `data/`" (ADR 0012); tôi chỉ commit các file của mình bằng `git commit --only`, giữ nguyên phần staged của họ. Dữ liệu thật nay ở `D:\Project\Auto_Post_MKT\data` (schema v6, 3 job đã đăng + 1 lỗi cũ còn nguyên).
 - **Chưa làm:** kết nối thật (cần người dùng chạy `page:connect` và tự nhập bí mật), API HTTP + giao diện danh sách Page (P09.2), upload ảnh bằng dữ liệu file (P09.3), đăng chữ/ảnh (P09.4), lịch + unknown (P09.5/6), gỡ Page dừng lịch (P09.7), đối chiếu tài liệu/phiên bản Meta (P09.8), trang đăng fanpage, bài thử thật lên Page.
 - **Tiếp theo:** người dùng chạy `npm run page:connect` (một lần, tự nhập App Secret và token mới); sau đó thử đăng CHỮ một bài lên Page với sự cho phép riêng của người dùng cho đúng Page đó (bài công khai trên fanpage thật), rồi ảnh theo thứ tự.
+
+## 2026-10-28 17:17 — Ước lượng tiến độ và mockup giao diện tham khảo
+
+- **Yêu cầu:** báo mức hoàn thành dự án và tạo ảnh giao diện để người dùng tham khảo.
+- **Đối chiếu:** plan P00–P13 và nhật ký mới nhất, gồm phần fanpage mới có Graph client/kết nối CLI nhưng chưa đăng trọn luồng. Ước lượng 80–85% cho bản đăng nhóm/TCN, 65–70% nếu tính mở rộng fanpage/keyword/LLM; không coi tỷ lệ checkbox là tỷ lệ hoàn thành hoặc nghiệm thu.
+- **Đã tạo:** `docs/design/ui-concept-v1.png` bằng imagegen tích hợp; ảnh tham khảo desktop sáng/sidebar navy, chọn máy/tài khoản, quét nhóm, nhập 30, danh sách nhóm, preview caption/ảnh, lịch và nút duyệt. Dữ liệu minh họa, mô phỏng, fanpage sắp có; không thay mã giao diện hiện tại.
+- **Kiểm tra:** đã xem ảnh tạo ra, các vùng chính và nhãn tiếng Việt thể hiện đúng ý tưởng; sao chép ảnh vào project. Brief/prompt thiết kế và phạm vi tiến độ lưu ở `docs/design/ui-concept-v1.md`. Không cần chạy test ứng dụng vì chỉ thêm ảnh/tài liệu, không đổi source hoặc dữ liệu vận hành.
+- **Tiếp theo:** người dùng xem mockup và chọn điểm cần chỉnh; chỉ triển khai vào giao diện khi có yêu cầu. Không push.
