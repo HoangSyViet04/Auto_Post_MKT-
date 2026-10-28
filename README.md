@@ -379,7 +379,7 @@ Các mục từ 1 đến 10 phía trên mô tả **mục tiêu và thiết kế*
 
 ### Chưa có hoặc chưa bàn giao
 
-- **Fanpage**: đã có kết nối (`npm run page:connect`), bộ đăng qua Graph API và trang "Đăng fanpage", đạt kiểm thử với Graph giả; **chưa đăng thật lần nào** (xem [docs/fanpage.md](docs/fanpage.md) về những điều chưa đối chiếu với Meta). **Proxy** — hoãn có chủ đích; **LLM** — chưa làm (bản cơ bản không cần AI).
+- **Fanpage**: kết nối (`npm run page:connect`), bộ đăng qua Graph API và trang "Đăng fanpage"; đã đăng thật một bài 2 ảnh và được người dùng xác nhận (28/10/2026); còn chưa thử lỗi thật từ Meta (xem [docs/fanpage.md](docs/fanpage.md)). **Proxy** — hoãn có chủ đích; **LLM** — chưa làm (bản cơ bản không cần AI).
 - Đọc tự động danh sách nhóm đã tham gia / tìm nhóm theo từ khóa: chưa bàn giao.
 - Đã nghiệm thu một chu trình thật qua launcher (28/10/2026: nick phụ đăng một bài vào nhóm, khởi động lại không đăng lại, sao lưu khi đang chạy); chưa thử nhóm kiểm duyệt thật, nick không phải quản trị, hai nick đồng thời.
 

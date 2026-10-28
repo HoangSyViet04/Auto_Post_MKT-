@@ -2,7 +2,7 @@
 
 Cập nhật: 28/10/2026. Phiên bản: mã nguồn trên nhánh `main` (chưa gắn số phiên bản; `package.json` ghi 0.0.0). Môi trường chạy thử: Windows 10, Node 24.16, Edge.
 
-**Kết luận ngắn:** bản nội bộ dùng được cho **đăng nhóm** và **đăng trang cá nhân (TCN)** với một hoặc hai tài khoản, từ hàng chờ có đối chiếu kết quả, sao lưu/phục hồi và cập nhật an toàn. **Chưa bàn giao đủ phạm vi** vì kênh **fanpage chưa được thử đăng thật** (đã có mã, đã kết nối Page thật ở chế độ chỉ đọc, đạt test với Graph giả; P09) và còn các mục "một phần" bên dưới. Theo `plan.md`: một kênh chính chưa đạt thì chưa bàn giao đủ.
+**Kết luận ngắn:** bản nội bộ dùng được cho **đăng nhóm** và **đăng trang cá nhân (TCN)** với một hoặc hai tài khoản, từ hàng chờ có đối chiếu kết quả, sao lưu/phục hồi và cập nhật an toàn. Cả ba kênh (**nhóm, trang cá nhân, fanpage**) đã đăng thật thành công một lần và được người dùng xác nhận bằng mắt. Vẫn **chưa bàn giao đủ phạm vi** vì còn các mục "một phần"/"chưa" bên dưới (proxy hoãn, quét nhóm tự động, nhóm kiểm duyệt thật, hai nick đồng thời, AI). Theo `plan.md`: một kênh chính chưa đạt thì chưa bàn giao đủ.
 
 Quy ước cột "Kết quả": **Đạt** = có test tự động (và/hoặc thử thật) chứng minh; **Một phần** = đạt phần nêu, còn thiếu phần ghi rõ; **Chưa** = chưa làm hoặc chưa kiểm chứng.
 
@@ -12,7 +12,7 @@ Quy ước cột "Kết quả": **Đạt** = có test tự động (và/hoặc t
 | --- | --- | --- | --- | --- |
 | T01 | Chỉ ảnh/tên/tình trạng, thiếu tùy chọn | Đạt | `packages/domain/src/caption.test.ts` (T01), `apps/web/src/product-form.test.ts`, mẫu caption bỏ dòng thiếu dữ kiện (`caption-template.test.ts`) | — |
 | T02 | Ảnh hỏng/mất hoặc upload lỗi | Đạt | `composer-publisher.test.ts` (ảnh không đính được → `media_invalid` trước khi gửi), `job-runner.test.ts` ("ảnh mất không biến bài thành chỉ chữ"), `media-store.test.ts`. Thử thật 28/10: ảnh trong kho không đuôi ảnh làm bài dừng trước khi gửi; đã sửa và có test hồi quy | — |
-| T03 | Nick A đăng nhóm X, nick B đăng TCN B, Page Y | Một phần | Nhóm và TCN: `data-api.test.ts` (P10, P10.3); đăng thật 28/10 một bài ở nhóm `1357510931662685` và một bài ở TCN nick phụ, người dùng đã xác nhận bằng mắt (nội dung, thứ tự ảnh, người đăng) | **Page: đã có mã và đạt test với Graph giả (`page-publisher.test.ts`, `page-job.test.ts`, `pages-api.test.ts`), chưa đăng thật lần nào** (P09); chưa thử đồng thời hai nick |
+| T03 | Nick A đăng nhóm X, nick B đăng TCN B, Page Y | Một phần | Nhóm và TCN: `data-api.test.ts` (P10, P10.3); đăng thật 28/10 một bài ở nhóm `1357510931662685` và một bài ở TCN nick phụ, người dùng đã xác nhận bằng mắt (nội dung, thứ tự ảnh, người đăng) | Fanpage: đăng thật 28/10 một bài 2 ảnh lên Page "Góc Nghiện Đồ Hay", người dùng xác nhận bằng mắt; test với Graph giả (`page-publisher.test.ts`, `page-job.test.ts`, `pages-api.test.ts`). **Còn thiếu:** chưa thử đồng thời hai nick, chưa thử lỗi thật từ Meta |
 | T04 | Bấm hai lần / hai worker nhận một job | Đạt | `post-batch.test.ts` (chống bấm hai lần), `repository.test.ts` ("nhiều tiến trình nhận cùng cohort, mỗi job một claim"), `apps/worker/src/single-instance.test.ts`, `tests/e2e/launcher.test.ts` (bản thứ hai bị từ chối) | — |
 | T05 | Quét/đăng/mở thủ công cùng profile | Một phần | Khóa hồ sơ: `browser.test.ts`; khóa trình duyệt giữa các tác vụ: `job-runner.test.ts`; `joined-scans.test.ts` xác nhận quét chờ khi bận và owner riêng ngăn login/đăng chiếm lease đang quét | Chưa nghiệm thu tranh phiên khi quét/đăng trên Facebook thật |
 | T06 | Nhóm chưa tham gia / chưa rõ quyền / có điều kiện | Một phần | `group-repository.test.ts` (lý do chặn), trang Đăng nhóm khóa nhóm chưa đủ điều kiện, `post-batch.test.ts` (tất cả hoặc không gì) | Chưa có cờ riêng "nhóm yêu cầu giá": nội quy được hiển thị để người dùng tự bỏ chọn |
@@ -65,7 +65,7 @@ Quy ước cột "Kết quả": **Đạt** = có test tự động (và/hoặc t
 
 ## Tồn đọng chính trước khi bàn giao đủ phạm vi
 
-1. Fanpage (P09/P10.4): đã có mã, kết nối Page thật thành công (đọc), đạt test với Graph giả; **chưa đăng thật** nên chưa kiểm chứng định dạng nhiều ảnh, đăng bằng file ảnh và việc chế độ Phát triển có cần App Review không.
+1. Fanpage (P09/P10.4): đã đăng thật và được xác nhận; còn chưa thử lỗi thật từ Meta (token hết hạn, bị từ chối), `unknown` thật và đăng 1 ảnh/nhiều ảnh hơn.
 2. Proxy (P04): hoãn có chủ đích.
 3. Quét nhóm đã tham gia (P06): đã có trong ứng dụng và đạt kiểm thử offline; cần nghiệm thu đọc thật trên tài khoản được chọn. Chưa tìm nhóm theo từ khóa. Có chọn theo số lượng ở trang Đăng nhóm; xem [joined-groups.md](joined-groups.md).
 4. Nhóm kiểm duyệt thật (P08.5), nick không phải quản trị, hai nick đồng thời.

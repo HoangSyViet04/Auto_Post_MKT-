@@ -808,3 +808,11 @@ Mẫu một mục:
 - **Bằng chứng:** 10 ảnh mới trong `docs/design/review-20261028/` (desktop viewport/full, 1024px, mobile viewport/full, empty, tải lỗi, máy, hàng chờ, fanpage). Đã mở xem các ảnh chính và nhánh lỗi. Dữ liệu giả, không publisher/mạng Facebook; fanpage chỉ kiểm hiển thị chưa kết nối trong lượt này.
 - **Kiểm tra cuối:** target UI/post-plan/selection 10/10 đạt; lần chốt UI 1/1 đạt (~12 giây); typecheck/lint 195 file/build web 51 module đạt. Không chạy lại full gate để giữ review nhanh theo yêu cầu. Không sửa dữ liệu/phiên thật.
 - **Tiếp theo:** người dùng restart app để nhận bản sửa; ưu tiên thanh hành động gọn dễ tìm trên màn nhỏ và tăng độ đọc chữ phụ. Lưu commit riêng, chưa push.
+
+## 2026-10-28 23:06 — P09: người dùng xác nhận bằng mắt bài fanpage; tick P09.3/P09.4/P10.4
+
+- **Người dùng xác nhận:** đã kiểm tra bài thật trên Page "Góc Nghiện Đồ Hay": đủ 2 ảnh đúng thứ tự (xanh rồi đỏ), đúng nội dung 2 dòng, công khai và đúng Page.
+- **Đã làm:** tick P09.3, P09.4, P10.4 trong `plan.md` (P09 xong 8/8 trừ P09.1 đã tick trước đó → P09 7/8 theo đếm checkbox, xem dòng trạng thái), cập nhật `docs/nghiem-thu.md` (cả ba kênh nhóm/TCN/fanpage đã đăng thật và được xác nhận), README mục 11, `docs/fanpage.md`.
+- **Tiến độ theo checkbox:** 71/116 (61%); bỏ proxy (P04, hoãn) và AI (P13): 71/100 (71%). Còn mở chủ yếu: P01 (bảng bằng chứng khả thi), P03 (quản lý tài khoản: bảng/mở đóng phiên/khóa profile), P06 (quét nhóm tự động và từ khóa), P05.5–5.7, P08.5/P08.7, P10.1, P07.2, P09 (một mục còn mở), P04 và P13.
+- **Chưa thử:** lỗi thật từ Meta (token hết hạn, bị từ chối), `unknown` thật trên Page, 1 ảnh/nhiều ảnh hơn 2, hai nick đồng thời, nhóm kiểm duyệt thật.
+- **Tiếp theo:** người dùng tự xóa các bài thử (nhóm, TCN, fanpage); chọn việc kế tiếp (đóng các mục P03/P06/P05 làm dở, hoặc P04 proxy, hoặc P13 AI).

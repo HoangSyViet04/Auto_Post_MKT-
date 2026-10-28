@@ -28,14 +28,14 @@ Fanpage đăng bằng **API chính thức của Meta**, độc lập với trìn
 - Lấy token Page bằng `GET /me/accounts` với token người dùng; kết quả có `tasks` và `access_token` của từng Page.
 - Bài chữ: `POST /{page-id}/feed` với `message`. Ảnh: `POST /{page-id}/photos`.
 - **Thực nghiệm (28/10/2026):** ứng dụng Meta loại Kinh doanh, chế độ Phát triển, người dùng là quản trị: `me/accounts` trả đúng Page thử với đủ `tasks`; `npm run page:connect` kết nối thành công (chỉ đọc).
-- **Bài thử thật đầu tiên (28/10/2026, người dùng cho phép riêng): MỘT bài công khai, 2 ảnh, lên Page "Góc Nghiện Đồ Hay".** Qua launcher chế độ thật + trang "Đăng fanpage": `queued` → `running` → `published` sau khoảng 14 giây, Meta trả ID bài `107892312229541_1104216589257690`, bằng chứng `api_response`, 1 lần thử, nhật ký `send_started` → `job_published`. **Không có token, không cần App Review** (ứng dụng ở chế độ Phát triển, người dùng là quản trị cả app lẫn Page). Việc Meta nhận bài chứng minh các điểm "đã chấp nhận" ở bảng dưới; việc bài hiển thị ĐỦ 2 ảnh ĐÚNG thứ tự cần người dùng xác nhận bằng mắt.
+- **Bài thử thật đầu tiên (28/10/2026, người dùng cho phép riêng): MỘT bài công khai, 2 ảnh, lên Page "Góc Nghiện Đồ Hay".** Qua launcher chế độ thật + trang "Đăng fanpage": `queued` → `running` → `published` sau khoảng 14 giây, Meta trả ID bài `107892312229541_1104216589257690`, bằng chứng `api_response`, 1 lần thử, nhật ký `send_started` → `job_published`. **Không có token, không cần App Review** (ứng dụng ở chế độ Phát triển, người dùng là quản trị cả app lẫn Page). Người dùng đã xác nhận bằng mắt: bài đủ 2 ảnh đúng thứ tự (xanh rồi đỏ), đúng nội dung, công khai, đúng Page.
 
 ## CHƯA đối chiếu hoặc chưa thử (không được coi là đã chắc chắn)
 
 | Điều chưa biết | Vì sao quan trọng | Cách xác minh |
 | --- | --- | --- |
 | ~~Chế độ Phát triển có **đăng** được mà không cần App Review không~~ | **Đã xác minh 28/10/2026:** đăng được với người dùng là quản trị app và Page | — |
-| Đính **nhiều ảnh** vào một bài bằng `attached_media[i]={"media_fbid":...}` sau khi tải ảnh `published=false` | **Meta chấp nhận** (tạo bài, trả ID) với 2 ảnh. Chờ người dùng xác nhận bằng mắt: đủ 2 ảnh, đúng thứ tự (xanh rồi đỏ) | Xác nhận bằng mắt; thử thêm 1 ảnh và nhiều ảnh hơn khi cần |
+| Đính **nhiều ảnh** vào một bài bằng `attached_media[i]={"media_fbid":...}` sau khi tải ảnh `published=false` | **Đã xác minh 28/10/2026** với 2 ảnh: Meta nhận, bài hiển thị đủ ảnh đúng thứ tự (người dùng xác nhận) | Thử thêm 1 ảnh và nhiều ảnh hơn khi cần |
 | ~~Tải ảnh bằng **dữ liệu file** (`source`, multipart) thay vì `url`~~ | **Đã xác minh 28/10/2026:** Meta nhận ảnh tải lên bằng file | — |
 | Giới hạn số ảnh, dung lượng ảnh mỗi bài | Giới hạn 10 ảnh là ước lượng thận trọng | Thử thật / đọc tài liệu |
 | Thời hạn thật của token Page lấy từ token người dùng dài hạn | Một số nguồn bên thứ ba nói "không hết hạn"; chưa xác minh | Theo dõi; ứng dụng xử lý hết hạn/thu hồi như lỗi thường gặp |
