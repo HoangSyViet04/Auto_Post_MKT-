@@ -116,7 +116,11 @@ export function createJobRunner(deps: JobRunnerDeps) {
         if (problem) { fail(problem); return; }
       }
       const prepared = await publisher.prepare(request);
-      if (!prepared.ok) { fail(prepared.reasonCode === 'stopped' ? 'unknown' : (prepared.reasonCode as FailureReason)); return; }
+      if (!prepared.ok) {
+        deps.log?.info({ reasonCode: prepared.reasonCode, reason: prepared.reason }, 'Dừng trước khi gửi'); // lý do do adapter viết, không chứa bí mật
+        fail(prepared.reasonCode === 'stopped' ? 'unknown' : (prepared.reasonCode as FailureReason));
+        return;
+      }
 
       try {
         jobs.markSendStarted(claim); // ghi mốc TRƯỚC khi gửi; nếu điều kiện đổi hoặc có yêu cầu dừng thì job kết thúc ở đây, không gửi
@@ -127,7 +131,9 @@ export function createJobRunner(deps: JobRunnerDeps) {
       jobs.logActivity(claim.jobId, 'info', 'send_started');
       let completion: Completion;
       try {
-        completion = toCompletion(await publisher.submit(request), source); // đúng MỘT lần
+        const submitted = await publisher.submit(request); // đúng MỘT lần
+        if (submitted.status === 'failed' || submitted.status === 'unknown') deps.log?.info({ status: submitted.status, reasonCode: submitted.reasonCode ?? null, reason: submitted.reason }, 'Kết quả gửi không thành công hoặc chưa rõ');
+        completion = toCompletion(submitted, source);
       } catch {
         completion = { outcome: 'unknown', source, reasonCode: 'unknown' }; // có thể đã gửi: không thử lại, chờ đối chiếu
       }

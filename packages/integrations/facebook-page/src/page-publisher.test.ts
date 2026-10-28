@@ -233,3 +233,22 @@ test('hợp đồng: yêu cầu thiếu ngữ cảnh/sai kênh bị từ chối;
   assert.deepEqual([reasonFor('token_expired'), reasonFor('permission_denied'), reasonFor('rate_limited'), reasonFor('invalid_request')], ['session_expired', 'destination_not_allowed', 'network_error', 'unknown']);
   assert.equal(count('POST', '/feed') + count('POST', '/photos'), 0);
 });
+
+test('lý do dừng/thất bại có mã lỗi số của Meta và HTTP để chẩn đoán, nhưng không chứa thông báo nguyên văn của Meta hay token', async () => {
+  const pub = publisher();
+  const req = request(files(PNG));
+  await pub.prepare(req);
+  override = (entry, response) => {
+    if (entry.path.endsWith('/feed')) { json(response, 400, { error: { code: 100, message: `Invalid parameter attached_media ${TOKEN}`, error_subcode: 1 } }); return true; }
+    return undefined;
+  };
+  const failed = await pub.submit(req);
+  assert.equal(failed.status, 'failed');
+  const reason = failed.status === 'failed' ? failed.reason : '';
+  assert.match(reason, /\[Meta: mã 100, HTTP 400\]/u);
+  assert.equal(reason.includes(TOKEN) || reason.includes('attached_media'), false);
+
+  override = (_entry, response) => { json(response, 403, { error: { code: 200, message: 'Permissions error' } }); return true; };
+  const refused = await publisher().prepare(request(files(PNG), { jobId: 'job-9' }));
+  assert.match(!refused.ok ? refused.reason : '', /\[Meta: mã 200, HTTP 403\]/u);
+});

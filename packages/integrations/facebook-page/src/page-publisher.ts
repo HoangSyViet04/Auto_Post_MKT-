@@ -14,6 +14,9 @@ import {
 } from '#contracts';
 import type { GraphClient, GraphErrorCode, PhotoUpload } from './graph-client.ts';
 
+/** Mã lỗi SỐ của Meta và mã HTTP: không chứa bí mật, giúp chẩn đoán khi Meta từ chối (thông báo nguyên văn của Meta cố ý bị bỏ). */
+const detail = (failure: { status: number | null; fbCode: number | null }): string => ` [Meta: mã ${failure.fbCode ?? '?'}, HTTP ${failure.status ?? '?'}]`;
+
 export interface PagePublisherDeps {
   graph: GraphClient;
   /** Page token theo mã kết nối (chỉ worker được gọi). Ném lỗi nếu token mất/đã thu hồi. */
@@ -126,7 +129,7 @@ export function createPagePublisher(deps: PagePublisherDeps): Publisher {
     const checked = await graph.checkPage(credentials.pageId, credentials.token);
     if (!checked.ok) {
       reportProblem(expectedIdentity.localId, checked.code);
-      return fail(reasonFor(checked.code), MESSAGE[checked.code]);
+      return fail(reasonFor(checked.code), `${MESSAGE[checked.code]}${detail(checked)}`);
     }
 
     // Đọc và kiểm tra TẤT CẢ ảnh trước khi tải bất cứ ảnh nào: ảnh hỏng thì dừng, không đăng thiếu ảnh.
@@ -147,7 +150,7 @@ export function createPagePublisher(deps: PagePublisherDeps): Publisher {
         await discard(session); // ảnh đã tải ở các lượt trước (chưa xuất bản) được dọn đi
         reportProblem(expectedIdentity.localId, uploaded.code);
         const reason = uploaded.code === 'invalid_request' ? 'media_invalid' : reasonFor(uploaded.code);
-        return fail(reason, `Tải ảnh số ${index + 1} không thành công (${MESSAGE[uploaded.code]}); dừng trước khi gửi, chưa có bài nào được đăng.`);
+        return fail(reason, `Tải ảnh số ${index + 1} không thành công (${MESSAGE[uploaded.code]}${detail(uploaded)}); dừng trước khi gửi, chưa có bài nào được đăng.`);
       }
       session.photoIds.push(uploaded.value.id); // đúng thứ tự đã duyệt
     }
@@ -172,10 +175,10 @@ export function createPagePublisher(deps: PagePublisherDeps): Publisher {
         }
         // Chưa biết bài đã tạo hay chưa (mạng đứt, quá giờ, lỗi tạm thời, phản hồi lạ): KHÔNG gửi lại, chờ đối chiếu.
         if (created.code === 'network' || created.code === 'temporary' || created.code === 'bad_response') {
-          return { status: 'unknown', reasonCode: 'network_error', evidence: evidence(approved), reason: 'Đã gửi yêu cầu đăng nhưng chưa nhận được xác nhận từ Meta; bài có thể đã đăng. Kiểm tra trên Page trước khi làm gì tiếp.' };
+          return { status: 'unknown', reasonCode: 'network_error', evidence: evidence(approved), reason: `Đã gửi yêu cầu đăng nhưng chưa nhận được xác nhận từ Meta; bài có thể đã đăng. Kiểm tra trên Page trước khi làm gì tiếp.${detail(created)}` };
         }
         reportProblem(session.connectionId, created.code);
-        return { status: 'failed', reasonCode: reasonFor(created.code), reason: MESSAGE[created.code] };
+        return { status: 'failed', reasonCode: reasonFor(created.code), reason: `${MESSAGE[created.code]}${detail(created)}` };
       } finally {
         sessions.delete(request.jobId);
       }
