@@ -64,7 +64,9 @@ export async function startMockFacebook(options: MockFacebookOptions = {}): Prom
   if ($('composer')) $('composer').onclick = () => { $('dlg').hidden = false; fetch('/__composer', { method: 'POST' }); };
   $('file').onchange = () => {
     if (${opts.dropUploads}) return;
-    for (const _ of $('file').files) {
+    // Giống Facebook thật: file không có đuôi/loại ảnh bị bỏ qua.
+    for (const file of $('file').files) {
+      if (!/\\.(png|jpe?g|webp)$/i.test(file.name) || !file.type.startsWith('image/')) continue;
       const canvas = document.createElement('canvas'); canvas.width = 200; canvas.height = 200;
       const image = document.createElement('img'); image.src = canvas.toDataURL(); $('previews').appendChild(image); images += 1;
     }

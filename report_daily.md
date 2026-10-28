@@ -577,3 +577,16 @@ Mẫu một mục:
   - Chạy thật trên giao diện (mô phỏng, DB tạm; Edge điều khiển): chọn 2 tài khoản + máy → cảnh báo trùng caption; sửa riêng caption Nick B → cảnh báo mất; bấm xếp lịch → 2 job `profile` tới đúng `vanity:nick.a`/`vanity:nick.b`, cả hai "Đã đăng (mô phỏng)". Đã tắt server/worker/web. Chưa xem ảnh chụp lần này.
 - **Giới hạn:** chưa đăng thật qua trang này; chưa hiển thị đối tượng bài thực tế (chỉ biết khi worker đọc lúc chuẩn bị); ô hẹn giờ chưa thử trên giao diện; một tài khoản lỗi giữa chừng không dừng tài khoản kia (có chủ ý, báo từng tài khoản).
 - **Tiếp theo:** đăng thử thật (nhóm/TCN) bằng các trang này khi người dùng cho phép; P11 đối chiếu job `unknown`/nhật ký/sao lưu; P10.5 preset; P10.9 máy sửa/đã bán phản ánh vào bài/lịch.
+
+## 2026-10-28 14:45 — P08.8: đăng thử THẬT qua trang giao diện (nhóm và trang cá nhân)
+
+- **Người dùng chọn rõ và cho phép:** đăng thử bằng các trang trong ứng dụng, nhóm `1357510931662685` (người dùng quản trị) và trang cá nhân của nick phụ `phu1` (công khai, đã đồng ý trước đó). Chế độ: `APM_INTEGRATIONS=live`, `APM_BROWSER=real`, `APM_PROFILE_AUDIENCE="Công khai"`, dữ liệu thật; trang giao diện được điều khiển bằng Edge ngầm (chọn tài khoản/máy/nhóm, tick xác nhận THẬT, bấm xếp lịch).
+- **Diễn biến thật:**
+  1. Lần 1 (nhóm): job chạy ~100 giây rồi **dừng trước khi gửi** — `failed/media_invalid`, mốc gửi = chưa; **không có bài nào được đăng**. Chẩn đoán: `spikes/fb-adapter-prepare.ts` (chỉ `prepare`, không submit) cho `ok` với ảnh `.png` do script tạo → nguyên nhân là ảnh trong kho ứng dụng có tên `<uuid>.blob` (không đuôi ảnh) nên giao diện Facebook không nhận. Sửa: đọc file và đưa trình duyệt kèm tên/loại đúng suy từ chữ ký file (giữ thứ tự), thông báo lỗi giờ nêu số ảnh đếm được; Facebook giả từ chối file không có đuôi ảnh để test bắt lỗi; thêm test hồi quy (ảnh `.blob` đính đủ 2, file không phải ảnh → `media_invalid` trước gửi).
+  2. Lần 2 (nhóm): sau ~50 giây `published`, ID bài `2307259096687859`, có liên kết bài, nguồn `ui_observation`, mốc gửi đã ghi, nhật ký `send_started` → `job_published`.
+  3. Trang cá nhân `phu1` (công khai): sau ~45 giây `published`, ID `1549103153905018` (ID đọc được từ trang; TCN không có liên kết bài suy ra).
+- **Kiểm tra:** cổng tổng `npm run check` → **198/198 test đạt**, lint 125 file sạch, build web đạt. Đã tắt toàn bộ server/worker/web và không còn trình duyệt của ứng dụng chạy.
+- **Chưa xác nhận (cần người dùng):** bằng mắt — nội dung đúng (2 dòng/caption mẫu), ảnh đúng thứ tự (xanh rồi đỏ), đúng người đăng, ở cả nhóm và trang cá nhân. Hệ thống chỉ có bằng chứng "thấy bài mới xuất hiện", chưa tự kiểm thứ tự ảnh trong bài đã đăng.
+- **Dọn dẹp cần người dùng:** tự xóa 2 bài thử trên Facebook (nhóm và trang cá nhân công khai). Trong ứng dụng có thêm máy "Máy thử P10 (xóa sau)" và 3 job (1 lỗi trước gửi, 2 đã đăng) — dữ liệu thử, có thể ẩn bằng "Ngừng bán".
+- **Giới hạn:** mỗi kênh mới 1 lần thành công; chỉ nick quản trị; chưa thử chờ duyệt/từ chối; chưa thử sau khi khởi động lại máy; chưa thử đăng hai nhóm liên tiếp qua hàng chờ thật (giãn cách) hoặc hai tài khoản.
+- **Tiếp theo:** người dùng đối chiếu và xóa bài thử → tick P08.8; P11 (đối chiếu `unknown`, nhật ký, sao lưu); P10.5/P10.9.

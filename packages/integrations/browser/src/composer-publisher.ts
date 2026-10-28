@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import type { Locator, Page } from 'playwright-core';
 import type {
   ApprovedPublishRequest,
@@ -68,6 +69,24 @@ interface Session {
 }
 
 const fail = (reasonCode: OperationReasonCode, reason: string): PrepareResult => ({ ok: false, reasonCode, reason });
+
+/**
+ * Ảnh trong kho của ứng dụng có tên `<uuid>.blob` (không đuôi ảnh) nên Facebook có thể không nhận. Đọc file và đưa cho trình duyệt kèm tên và
+ * loại ảnh đúng (suy từ chữ ký file, không tin tên), giữ nguyên thứ tự đã duyệt. Không phải ảnh hợp lệ thì ném lỗi → dừng trước khi gửi.
+ */
+async function imagePayloads(paths: readonly string[]): Promise<Array<{ name: string; mimeType: string; buffer: Buffer }>> {
+  const payloads: Array<{ name: string; mimeType: string; buffer: Buffer }> = [];
+  for (const [index, path] of paths.entries()) {
+    const buffer = await readFile(path);
+    const png = buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    const jpeg = buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+    const webp = buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP';
+    if (!png && !jpeg && !webp) throw new Error('not_an_image');
+    const [ext, mimeType] = png ? ['png', 'image/png'] : jpeg ? ['jpg', 'image/jpeg'] : ['webp', 'image/webp'];
+    payloads.push({ name: `anh-${index + 1}.${ext}`, mimeType, buffer });
+  }
+  return payloads;
+}
 
 /**
  * Động cơ đăng bài qua trình duyệt cho nhóm/TCN. `prepare` làm MỌI việc trừ bấm Đăng (đúng người, đúng đích, soạn chữ, đính đủ ảnh,
@@ -164,19 +183,21 @@ export function createBrowserPublisher(deps: BrowserPublisherDeps): Publisher {
 
       const wanted = approved.mediaPaths.length;
       if (wanted > 0) {
+        let files: Awaited<ReturnType<typeof imagePayloads>>;
+        try { files = await imagePayloads(approved.mediaPaths); } catch { return await abort(fail('media_invalid', 'Không đọc được ảnh đã duyệt hoặc không phải ảnh hợp lệ; dừng trước khi gửi.')); }
         const inputs = dialogs.first().locator('input[type="file"]');
-        if ((await inputs.count()) > 0) await inputs.first().setInputFiles([...approved.mediaPaths]); // đúng thứ tự đã duyệt
+        if ((await inputs.count()) > 0) await inputs.first().setInputFiles(files); // đúng thứ tự đã duyệt
         else {
           const chooser = page.waitForEvent('filechooser', { timeout: 15_000 });
           await dialogs.first().getByRole('button', { name: PHOTO_BUTTON }).first().click();
-          await (await chooser).setFiles([...approved.mediaPaths]);
+          await (await chooser).setFiles(files);
         }
         let attached = 0;
         for (let waited = 0; waited <= timing.uploadMs && attached < wanted; waited += 1_000) {
           attached = await bigImages(dialogs.first());
           if (attached < wanted) await page.waitForTimeout(1_000);
         }
-        if (attached !== wanted) return await abort(fail('media_invalid', 'Số ảnh đính kèm không khớp số ảnh đã duyệt; dừng trước khi gửi.'));
+        if (attached !== wanted) return await abort(fail('media_invalid', `Số ảnh đính kèm (${attached}) không khớp số ảnh đã duyệt (${wanted}); dừng trước khi gửi.`));
       }
       if (stopped) return await abort(fail('stopped', 'Đã dừng.'));
 

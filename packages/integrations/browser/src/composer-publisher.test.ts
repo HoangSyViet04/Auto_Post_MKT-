@@ -68,6 +68,22 @@ describe('adapter nhóm trên Facebook giả', () => {
     assert.equal(mock?.submits, 1); // đã bấm một lần, không thử lại
   });
 
+  test('ảnh từ kho có tên .blob (không đuôi ảnh) vẫn đính đúng thứ tự và đủ số lượng; file không phải ảnh dừng trước khi gửi', async () => {
+    const { copyFileSync } = await import('node:fs');
+    const blobs = images.map((path, index) => { const blob = join(dir, `${index}-kho-ung-dung.blob`); copyFileSync(path, blob); return blob; });
+    const publisher = await group();
+    const request = groupRequest({ mediaPaths: blobs });
+    assert.deepEqual(await publisher.prepare(request), { ok: true });
+    assert.equal((await publisher.submit(request)).status, 'published');
+    assert.equal(mock?.posts[0]?.images, 2);
+
+    const notImage = join(dir, 'khong-phai-anh.blob');
+    writeFileSync(notImage, 'đây không phải ảnh');
+    const bad = await publisher.prepare(groupRequest({ jobId: 'job-2', mediaPaths: [notImage] }));
+    assert.deepEqual([bad.ok, !bad.ok && bad.reasonCode], [false, 'media_invalid']);
+    assert.equal(mock?.submits, 1); // chỉ lần đăng đầu; lần hai dừng trước khi gửi
+  });
+
   test('quy tắc sản phẩm: bài phải có ít nhất một ảnh — yêu cầu không ảnh bị từ chối trước khi mở trình duyệt', async () => {
     const publisher = await group();
     const result = await publisher.prepare(groupRequest({ mediaPaths: [] }));
