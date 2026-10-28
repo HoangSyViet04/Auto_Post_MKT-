@@ -1,2 +1,3 @@
 /** Adapter fanpage qua Graph API — P09. */
-export {};
+export * from './connect-flow.ts';
+export * from './graph-client.ts';

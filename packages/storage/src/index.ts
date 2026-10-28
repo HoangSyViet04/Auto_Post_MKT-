@@ -17,3 +17,4 @@ export * from './preset-repository.ts';
 export * from './secret-store.ts';
 export * from './worker-status.ts';
 export * from './sales-repository.ts';
+export * from './page-repository.ts';
