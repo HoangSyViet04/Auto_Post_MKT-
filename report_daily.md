@@ -590,3 +590,10 @@ Mẫu một mục:
 - **Dọn dẹp cần người dùng:** tự xóa 2 bài thử trên Facebook (nhóm và trang cá nhân công khai). Trong ứng dụng có thêm máy "Máy thử P10 (xóa sau)" và 3 job (1 lỗi trước gửi, 2 đã đăng) — dữ liệu thử, có thể ẩn bằng "Ngừng bán".
 - **Giới hạn:** mỗi kênh mới 1 lần thành công; chỉ nick quản trị; chưa thử chờ duyệt/từ chối; chưa thử sau khi khởi động lại máy; chưa thử đăng hai nhóm liên tiếp qua hàng chờ thật (giãn cách) hoặc hai tài khoản.
 - **Tiếp theo:** người dùng đối chiếu và xóa bài thử → tick P08.8; P11 (đối chiếu `unknown`, nhật ký, sao lưu); P10.5/P10.9.
+
+## 2026-10-28 15:00 — P08.8: người dùng xác nhận đã thấy bài thử
+
+- **Người dùng báo:** "vào nick phụ thấy đăng rồi" — xác nhận bằng mắt rằng bài thử đã được đăng (cho nick phụ `phu1`).
+- **Mức xác nhận được ghi nhận:** bài thử có xuất hiện. **Chưa** có xác nhận riêng về: thứ tự ảnh (xanh rồi đỏ), đủ 2 dòng nội dung, và việc bài ở nhóm `1357510931662685` (người dùng chỉ nhắc nick phụ). P08.8 vì vậy vẫn để mở, ghi rõ trong `plan.md`.
+- **Việc người dùng còn lại:** tự xóa các bài thử trên Facebook (trang cá nhân công khai và bài ở nhóm).
+- **Tiếp theo:** P11 (đối chiếu job `unknown`, nhật ký hoạt động, sao lưu) hoặc P10.5/P10.9; thử thêm các tình huống chưa có (hai nhóm liên tiếp qua hàng chờ thật, sau khi khởi động lại máy, nick không phải quản trị).
