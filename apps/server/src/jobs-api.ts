@@ -19,12 +19,28 @@ export function installJobsApi(app: FastifyInstance, db: Database, mode: Integra
   const queries = createJobQueries(db);
   const posts = createPostBatchService(db, { mode });
 
-  app.get<{ Querystring: { status?: JobStatus; accountId?: string; page?: number; pageSize?: number } }>('/api/jobs', {
+  app.get<{ Querystring: { status?: JobStatus; accountId?: string; destinationId?: string; productId?: string; from?: number; to?: number; page?: number; pageSize?: number } }>('/api/jobs', {
     schema: { querystring: { type: 'object', additionalProperties: false, properties: {
-      status: { type: 'string', enum: [...JOB_STATUSES] }, accountId: uuid,
+      status: { type: 'string', enum: [...JOB_STATUSES] }, accountId: uuid, destinationId: uuid, productId: uuid, from: epochMs, to: epochMs,
       page: { type: 'integer', minimum: 1, maximum: 1_000_000 }, pageSize: { type: 'integer', minimum: 1, maximum: 100 },
     } } },
   }, async (request) => queries.list({ ...request.query, overdueAfterMs }));
+
+  // Chi tiết một job: bản đã duyệt, từng lần thử và quan sát có nguồn, nhật ký.
+  app.get<{ Params: { id: string } }>('/api/jobs/:id', { schema: { params: idParams } },
+    async (request) => queries.detail(request.params.id, overdueAfterMs));
+
+  // Xem trước tác động của việc sửa/bán máy lên các job đã xếp (chỉ đọc).
+  app.get<{ Params: { id: string } }>('/api/products/:id/impact', { schema: { params: idParams } },
+    async (request) => queries.productImpact(request.params.id));
+
+  // Đối chiếu job unknown / pending_approval bằng xác nhận của người dùng (nguồn luôn là "manual"). Không có đường nào đưa job
+  // về hàng chờ để gửi lại: muốn đăng lại phải tạo bài mới.
+  app.post<{ Params: { id: string }; Body: { resolution: 'published' | 'pending_approval' | 'not_published'; remoteUrl?: string } }>('/api/jobs/:id/reconcile', {
+    schema: { params: idParams, body: { type: 'object', additionalProperties: false, required: ['resolution'], properties: {
+      resolution: { type: 'string', enum: ['published', 'pending_approval', 'not_published'] }, remoteUrl: { type: 'string', maxLength: 2000 } } } },
+  }, async (request) => ({ status: jobs.reconcile(request.params.id, { resolution: request.body.resolution, source: 'manual',
+    ...(request.body.remoteUrl ? { remoteUrl: request.body.remoteUrl } : {}) }).status }));
 
   // Duyệt đúng một bản caption (đã gắn đích) cho đúng một tài khoản; gắn với danh tính đã xác nhận của tài khoản đó.
   app.post<{ Body: { contentVersionId: string; accountId: string } }>('/api/approvals', {

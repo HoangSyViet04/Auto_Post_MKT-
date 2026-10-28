@@ -5,7 +5,7 @@ import { describeJobResult, formatVn, jobActions, parseVnLocal } from './job-vie
 
 const base: JobListItem = {
   id: 'j', status: 'queued', scheduledAt: 0, createdAt: 0, channel: 'group', mode: 'fake', destination: { id: 'd', name: 'Nhóm', externalId: '1' },
-  account: { id: 'a', label: 'Nick A' }, productName: 'iPhone', attempts: 0, sendStarted: false, stopRequested: false, overdue: false, lastObservation: null,
+  account: { id: 'a', label: 'Nick A' }, productName: 'iPhone', productId: 'p', approvedRevisionNo: 1, currentRevisionNo: 1, productStatus: 'selling', attempts: 0, sendStarted: false, stopRequested: false, overdue: false, lastObservation: null,
 };
 
 test('giờ hẹn theo giờ Việt Nam (UTC+7, không có giờ mùa hè); ngày không tồn tại bị từ chối', () => {
@@ -33,4 +33,15 @@ test('mô tả kết quả: mô phỏng nói rõ chưa đăng thật; unknown c�
   assert.match(describeJobResult({ ...base, status: 'unknown', sendStarted: true }), /đối chiếu/u);
   assert.match(describeJobResult({ ...base, status: 'failed', lastObservation: { outcome: 'failed', reasonCode: 'media_invalid', remoteId: null, observedAt: 1 } }), /ảnh mất/u);
   assert.match(describeJobResult({ ...base, overdue: true }), /quá giờ hẹn/u);
+});
+
+test('đối chiếu: chỉ job đã có mốc gửi và chưa chắc kết quả; không có lựa chọn gửi lại; thông báo máy đã sửa/đã bán', async () => {
+  const { reconcileChoices, revisionNotice } = await import('./job-view.ts');
+  assert.deepEqual(reconcileChoices({ status: 'unknown', sendStarted: true }).map((c) => c.resolution), ['published', 'pending_approval', 'not_published']);
+  assert.deepEqual(reconcileChoices({ status: 'pending_approval', sendStarted: true }).map((c) => c.resolution), ['published', 'not_published']);
+  for (const status of ['queued', 'published', 'failed', 'cancelled', 'running'] as const) assert.deepEqual(reconcileChoices({ status, sendStarted: true }), []);
+  assert.deepEqual(reconcileChoices({ status: 'unknown', sendStarted: false }), []);
+  assert.equal(revisionNotice({ approvedRevisionNo: 1, currentRevisionNo: 1, productStatus: 'selling', status: 'queued' }), null);
+  assert.match(revisionNotice({ approvedRevisionNo: 1, currentRevisionNo: 3, productStatus: 'selling', status: 'needs_review' }) ?? '', /bản 1 → 3.*giữ nội dung bản 1/u);
+  assert.match(revisionNotice({ approvedRevisionNo: 1, currentRevisionNo: 1, productStatus: 'sold', status: 'cancelled' }) ?? '', /Máy đã bán/u);
 });

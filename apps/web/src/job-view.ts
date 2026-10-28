@@ -68,3 +68,42 @@ export function describeJobResult(job: JobListItem): string {
     default: return job.overdue ? 'Đã quá giờ hẹn, không tự chạy. Chọn chạy ngay hoặc bỏ.' : '';
   }
 }
+
+export type Resolution = 'published' | 'pending_approval' | 'not_published';
+
+export const OBSERVATION_SOURCE_LABEL: Record<string, string> = {
+  fake: 'mô phỏng',
+  api_response: 'phản hồi API',
+  ui_observation: 'quan sát từ trình duyệt',
+  manual: 'xác nhận thủ công',
+};
+
+/**
+ * Cách đối chiếu hợp lệ cho job chưa chắc kết quả. Luôn dựa trên việc người dùng đã tự kiểm tra trên Facebook;
+ * không có lựa chọn nào đưa job về hàng chờ để gửi lại.
+ */
+export function reconcileChoices(job: Pick<JobListItem, 'status' | 'sendStarted'>): Array<{ resolution: Resolution; label: string }> {
+  if (!job.sendStarted) return [];
+  if (job.status === 'unknown') {
+    return [
+      { resolution: 'published', label: 'Tôi đã kiểm tra: bài ĐÃ đăng' },
+      { resolution: 'pending_approval', label: 'Bài đang chờ admin duyệt' },
+      { resolution: 'not_published', label: 'Tôi đã kiểm tra: bài CHƯA đăng' },
+    ];
+  }
+  if (job.status === 'pending_approval') {
+    return [
+      { resolution: 'published', label: 'Admin đã duyệt (bài đã đăng)' },
+      { resolution: 'not_published', label: 'Admin từ chối / không có bài' },
+    ];
+  }
+  return [];
+}
+
+/** Máy đã sửa hoặc đã bán sau khi duyệt: thông báo rõ, bài đã duyệt vẫn giữ nguyên bản cũ. */
+export function revisionNotice(job: Pick<JobListItem, 'approvedRevisionNo' | 'currentRevisionNo' | 'productStatus' | 'status'>): string | null {
+  const parts: string[] = [];
+  if (job.currentRevisionNo > job.approvedRevisionNo) parts.push(`Máy đã sửa sau khi duyệt (bản ${job.approvedRevisionNo} → ${job.currentRevisionNo}); bài này vẫn giữ nội dung bản ${job.approvedRevisionNo} đã duyệt`);
+  if (job.productStatus !== 'selling') parts.push(job.productStatus === 'sold' ? 'Máy đã bán' : 'Máy đã ngừng bán');
+  return parts.length ? `${parts.join('. ')}.` : null;
+}

@@ -1,4 +1,4 @@
-import { type ContentVersionItem, findSimilarCaptions } from '#domain';
+import { type ContentVersionItem, findSimilarCaptions, type GroupItem, type PresetItem } from '#domain';
 import { parseVnLocal } from './job-view.ts';
 
 export interface PostDraft {
@@ -85,4 +85,43 @@ export function similarToHistory(items: readonly PlanItem[], versions: readonly 
 /** Chữ ký nội dung gửi: đổi nội dung thì phải dùng mã yêu cầu mới; không đổi thì giữ mã cũ để bấm lại không tạo job trùng. */
 export function planSignature(accountId: string, productId: string, start: number | 'now', items: readonly PlanItem[]): string {
   return JSON.stringify([accountId, productId, start, items.map(({ destinationId, caption }) => [destinationId, caption])]);
+}
+
+const VN_OFFSET_MS = 7 * 3_600_000;
+const DAY_MS = 86_400_000;
+
+/** Lần kế tiếp (epoch ms UTC) của giờ "HH:MM" theo giờ Việt Nam; đúng giờ hiện tại thì tính sang ngày mai. */
+export function nextDailyStart(timeOfDay: string, now: number): number | null {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/u.exec(timeOfDay);
+  if (!match) return null;
+  const vnNow = now + VN_OFFSET_MS;
+  const dayStart = vnNow - (((vnNow % DAY_MS) + DAY_MS) % DAY_MS);
+  const today = dayStart + (Number(match[1]) * 60 + Number(match[2])) * 60_000 - VN_OFFSET_MS;
+  return today > now ? today : today + DAY_MS;
+}
+
+/** Epoch ms UTC → "2026-10-27T14:30" theo giờ Việt Nam (giá trị của ô nhập giờ hẹn). */
+export const toVnLocal = (ms: number): string => new Date(ms + VN_OFFSET_MS).toISOString().slice(0, 16);
+
+export interface PresetSelection {
+  selected: string[];
+  skipped: Array<{ destinationId: string; name: string; reason: 'not_loaded' | 'not_eligible' }>;
+}
+
+/**
+ * Nhóm được chọn khi áp dụng cấu hình cho một tài khoản: chỉ các đích đã lưu cho ĐÚNG tài khoản này và hiện vẫn đủ điều kiện đăng.
+ * Đích không còn (bị lưu trữ/mất quan hệ) hoặc không còn đủ điều kiện bị bỏ qua và được báo rõ, không tự thay bằng đích khác.
+ */
+export function presetSelection(preset: Pick<PresetItem, 'targets'>, accountId: string, groups: readonly GroupItem[]): PresetSelection {
+  const byId = new Map(groups.map((group) => [group.id, group]));
+  const result: PresetSelection = { selected: [], skipped: [] };
+  for (const target of preset.targets) {
+    if (target.accountId !== accountId || target.channel !== 'group') continue;
+    const group = byId.get(target.destinationId);
+    const name = target.name ?? target.externalId ?? target.destinationId;
+    if (!group) result.skipped.push({ destinationId: target.destinationId, name, reason: 'not_loaded' });
+    else if (group.accounts.find((relation) => relation.accountId === accountId)?.eligible !== true) result.skipped.push({ destinationId: target.destinationId, name, reason: 'not_eligible' });
+    else result.selected.push(target.destinationId);
+  }
+  return result;
 }

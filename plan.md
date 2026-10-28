@@ -164,8 +164,8 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Xong phần mô phỏng (P07.1, P07.3–P07.9); P07.2 còn ô nhập lịch (P10) và giới hạn/ngày |
 | P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Đạt offline (Facebook giả) và **đạt thật một lần mỗi kênh** (nhóm, TCN) qua trang giao diện, 28/10/2026; còn đối chiếu bằng mắt của người dùng (P08.8), chờ duyệt/từ chối (P08.5), nick không phải quản trị, lặp lại sau restart |
 | P09 | Kết nối và đăng fanpage | P01, P02, P05, P07 | Chưa bắt đầu |
-| P10 | Ba trang đăng tích hợp | P05–P09 | Trang đăng nhóm và trang cá nhân xong (P10.2/3/6/7/8), đạt mô phỏng; còn fanpage (P10.4), preset (P10.5), máy sửa/đã bán phản ánh ở bài/lịch (P10.9) |
-| P11 | Nhật ký, đối chiếu, phục hồi | P07–P10 | Chưa bắt đầu |
+| P10 | Ba trang đăng tích hợp | P05–P09 | Trang đăng nhóm và trang cá nhân xong (P10.2/3/5/6/7/8/9), đạt mô phỏng và đã đăng thử thật; còn fanpage (P10.4) và composer chung (P10.1) |
+| P11 | Nhật ký, đối chiếu, phục hồi | P07–P10 | P11.1–7 xong (đạt mô phỏng, đã thử trên trình duyệt và script thật trên dữ liệu tạm); còn P11.8 (thu ảnh chụp/trace có bật rõ) và P11.9 (nhập tay nguồn khách hỏi) |
 | P12 | Kiểm thử tổng thể, chạy Windows, bàn giao | P00–P11 | Chưa bắt đầu |
 | P13 | LLM theo ngữ cảnh | P12 | Chưa bắt đầu |
 
@@ -355,11 +355,11 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 - [x] P10.2. Đăng nhóm nhận P06 hoặc link/ID, hiển thị điều kiện/nội quy từng nhóm. *(Trang "Đăng bài viết nhóm" nhận nhóm đã chọn từ trang Nhóm; liệt kê nhóm theo tài khoản kèm nội quy, duyệt bài, lý do chưa đăng được; nhóm chưa đủ điều kiện bị khóa. Thêm nhóm bằng link/ID làm ở trang Nhóm.)*
 - [x] P10.3. Đăng cá nhân chọn một/hai tài khoản, hiển thị đúng TCN; không tự dùng danh sách group làm đích. *(Trang "Đăng bài viết cá nhân": chọn một hoặc hai tài khoản (chỉ tài khoản đã đăng nhập, có danh tính, không tạm dừng); đích luôn là trang cá nhân của CHÍNH tài khoản đó (`profile-destination`), xem trước hiển thị đúng trang/danh tính; mỗi tài khoản một job và một kết quả riêng; cảnh báo cùng caption giữa hai tài khoản (P10.6); không dùng danh sách nhóm làm đích. Mới đạt mô phỏng; chưa đăng thật.)*
 - [ ] P10.4. Đăng fanpage chọn Page có quyền; trạng thái kết nối tách khỏi browser.
-- [ ] P10.5. Preset theo cặp tài khoản–đích/mẫu/lịch; hai tài khoản không mặc định nhân đôi mọi group.
+- [x] P10.5. Preset theo cặp tài khoản–đích/mẫu/lịch; hai tài khoản không mặc định nhân đôi mọi group. *(Cấu hình lưu theo CẶP tài khoản–nhóm do người dùng chọn rõ (bảng `posting_presets`/`preset_targets`), mẫu caption có chỗ trống `{ten} {gia}…` (dòng thiếu dữ kiện tự bỏ, không bịa), lịch "ngay" hoặc "hằng ngày HH:MM giờ Việt Nam". Trang "Đăng bài viết nhóm": lưu/cập nhật/ngừng dùng/áp dụng; áp dụng chỉ điền sẵn form, chọn nhóm của ĐÚNG tài khoản và còn đủ điều kiện, nhóm bị bỏ qua được báo rõ; không có đường nào tự nhân nhóm sang tài khoản khác; lưu/áp dụng không tạo job. Đã thử trên trình duyệt (mô phỏng). Giới hạn: trang cá nhân và fanpage chưa dùng cấu hình; "hằng ngày" là điền sẵn giờ hẹn kế tiếp khi áp dụng, chưa có bộ lập lịch tự lặp.)*
 - [x] P10.6. Preview từng phiên bản, đủ ảnh/thứ tự/đích/giờ; cảnh báo trùng giữa hai tài khoản. *(Xem trước từng nhóm: ảnh theo thứ tự, caption (sửa riêng được), giờ hẹn theo giờ Việt Nam, chế độ mô phỏng/THẬT; cảnh báo cùng caption cho nhiều nhóm và giống bản đã lưu cho cùng nhóm. Cảnh báo trùng giữa hai tài khoản chưa có (chỉ một tài khoản mỗi lần).)*
 - [x] P10.7. Duyệt theo phiên bản, tạo job theo mã yêu cầu; ghi rõ mô phỏng/tự động/bán tự động/chưa hỗ trợ. *(`POST /api/posts`: tạo bản caption riêng từng đích, duyệt theo phiên bản máy và danh tính đã xác nhận, xếp job; mã yêu cầu chống bấm hai lần (kể cả mất phản hồi); tất cả hoặc không gì, nhóm bị chặn được liệt kê; chế độ THẬT cần tick xác nhận trước khi gửi.)*
 - [x] P10.8. Kết quả từng đích, bắt đầu/tạm dừng/dừng và lý do chưa chạy; không thành công chung khi chỉ một đích thành công. *(Kết quả từng nhóm hiển thị riêng (đã đăng/chờ duyệt/không rõ/lỗi kèm lý do); tạm dừng, hủy, chạy ngay, yêu cầu dừng từng job ở "Hàng chờ đăng".)*
-- [ ] P10.9. Máy đã bán/nguồn đổi phản ánh ở bài/lịch; mở được phiên bản cũ, không âm thầm sửa bài đã duyệt.
+- [x] P10.9. Máy đã bán/nguồn đổi phản ánh ở bài/lịch; mở được phiên bản cũ, không âm thầm sửa bài đã duyệt. *(Hàng chờ hiện thông báo máy đã sửa/đã bán trên từng job; chi tiết job luôn hiển thị đúng caption/ảnh của bản đã duyệt (không âm thầm sửa); server chuyển job chưa gửi sang "Cần xem lại" khi máy sửa và hủy khi bán/ngừng bán. Mới: trang Máy xem trước tác động (`GET /api/products/:id/impact`) và hỏi xác nhận trước khi lưu bản sửa/đổi trạng thái nếu có bài bị ảnh hưởng; không kiểm tra được thì không lưu. Đã thử trên trình duyệt (mô phỏng). Giới hạn: xem lại bản máy cũ chỉ qua bản duyệt trong chi tiết job và lịch sử caption, chưa có màn xem toàn bộ dữ kiện máy ở phiên bản cũ.)*
 
 **Đầu ra:** ba trang đăng cùng bố cục và backend/worker.
 
@@ -369,15 +369,15 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Mục tiêu:** biết việc gì đã xảy ra khi lỗi/restart, giữ dữ liệu sử dụng được.
 
-- [ ] P11.1. Lọc lịch sử theo máy/tài khoản/đích/giờ/trạng thái, xem caption/ảnh phiên bản thực tế và lần thử.
-- [ ] P11.2. Unknown có verify chỉ đọc hoặc xác nhận thủ công kèm nguồn; không có thử lại mù.
-- [ ] P11.3. Group pending giữ đúng trạng thái; quan sát lại trong giới hạn hoặc xác nhận thủ công, không tự thành published sau khoảng chờ.
-- [ ] P11.4. Crash: phân loại trước/sau gửi, xử lý khóa treo, không tạo worker thứ hai khi tiến trình cũ còn chạy.
-- [ ] P11.5. Backup DB nhất quán cùng manifest và ảnh tham chiếu, kiểm tra hashes khi restore. Tham khảo [SQLite Online Backup](https://sqlite.org/backup.html), không copy tùy ý DB đang ghi.
-- [ ] P11.6. Bản xuất thông thường loại cookie/profile/token/khóa. Restore sang máy mới báo cần đăng nhập/kết nối lại; không giả định bí mật bảo vệ theo Windows chuyển được giữa máy.
-- [ ] P11.7. Restore vào vùng tạm, kiểm tra trước thay dữ liệu; không ghi đè bộ dữ liệu tốt bằng backup hỏng.
-- [ ] P11.8. Chẩn đoán lọc secrets; screenshot/trace nhạy cảm chỉ thu khi bật rõ và có thời hạn lưu.
-- [ ] P11.9. Nhập tay nguồn khách hỏi/đơn hàng; không bắt tự đọc tương tác TCN/group.
+- [x] P11.1. Lọc lịch sử theo máy/tài khoản/đích/giờ/trạng thái, xem caption/ảnh phiên bản thực tế và lần thử. *(Hàng chờ có bộ lọc trạng thái/tài khoản/máy/đích/giờ/mã job; "Chi tiết" hiện caption và ảnh theo thứ tự của bản đã duyệt, từng lần thử, quan sát có nguồn, nhật ký hoạt động. Đã thử trên trình duyệt (mô phỏng).)*
+- [x] P11.2. Unknown có verify chỉ đọc hoặc xác nhận thủ công kèm nguồn; không có thử lại mù. *(Đối chiếu bằng xác nhận thủ công kèm nguồn `manual` (đã đăng / chờ admin duyệt / chưa đăng), hai bước xác nhận, quan sát mới được thêm (không xóa quan sát cũ); không có đường đưa job về hàng chờ để gửi lại. Chưa có verify chỉ đọc tự động qua trình duyệt (tiêu chí cho phép "hoặc"). Đã thử trên trình duyệt (mô phỏng).)*
+- [x] P11.3. Group pending giữ đúng trạng thái; quan sát lại trong giới hạn hoặc xác nhận thủ công, không tự thành published sau khoảng chờ. *(pending_approval giữ nguyên cho tới khi người dùng xác nhận (đã duyệt/bị từ chối), có test chặn đổi bừa; chưa có quan sát lại tự động.)*
+- [x] P11.4. Crash: phân loại trước/sau gửi, xử lý khóa treo, không tạo worker thứ hai khi tiến trình cũ còn chạy. *(Job bị bỏ dở được phân loại theo mốc gửi: trước gửi → tạm dừng, sau gửi → unknown (worker gọi `recoverExpired` mỗi vòng); khóa worker mồ côi tự dọn, bản worker thứ hai bị từ chối (`worker.lock`, test chạy tiến trình thật). Chưa thử mất điện/kill giữa lúc đăng thật.)*
+- [x] P11.5. Backup DB nhất quán cùng manifest và ảnh tham chiếu, kiểm tra hashes khi restore. Tham khảo [SQLite Online Backup](https://sqlite.org/backup.html), không copy tùy ý DB đang ghi. *(`npm run backup`: DB qua API sao lưu trực tuyến của SQLite + ảnh tham chiếu + `manifest.json` (SHA-256, ghi cuối cùng); từ chối ghi vào repo; xem `docs/backup.md`.)*
+- [x] P11.6. Bản xuất thông thường loại cookie/profile/token/khóa. Restore sang máy mới báo cần đăng nhập/kết nối lại; không giả định bí mật bảo vệ theo Windows chuyển được giữa máy. *(Không chứa `profiles`, `secrets`, `logs`, `backups`, `spikes`, `cache` (test dùng dữ liệu mồi). Sau khi phục hồi tài khoản về `login_required`, job chờ chuyển sang tạm dừng (không tự chạy).)*
+- [x] P11.7. Restore vào vùng tạm, kiểm tra trước thay dữ liệu; không ghi đè bộ dữ liệu tốt bằng backup hỏng. *(`npm run restore -- <thư mục> [--verify-only] [--replace]`: kiểm tra mã băm/integrity/schema, phục hồi vào thư mục tạm rồi mới thay; bản hỏng hoặc dở dang không đụng tới dữ liệu hiện tại; dữ liệu cũ được đổi tên, không xóa; từ chối khi worker đang chạy. Đã chạy thử script trên dữ liệu tạm.)*
+- [ ] P11.8. Chẩn đoán lọc secrets; screenshot/trace nhạy cảm chỉ thu khi bật rõ và có thời hạn lưu. *(Mới có nửa đầu: `npm run diagnostics` in báo cáo chỉ gồm số đếm/mã trạng thái/kích thước (test chứng minh không lộ caption, tên, mã đích, đường dẫn, nội dung log/hồ sơ/khóa). Cơ chế thu screenshot/trace khi bật rõ và hạn lưu chưa có vì ứng dụng chưa thu loại dữ liệu đó)*
+- [ ] P11.9. Nhập tay nguồn khách hỏi/đơn hàng; không bắt tự đọc tương tác TCN/group. *(chưa làm)*
 
 **Đầu ra:** lịch sử, đối chiếu unknown, phục hồi/backup, hướng dẫn chẩn đoán.
 

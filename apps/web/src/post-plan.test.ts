@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { ContentVersionItem } from '#domain';
-import { captionFor, duplicateWarning, emptyDraft, planItems, planProblems, planSignature, resolveStart, similarToHistory } from './post-plan.ts';
+import type { ContentVersionItem, GroupItem, PresetItem } from '#domain';
+import { captionFor, duplicateWarning, emptyDraft, nextDailyStart, planItems, planProblems, planSignature, presetSelection, resolveStart, similarToHistory, toVnLocal } from './post-plan.ts';
 
 const NOW = Date.UTC(2026, 9, 27, 7, 0); // 14:00 giờ Việt Nam
 const ready = { ...emptyDraft(), accountId: 'a', productId: 'p', caption: 'iPhone 13\nTình trạng: đẹp', selected: ['g1', 'g2'] };
@@ -55,4 +55,28 @@ test('chữ ký nội dung: đổi tài khoản/máy/giờ/caption/đích thì k
     planSignature('a', 'p', NOW, planItems({ ...ready, caption: 'khác' }, '')), planSignature('a', 'p', NOW, planItems({ ...ready, selected: ['g1'] }, ''))]) {
     assert.notEqual(changed, base);
   }
+});
+
+test('giờ hằng ngày: lần kế tiếp theo giờ Việt Nam, đúng giờ hiện tại thì sang ngày mai; giờ sai bị từ chối', () => {
+  assert.equal(nextDailyStart('15:30', NOW), Date.UTC(2026, 9, 27, 8, 30)); // 14:00 → hôm nay 15:30
+  assert.equal(nextDailyStart('08:30', NOW), Date.UTC(2026, 9, 28, 1, 30)); // đã qua → sáng mai
+  assert.equal(nextDailyStart('14:00', NOW), Date.UTC(2026, 9, 28, 7, 0)); // đúng bây giờ → ngày mai
+  assert.equal(nextDailyStart('00:15', Date.UTC(2026, 9, 27, 18, 0)), Date.UTC(2026, 9, 28, 17, 15)); // 01:00 sáng 28/10 VN (đã qua 00:15) → 00:15 ngày 29/10 VN
+  assert.equal(nextDailyStart('24:00', NOW), null);
+  assert.equal(nextDailyStart('8:30', NOW), null);
+  assert.equal(toVnLocal(Date.UTC(2026, 9, 27, 8, 30)), '2026-10-27T15:30');
+  assert.equal(resolveStart({ ...ready, startMode: 'later', startLocal: toVnLocal(nextDailyStart('08:30', NOW) as number) }, NOW), nextDailyStart('08:30', NOW)); // giá trị đưa vào ô giờ hẹn dùng lại được
+});
+
+const group = (id: string, accountId: string, eligible: boolean): GroupItem => ({ id, externalId: id, canonicalUrl: null, name: `Nhóm ${id}`, region: null, topic: null, rulesNote: null,
+  approvalRequired: 'unknown', curation: 'normal', userNote: null, archived: false, createdAt: 0, accounts: [{ accountId, eligible } as GroupItem['accounts'][number]] });
+
+test('áp dụng cấu hình: chỉ chọn nhóm của đúng tài khoản và còn đủ điều kiện; nhóm không còn/không đủ điều kiện được báo rõ, không thay bằng nhóm khác', () => {
+  const target = (accountId: string, destinationId: string) => ({ accountId, destinationId, channel: 'group' as const, name: `Nhóm ${destinationId}`, externalId: destinationId });
+  const preset: Pick<PresetItem, 'targets'> = { targets: [target('a', 'g1'), target('a', 'g2'), target('a', 'g3'), target('b', 'g1'), target('b', 'g4')] };
+  const result = presetSelection(preset, 'a', [group('g1', 'a', true), group('g2', 'a', false), group('g9', 'a', true)]);
+  assert.deepEqual(result.selected, ['g1']);
+  assert.deepEqual(result.skipped.map((entry) => [entry.destinationId, entry.reason]), [['g2', 'not_eligible'], ['g3', 'not_loaded']]);
+  assert.deepEqual(presetSelection(preset, 'b', [group('g1', 'b', true)]).selected, ['g1']); // cặp của tài khoản b không lẫn với a
+  assert.deepEqual(presetSelection(preset, 'c', [group('g1', 'c', true)]), { selected: [], skipped: [] }); // tài khoản khác không tự nhận nhóm
 });

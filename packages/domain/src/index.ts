@@ -8,4 +8,5 @@ export * from './similarity.ts';
 export * from './group-link.ts';
 export * from './api.ts';
 export * from './caption.ts';
+export * from './caption-template.ts';
 export * from './business-error.ts';

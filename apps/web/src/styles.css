@@ -437,3 +437,13 @@ button.primary:disabled {
   flex-direction: row;
   align-items: center;
 }
+
+.caption-box {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  white-space: pre-wrap;
+}

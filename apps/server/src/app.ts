@@ -8,6 +8,7 @@ import { installAccountsApi } from './accounts-api.ts';
 import { installDataApi } from './data-api.ts';
 import { installGroupsApi } from './groups-api.ts';
 import { installJobsApi } from './jobs-api.ts';
+import { installPresetsApi } from './presets-api.ts';
 
 export interface AppDeps {
   db: Database;
@@ -36,6 +37,7 @@ export function buildApp({ db, env, integrations, logger = true, security, media
   installAccountsApi(app, db);
   installGroupsApi(app, db);
   installJobsApi(app, db, integrations, overdueAfterMs);
+  installPresetsApi(app, db);
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof BusinessError) {
       const status = error.code === 'not_found' ? 404 : error.code === 'invalid_input' ? 400

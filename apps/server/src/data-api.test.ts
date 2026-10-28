@@ -304,3 +304,73 @@ test('P10.3: đăng trang cá nhân — đích là TCN của chính tài khoản
   assert.deepEqual(listed.items.map((job: { channel: string }) => job.channel), ['profile', 'profile']);
   assert.deepEqual(listed.items.map((job: { account: { label: string } }) => job.account.label).sort(), ['Nick A', 'Nick B']);
 });
+
+test('P11: API chi tiết/lọc job và đối chiếu unknown — nguồn luôn là manual, không có đường gửi lại', async () => {
+  const { createAccountRepository, createGroupRepository, createJobRepository } = await import('#storage');
+  const call = (method: string, url: string, payload?: object) => app.inject({ method: method as 'GET', url, headers, ...(payload ? { payload } : {}) });
+  const accounts = createAccountRepository(db);
+  const account = accounts.create({ label: 'Nick A' }).id;
+  accounts.recordIdentity(account, 'vanity:nick.a'); accounts.recordSession(account, 'logged_in');
+  const group = createGroupRepository(db).add({ reference: '111111111111', accountId: account, name: 'Nhóm một', membership: 'joined', permission: 'allowed' }).id;
+  const media = (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' }, payload: image })).json().id as string;
+  const product = (await call('POST', '/api/products', { name: 'iPhone 13', condition: 'Đẹp', mediaIds: [media] })).json();
+  const posted = (await call('POST', '/api/posts', { requestKey: 'khoa-doi-chieu-001', accountId: account, productId: product.productId, scheduledAt: Date.now(),
+    items: [{ destinationId: group, caption: 'Bán iPhone 13' }] })).json();
+  const jobId = posted.jobs[0].jobId as string;
+
+  const jobs = createJobRepository(db);
+  const claim = jobs.claimNext('worker-test', 'fake');
+  jobs.markSendStarted(claim as NonNullable<typeof claim>);
+  jobs.finish(claim as NonNullable<typeof claim>, { outcome: 'unknown', source: 'fake', reasonCode: 'unknown' });
+
+  const detail = (await call('GET', `/api/jobs/${jobId}`)).json();
+  assert.deepEqual([detail.status, detail.caption, detail.mediaIds, detail.sendStarted, detail.attemptsDetail.length], ['unknown', 'Bán iPhone 13', [media], true, 1]);
+  assert.equal((await call('GET', `/api/jobs?status=unknown&destinationId=${group}&productId=${product.productId}`)).json().total, 1);
+  assert.equal((await call('GET', `/api/jobs?destinationId=${product.productId}`)).json().total, 0);
+  assert.equal((await call('GET', '/api/jobs?from=-5')).statusCode, 400);
+
+  assert.equal((await call('POST', `/api/jobs/${jobId}/reconcile`, { resolution: 'published', remoteUrl: 'https://x.test/p?token=abc' })).statusCode, 400); // URL chứa bí mật
+  assert.equal((await call('POST', `/api/jobs/${jobId}/reconcile`, { resolution: 'queued' })).statusCode, 400); // không có đường đưa về hàng chờ
+  assert.equal((await call('POST', `/api/jobs/${jobId}/reconcile`, { resolution: 'published', remoteUrl: 'https://www.facebook.com/groups/1/posts/2' })).json().status, 'published');
+  const after = (await call('GET', `/api/jobs/${jobId}`)).json();
+  assert.deepEqual(after.attemptsDetail[0].observations.map((o: { source: string }) => o.source), ['fake', 'manual']);
+  assert.equal((await call('POST', `/api/jobs/${jobId}/reconcile`, { resolution: 'not_published' })).statusCode, 409); // đã chốt
+  assert.equal((await call('GET', '/api/jobs/00000000-0000-4000-8000-000000000000')).statusCode, 404);
+});
+
+test('P10.5/P10.9: API cấu hình đăng thường dùng (lưu/sửa/ngừng, không tạo job) và xem trước tác động của việc sửa/bán máy', async () => {
+  const { createAccountRepository, createGroupRepository } = await import('#storage');
+  const call = (method: string, url: string, payload?: object) => app.inject({ method: method as 'GET', url, headers, ...(payload ? { payload } : {}) });
+  const accounts = createAccountRepository(db);
+  const account = accounts.create({ label: 'Nick A' }).id;
+  accounts.recordIdentity(account, 'vanity:nick.a'); accounts.recordSession(account, 'logged_in');
+  const group = createGroupRepository(db).add({ reference: '111111111111', accountId: account, name: 'Nhóm 1', membership: 'joined', permission: 'allowed' }).id;
+  const media = (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' }, payload: image })).json().id as string;
+  const product = (await call('POST', '/api/products', { name: 'iPhone 13', condition: 'Đẹp', mediaIds: [media] })).json();
+  const body = { label: 'Buổi sáng', captionTemplate: '{ten}\nGiá: {gia}', schedule: { startMode: 'daily', timeOfDay: '08:30' }, targets: [{ accountId: account, destinationId: group }] };
+
+  const created = await call('POST', '/api/presets', body);
+  assert.equal(created.statusCode, 201);
+  assert.deepEqual(created.json().targets.map((t: { name: string }) => t.name), ['Nhóm 1']);
+  assert.equal((await call('GET', '/api/presets')).json().items.length, 1);
+  assert.equal((await call('GET', '/api/jobs')).json().total, 0); // lưu cấu hình không tạo job
+  assert.equal((await call('POST', '/api/presets', { ...body, captionTemplate: '{ten}\n{mau}' })).statusCode, 400); // chỗ trống lạ
+  assert.equal((await call('POST', '/api/presets', { ...body, schedule: { startMode: 'daily', timeOfDay: '8:30' } })).statusCode, 400);
+  assert.equal((await call('POST', '/api/presets', { ...body, targets: [] })).statusCode, 400);
+  assert.equal((await call('POST', '/api/presets', { ...body, extra: 1 })).statusCode, 400);
+  const updated = await call('PUT', `/api/presets/${created.json().id}`, { ...body, label: 'Đổi tên', captionTemplate: null, schedule: { startMode: 'now' } });
+  assert.deepEqual([updated.statusCode, updated.json().label, updated.json().schedule], [200, 'Đổi tên', { startMode: 'now' }]);
+  assert.equal((await call('POST', `/api/presets/${created.json().id}/archive`, {})).statusCode, 204);
+  assert.deepEqual((await call('GET', '/api/presets')).json().items, []);
+  assert.equal((await call('POST', `/api/presets/${created.json().id}/archive`, {})).statusCode, 404);
+  const { 'x-apm-token': _token, ...noToken } = headers;
+  assert.equal((await app.inject({ method: 'POST', url: '/api/presets', headers: noToken, payload: body })).statusCode, 403);
+
+  assert.deepEqual((await call('GET', `/api/products/${product.productId}/impact`)).json(), { productId: product.productId, pendingJobs: 0, runningJobs: 0, settledJobs: 0, byStatus: {} });
+  const posted = await call('POST', '/api/posts', { requestKey: 'khoa-impact-0001', accountId: account, productId: product.productId, scheduledAt: Date.now() + 3_600_000, items: [{ destinationId: group, caption: 'Bán iPhone 13' }] });
+  assert.equal(posted.statusCode, 201);
+  assert.deepEqual((await call('GET', `/api/products/${product.productId}/impact`)).json().byStatus, { queued: 1 });
+  assert.equal((await call('GET', `/api/products/${product.productId}/impact`)).json().pendingJobs, 1);
+  assert.equal((await call('GET', '/api/products/00000000-0000-4000-8000-000000000000/impact')).statusCode, 404);
+  assert.equal((await call('GET', '/api/products/khong-phai-uuid/impact')).statusCode, 400);
+});

@@ -198,6 +198,46 @@ export function createJobRepository(db: Database, options: RepositoryOptions = {
       });
     },
 
+    /**
+     * Đối chiếu job có kết quả chưa chắc (`unknown`) hoặc đang chờ admin duyệt (`pending_approval`) sau khi người dùng/quan sát chỉ đọc đã xác minh.
+     * Ghi thêm một quan sát (có nguồn) vào lần thử gần nhất rồi đổi trạng thái. KHÔNG có đường nào đưa job về hàng chờ để gửi lại: muốn đăng
+     * lại phải tạo bài mới có chủ đích. `pending_approval` không tự thành `published` theo thời gian.
+     */
+    reconcile(jobId: string, input: { resolution: 'published' | 'pending_approval' | 'not_published'; source: 'manual' | 'ui_observation';
+      remoteId?: string; remoteUrl?: string }): StoredJob {
+      objectInput(input);
+      if (!['published', 'pending_approval', 'not_published'].includes(input.resolution) || !['manual', 'ui_observation'].includes(input.source)) {
+        throw new BusinessError('invalid_input');
+      }
+      if (input.remoteId !== undefined) text(input.remoteId, 500);
+      if (input.remoteUrl !== undefined) {
+        text(input.remoteUrl, 2000);
+        let url: URL;
+        try { url = new URL(input.remoteUrl); } catch { throw new BusinessError('invalid_input'); }
+        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password
+          || [...url.searchParams.keys()].some((key) => /token|pass|secret|key|auth|cookie/i.test(key))) throw new BusinessError('invalid_input');
+      }
+      return atomic(db, () => {
+        const job = get(jobId);
+        if (job.status !== 'unknown' && job.status !== 'pending_approval') throw new BusinessError('invalid_transition');
+        if (job.status === 'pending_approval' && input.resolution === 'pending_approval') throw new BusinessError('invalid_transition');
+        const attempt = one<Attempt>(db, `SELECT id,job_id,send_started_at,finished_at FROM publish_attempts WHERE job_id=?
+          ORDER BY attempt_no DESC LIMIT 1`, job.id);
+        if (!attempt || attempt.send_started_at === null) throw new BusinessError('invalid_transition'); // chưa từng gửi thì không có gì để đối chiếu
+        const now = clock();
+        const outcome = input.resolution === 'not_published' ? 'not_found' : input.resolution;
+        const remoteId = input.resolution === 'published' ? (input.remoteId ?? (input.remoteUrl ? undefined : 'manual:no_id')) : input.remoteId;
+        db.prepare(`INSERT INTO publish_observations(id,attempt_id,outcome,source,remote_id,remote_url,reason_code,observed_at)
+          VALUES(?,?,?,?,?,?,?,?)`).run(randomUUID(), attempt.id, outcome, input.source, remoteId ?? null, input.remoteUrl ?? null,
+          input.resolution === 'not_published' ? 'confirmed_not_posted' : null, now);
+        const next = input.resolution === 'not_published' ? 'failed' : input.resolution;
+        db.prepare('UPDATE publish_jobs SET status=? WHERE id=?').run(next, job.id);
+        db.prepare("INSERT INTO activity_log(id,job_id,severity,action_code,reason_code,occurred_at) VALUES(?,?,'info','job_reconciled',?,?)")
+          .run(randomUUID(), job.id, `${input.source}_${input.resolution}`, now);
+        return get(job.id);
+      });
+    },
+
     markSendStarted(claim: JobClaim): void {
       const rejection = atomic(db, () => {
         const now = clock(); const { job, attempt } = owned(claim, now);

@@ -1,7 +1,8 @@
 import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } from 'react';
-import { type ContentVersionItem, findSimilarCaptions, type ProductDetail, type ProductListResponse, type ProductStatus } from '#domain';
+import { type ContentVersionItem, findSimilarCaptions, type ProductDetail, type ProductImpact, type ProductListResponse, type ProductStatus } from '#domain';
 import { apiFetch } from './api.ts';
 import { networkMessage, readError } from './http.ts';
+import { hasImpact, IMPACT_TITLE, type ImpactKind, impactLines } from './product-impact.ts';
 import {
   emptyForm,
   type FormErrors,
@@ -14,6 +15,9 @@ import {
   previewCaption,
   validateForm,
 } from './product-form.ts';
+
+/** Thay đổi đang chờ người dùng xác nhận vì sẽ ảnh hưởng các bài đã xếp. */
+interface PendingChange { kind: ImpactKind; impact: ProductImpact; run: () => Promise<void> }
 
 const PAGE_SIZE = 20;
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -139,6 +143,7 @@ function ProductForm({ productId, onClose }: { productId: string | null; onClose
   const [versions, setVersions] = useState<ContentVersionItem[]>([]);
   /** null: dùng caption mẫu tự sinh. Chuỗi: người dùng đã chỉnh tay (chưa lưu — thuộc P05.5). */
   const [captionDraft, setCaptionDraft] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingChange | null>(null);
 
   const load = useCallback(async (id: string) => {
     const response = await apiFetch(`/api/products/${id}`);
@@ -208,6 +213,29 @@ function ProductForm({ productId, onClose }: { productId: string | null; onClose
     const { errors: found, facts } = validateForm(form);
     setErrors(found);
     if (!facts) return; // Giữ nguyên nội dung đang nhập
+    if (detail) { await confirmImpact('revise', () => save(facts)); return; }
+    await save(facts);
+  }
+
+  /** Xem trước tác động lên các bài đã xếp. Không ảnh hưởng gì thì làm luôn; có ảnh hưởng thì chờ xác nhận. Không kiểm tra được thì không làm. */
+  async function confirmImpact(kind: ImpactKind, run: () => Promise<void>) {
+    if (!detail) return;
+    setPending(null);
+    setBusy(true);
+    try {
+      const response = await apiFetch(`/api/products/${detail.id}/impact`);
+      if (!response.ok) { setMessage(`Chưa kiểm tra được tác động lên các bài đã xếp, nên chưa lưu: ${await readError(response)}`); return; }
+      const impact = (await response.json()) as ProductImpact;
+      if (!hasImpact(impact)) { setBusy(false); await run(); return; }
+      setPending({ kind, impact, run });
+    } catch (e) {
+      setMessage(`Chưa kiểm tra được tác động lên các bài đã xếp, nên chưa lưu: ${networkMessage(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function save(facts: NonNullable<ReturnType<typeof validateForm>['facts']>) {
     setBusy(true);
     try {
       const response = detail
@@ -256,6 +284,11 @@ function ProductForm({ productId, onClose }: { productId: string | null; onClose
 
   async function changeStatus(status: ProductStatus) {
     if (!detail) return;
+    await confirmImpact(status, () => applyStatus(status));
+  }
+
+  async function applyStatus(status: ProductStatus) {
+    if (!detail) return;
     setBusy(true);
     setMessage('');
     try {
@@ -297,6 +330,16 @@ function ProductForm({ productId, onClose }: { productId: string | null; onClose
           </>
         )}
       </div>
+      {pending && (
+        <div className="notice" role="alertdialog" aria-label={IMPACT_TITLE[pending.kind]}>
+          <strong>{IMPACT_TITLE[pending.kind]} sẽ ảnh hưởng các bài đã xếp:</strong>
+          <ul>{impactLines(pending.kind, pending.impact).map((line) => <li key={line}>{line}</li>)}</ul>
+          <div className="actions">
+            <button type="button" className="primary" disabled={busy} onClick={async () => { const change = pending; setPending(null); await change.run(); }}>Vẫn tiếp tục</button>
+            <button type="button" disabled={busy} onClick={() => setPending(null)}>Quay lại</button>
+          </div>
+        </div>
+      )}
       {detail && detail.status !== 'selling' && (
         <p className="notice">Máy không ở trạng thái đang bán: không thể tạo bài hoặc lịch mới cho máy này.</p>
       )}

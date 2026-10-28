@@ -4,7 +4,7 @@
  * Điều khiển trình duyệt mặc định TẮT (APM_BROWSER=off); chỉ chạy lệnh đăng nhập/kiểm tra phiên do người dùng bấm khi APM_BROWSER=real.
  * Chạy job đến hạn bằng adapter đã chọn (APM_INTEGRATIONS=fake: mô phỏng, không gọi Facebook). Khởi động worker không tự tạo job. `--once`: khởi động, ghi nhịp sống, thoát (dùng cho test).
  */
-import { createPlaywrightDriver } from '#browser';
+import { acquireProfileLock, createPlaywrightDriver } from '#browser';
 import { getAppEnv, getBrowserMode, getDatabasePath, getDataDir, getIntegrationMode, getMinGapMs, getOverdueAfterMs, getProfileAudience } from '#config';
 import { join } from 'node:path';
 import { createLogger } from '#logging';
@@ -43,6 +43,15 @@ try {
   if (process.argv.includes('--once')) {
     db.close();
   } else {
+    // Chỉ một worker mỗi thư mục dữ liệu: hai worker sẽ tranh hàng chờ và hồ sơ trình duyệt. Khóa của tiến trình đã chết được dọn tự động.
+    let instanceLock: ReturnType<typeof acquireProfileLock>;
+    try {
+      instanceLock = acquireProfileLock(join(dataDir, 'worker.lock'));
+    } catch {
+      log.error({ code: 'worker_already_running' }, '[worker] Đã có một worker khác đang chạy với thư mục dữ liệu này. Dừng, không khởi động bản thứ hai.');
+      db.close();
+      process.exit(1);
+    }
     const workerId = `worker-${process.pid}`;
     const runner = browser === 'real'
       ? createBrowserCommandRunner({ db, driver: createPlaywrightDriver(), workerId, dataDir, log })
@@ -72,6 +81,7 @@ try {
       log.info(`[worker] Nhận ${signal}, đang dừng`);
       clearInterval(beat);
       clearInterval(poll);
+      instanceLock.release();
       db.close();
       process.exit(0);
     };

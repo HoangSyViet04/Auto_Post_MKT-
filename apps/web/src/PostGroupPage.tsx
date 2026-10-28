@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type {
-  AccountSummary,
-  ContentVersionItem,
-  GroupBlocker,
-  GroupItem,
-  GroupListResponse,
-  HealthResponse,
-  JobListItem,
-  JobListResponse,
-  ProductDetail,
-  ProductListItem,
-  ProductListResponse,
+import {
+  type AccountSummary,
+  type ContentVersionItem,
+  type GroupBlocker,
+  type GroupItem,
+  type GroupListResponse,
+  type HealthResponse,
+  type JobListItem,
+  type JobListResponse,
+  type PresetItem,
+  type ProductDetail,
+  type ProductListItem,
+  type ProductListResponse,
+  renderCaptionTemplate,
 } from '#domain';
 import { apiFetch } from './api.ts';
 import { clearHandoff, getHandoff } from './handoff.ts';
@@ -19,13 +21,17 @@ import { describeJobResult, formatVn, JOB_STATUS_LABEL } from './job-view.ts';
 import {
   duplicateWarning,
   emptyDraft,
+  nextDailyStart,
   planItems,
   planProblems,
   planSignature,
   type PostDraft,
+  presetSelection,
   resolveStart,
   similarToHistory,
+  toVnLocal,
 } from './post-plan.ts';
+import { PresetPanel } from './PresetPanel.tsx';
 import { formFromDetail, previewCaption } from './product-form.ts';
 
 const BLOCKER_LABEL: Record<GroupBlocker, string> = {
@@ -41,6 +47,9 @@ const FINAL = new Set(['published', 'pending_approval', 'failed', 'unknown', 'ca
 
 interface Failure { destinationId: string; code: string }
 interface Batch { jobs: Array<{ jobId: string; destinationId: string }>; replayed: boolean }
+
+/** Caption mẫu: theo mẫu của cấu hình nếu có (dòng thiếu dữ kiện tự bỏ), nếu không thì caption mặc định của máy. */
+const defaultCaption = (detail: ProductDetail, templateText: string): string => (templateText.trim() ? renderCaptionTemplate(templateText, detail) : previewCaption(formFromDetail(detail)));
 
 /** Bản nháp đang soạn được giữ khi chuyển sang trang khác rồi quay lại (chỉ trong phiên của tab, không lưu đĩa). */
 let remembered: PostDraft | null = null;
@@ -69,6 +78,7 @@ export function PostGroupPage() {
   const [versions, setVersions] = useState<ContentVersionItem[]>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [filter, setFilter] = useState('');
+  const [templateText, setTemplateText] = useState('');
   const [liveConfirm, setLiveConfirm] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -78,6 +88,9 @@ export function PostGroupPage() {
   /** Mã yêu cầu giữ nguyên khi nội dung không đổi: bấm lại (hoặc mất phản hồi) không tạo job trùng. */
   const attempt = useRef<{ signature: string; key: string; startAt: number } | null>(null);
   const lastTemplate = useRef('');
+  /** Cấu hình cần áp dụng sau khi danh sách nhóm của tài khoản của nó tải xong. */
+  const pendingPreset = useRef<PresetItem | null>(null);
+  const selectRef = useRef<(preset: PresetItem, accountId: string, list: readonly GroupItem[]) => void>(() => undefined);
 
   useEffect(() => { remembered = draft; }, [draft]);
 
@@ -99,7 +112,11 @@ export function PostGroupPage() {
   useEffect(() => {
     if (!draft.accountId) { setGroups([]); return; }
     fetchAll<GroupItem>(`/api/groups?accountId=${draft.accountId}`, (body) => body as GroupListResponse)
-      .then(setGroups)
+      .then((list) => {
+        setGroups(list);
+        const preset = pendingPreset.current;
+        if (preset) { pendingPreset.current = null; selectRef.current(preset, draft.accountId, list); }
+      })
       .catch((e) => setMessage(networkMessage(e)));
   }, [draft.accountId]);
 
@@ -110,14 +127,19 @@ export function PostGroupPage() {
       if (!response.ok) throw new Error(await readError(response));
       const loaded = (await response.json()) as ProductDetail;
       setDetail(loaded);
-      const template = previewCaption(formFromDetail(loaded));
-      // Điền caption mẫu khi chưa có hoặc người dùng chưa sửa gì khỏi caption mẫu trước đó.
-      setDraft((current) => (current.caption.trim() === '' || current.caption === lastTemplate.current ? { ...current, caption: template } : current));
-      lastTemplate.current = template;
       const history = await apiFetch(`/api/products/${draft.productId}/content-versions`);
       if (history.ok) setVersions(((await history.json()) as { items: ContentVersionItem[] }).items);
     })().catch((e) => setMessage(networkMessage(e)));
   }, [draft.productId]);
+
+  // Điền caption mẫu khi chưa có hoặc người dùng chưa sửa gì khỏi caption mẫu trước đó (đổi máy hoặc đổi mẫu thì điền lại).
+  useEffect(() => {
+    if (!detail) return;
+    const next = defaultCaption(detail, templateText);
+    const previous = lastTemplate.current; // chốt trước: hàm cập nhật chạy muộn, lúc đó lastTemplate đã là giá trị mới
+    setDraft((current) => (current.caption.trim() === '' || current.caption === previous ? { ...current, caption: next } : current));
+    lastTemplate.current = next;
+  }, [detail, templateText]);
 
   const poll = useCallback(async () => {
     const response = await apiFetch('/api/jobs?pageSize=100');
@@ -135,7 +157,7 @@ export function PostGroupPage() {
 
   const account = accounts.find((item) => item.id === draft.accountId);
   const live = health?.integrations === 'live';
-  const template = detail ? previewCaption(formFromDetail(detail)) : '';
+  const template = detail ? defaultCaption(detail, templateText) : '';
   const items = planItems(draft, template);
   const problems = planProblems(draft, { accountSession: account?.sessionStatus ?? null, productSelling: detail?.status === 'selling', now: Date.now() });
   const groupById = new Map(groups.map((group) => [group.id, group]));
@@ -147,6 +169,32 @@ export function PostGroupPage() {
   const similar = new Map(similarToHistory(items, versions).map((hit) => [hit.destinationId, hit.score]));
   const startAt = resolveStart(draft, Date.now());
   const ready = problems.length === 0 && (!live || liveConfirm) && !busy;
+
+  /** Điền nhóm từ cấu hình: chỉ nhóm đã lưu cho đúng tài khoản này và còn đủ điều kiện; phần bị bỏ qua được báo rõ. */
+  function selectFromPreset(preset: PresetItem, accountId: string, list: readonly GroupItem[]) {
+    const { selected, skipped } = presetSelection(preset, accountId, list);
+    setDraft((current) => ({ ...current, accountId, selected, overrides: {} }));
+    const others = new Set(preset.targets.map((target) => target.accountId)).size > 1 ? ' Cấu hình có cả tài khoản khác; trang này chỉ đăng bằng một tài khoản.' : '';
+    const skippedText = skipped.length
+      ? ` Bỏ qua ${skipped.length} nhóm: ${skipped.map((entry) => `${entry.name} (${entry.reason === 'not_eligible' ? 'không còn đủ điều kiện' : 'không còn trong danh sách của tài khoản'})`).join(', ')}.`
+      : '';
+    setMessage(`Đã áp dụng cấu hình "${preset.label}": chọn ${selected.length} nhóm.${skippedText}${others} Chưa có job nào được tạo; kiểm tra rồi bấm Duyệt và xếp lịch.`);
+  }
+
+  selectRef.current = selectFromPreset; // effect tải nhóm luôn gọi bản mới nhất mà không phải thêm vào danh sách phụ thuộc
+
+  function applyPreset(preset: PresetItem) {
+    setTemplateText(preset.captionTemplate ?? '');
+    const start = preset.schedule.startMode === 'daily' && preset.schedule.timeOfDay ? nextDailyStart(preset.schedule.timeOfDay, Date.now()) : null;
+    setDraft((current) => ({ ...current, startMode: start === null ? 'now' : 'later', startLocal: start === null ? '' : toVnLocal(start) }));
+    const accountIds = [...new Set(preset.targets.map((target) => target.accountId))];
+    const accountId = accountIds.includes(draft.accountId) ? draft.accountId : (accountIds[0] ?? '');
+    if (!accounts.some((item) => item.id === accountId)) { setMessage('Tài khoản của cấu hình này không còn dùng nữa.'); return; }
+    setFailures([]);
+    if (accountId === draft.accountId) { selectFromPreset(preset, accountId, groups); return; }
+    pendingPreset.current = preset; // nhóm của tài khoản mới chưa tải; áp dụng khi tải xong
+    setDraft((current) => ({ ...current, accountId, selected: [], overrides: {} }));
+  }
 
   function toggle(group: GroupItem, checked: boolean) {
     set({ selected: checked ? [...draft.selected, group.id] : draft.selected.filter((id) => id !== group.id) });
@@ -197,6 +245,9 @@ export function PostGroupPage() {
       {message && <p className="notice" role="status">{message}</p>}
 
       <div className="product-form">
+        <PresetPanel accountId={draft.accountId} selected={draft.selected} startMode={draft.startMode} startLocal={draft.startLocal}
+          templateText={templateText} onTemplateText={setTemplateText} onApply={applyPreset} notify={setMessage} />
+
         <fieldset>
           <legend>1. Tài khoản đăng</legend>
           <select aria-label="Tài khoản" value={draft.accountId} onChange={(event) => set({ accountId: event.target.value, selected: [], overrides: {} })}>
