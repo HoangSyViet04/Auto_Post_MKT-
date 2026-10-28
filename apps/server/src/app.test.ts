@@ -30,7 +30,7 @@ describe('server API', () => {
 
   test('API không tồn tại trả 404 JSON', async () => {
     const session = await app.inject({ method: 'GET', url: '/api/session', headers: { host: '127.0.0.1:4317' } });
-    const res = await app.inject({ method: 'POST', url: '/api/posts', headers: {
+    const res = await app.inject({ method: 'POST', url: '/api/khong-co-api', headers: {
       host: '127.0.0.1:4317', origin: 'http://127.0.0.1:4317',
       'content-type': 'application/json', 'x-apm-token': session.json().token,
     }, payload: {} });

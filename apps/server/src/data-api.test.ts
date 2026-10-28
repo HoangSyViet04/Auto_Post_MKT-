@@ -246,3 +246,34 @@ test('P07: API duyệt và hàng chờ — duyệt cần danh tính, xếp job c
   const { 'x-apm-token': _token, ...noToken } = headers;
   assert.equal((await app.inject({ method: 'POST', url: '/api/jobs', headers: noToken, payload: body })).statusCode, 403);
 });
+
+test('P10: POST /api/posts — một lần gửi tạo bản caption riêng, duyệt và xếp job cho nhiều nhóm; chống bấm hai lần; đích bị chặn thì không xếp gì', async () => {
+  const { createAccountRepository, createGroupRepository } = await import('#storage');
+  const call = (method: string, url: string, payload?: object) => app.inject({ method: method as 'GET', url, headers, ...(payload ? { payload } : {}) });
+  const accounts = createAccountRepository(db);
+  const account = accounts.create({ label: 'Nick A' }).id;
+  accounts.recordIdentity(account, 'vanity:nick.a'); accounts.recordSession(account, 'logged_in');
+  const groups = createGroupRepository(db);
+  const [g1, g2] = ['111111111111', '222222222222'].map((id, i) => groups.add({ reference: id, accountId: account, name: `Nhóm ${i + 1}`, membership: 'joined', permission: 'allowed' }).id);
+  const blocked = groups.add({ reference: '333333333333', accountId: account, name: 'Chưa có quyền', membership: 'joined' }).id;
+  const media = (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' }, payload: image })).json().id as string;
+  const product = (await call('POST', '/api/products', { name: 'iPhone 13', condition: 'Đẹp', mediaIds: [media] })).json();
+  const when = Date.now(); // cố định: cùng mã yêu cầu phải cùng nội dung (kể cả giờ hẹn)
+  const body = (items: object[], requestKey = 'khoa-dang-bai-0001') => ({ requestKey, accountId: account, productId: product.productId, scheduledAt: when, items });
+
+  const blockedResult = await call('POST', '/api/posts', body([{ destinationId: g1, caption: 'A' }, { destinationId: blocked, caption: 'B' }]));
+  assert.equal(blockedResult.statusCode, 409);
+  assert.deepEqual(blockedResult.json().failures, [{ destinationId: blocked, code: 'not_ready' }]);
+  assert.equal((await call('GET', '/api/jobs')).json().total, 0); // không xếp job nào
+
+  const items = [{ destinationId: g1, caption: 'Caption nhóm 1' }, { destinationId: g2, caption: 'Caption nhóm 2', source: 'manual' }];
+  const ok = await call('POST', '/api/posts', body(items));
+  assert.equal(ok.statusCode, 201); assert.equal(ok.json().jobs.length, 2);
+  const replay = await call('POST', '/api/posts', body(items));
+  assert.deepEqual([replay.statusCode, replay.json().replayed, replay.json().jobs.length], [200, true, 2]);
+  assert.equal((await call('POST', '/api/posts', body([{ destinationId: g1, caption: 'Khác' }]))).statusCode, 409); // cùng mã, khác nội dung
+  assert.equal((await call('GET', '/api/jobs')).json().total, 2);
+  assert.equal((await call('POST', '/api/posts', { ...body(items, 'x'), requestKey: 'x' })).statusCode, 400);
+  const { 'x-apm-token': _token, ...noToken } = headers;
+  assert.equal((await app.inject({ method: 'POST', url: '/api/posts', headers: noToken, payload: body(items, 'khoa-khong-token-1') })).statusCode, 403);
+});

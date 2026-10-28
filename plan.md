@@ -164,7 +164,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Xong phần mô phỏng (P07.1, P07.3–P07.9); P07.2 còn ô nhập lịch (P10) và giới hạn/ngày |
 | P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Mã xong và đạt offline (trang Facebook giả); **chưa có bằng chứng chạy thật qua ứng dụng**, nên chưa đóng P08.2–P08.8 |
 | P09 | Kết nối và đăng fanpage | P01, P02, P05, P07 | Chưa bắt đầu |
-| P10 | Ba trang đăng tích hợp | P05–P09 | Chưa bắt đầu |
+| P10 | Ba trang đăng tích hợp | P05–P09 | Trang đăng nhóm xong (P10.2/6/7/8) và đạt mô phỏng; còn trang cá nhân (P10.3), fanpage (P10.4), preset (P10.5), máy sửa/đã bán phản ánh ở bài/lịch (P10.9) |
 | P11 | Nhật ký, đối chiếu, phục hồi | P07–P10 | Chưa bắt đầu |
 | P12 | Kiểm thử tổng thể, chạy Windows, bàn giao | P00–P11 | Chưa bắt đầu |
 | P13 | LLM theo ngữ cảnh | P12 | Chưa bắt đầu |
@@ -351,14 +351,14 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Mục tiêu:** dùng được từ nhập máy đến kết quả trong UI.
 
-- [ ] P10.1. Composer chung: máy, ảnh, caption/phiên bản, tài khoản/đích/lịch; không mất nội dung khi đổi màn hình.
-- [ ] P10.2. Đăng nhóm nhận P06 hoặc link/ID, hiển thị điều kiện/nội quy từng nhóm.
+- [ ] P10.1. Composer chung: máy, ảnh, caption/phiên bản, tài khoản/đích/lịch; không mất nội dung khi đổi màn hình. *(Phần cho kênh nhóm xong: máy, ảnh theo thứ tự, caption mẫu/sửa tay, tài khoản, nhóm, lịch; bản nháp đang soạn được giữ khi chuyển trang trong phiên. Chưa có phiên bản chọn lại từ bản đã lưu, trang cá nhân và fanpage dùng lại sau.)*
+- [x] P10.2. Đăng nhóm nhận P06 hoặc link/ID, hiển thị điều kiện/nội quy từng nhóm. *(Trang "Đăng bài viết nhóm" nhận nhóm đã chọn từ trang Nhóm; liệt kê nhóm theo tài khoản kèm nội quy, duyệt bài, lý do chưa đăng được; nhóm chưa đủ điều kiện bị khóa. Thêm nhóm bằng link/ID làm ở trang Nhóm.)*
 - [ ] P10.3. Đăng cá nhân chọn một/hai tài khoản, hiển thị đúng TCN; không tự dùng danh sách group làm đích.
 - [ ] P10.4. Đăng fanpage chọn Page có quyền; trạng thái kết nối tách khỏi browser.
 - [ ] P10.5. Preset theo cặp tài khoản–đích/mẫu/lịch; hai tài khoản không mặc định nhân đôi mọi group.
-- [ ] P10.6. Preview từng phiên bản, đủ ảnh/thứ tự/đích/giờ; cảnh báo trùng giữa hai tài khoản.
-- [ ] P10.7. Duyệt theo phiên bản, tạo job theo mã yêu cầu; ghi rõ mô phỏng/tự động/bán tự động/chưa hỗ trợ.
-- [ ] P10.8. Kết quả từng đích, bắt đầu/tạm dừng/dừng và lý do chưa chạy; không thành công chung khi chỉ một đích thành công.
+- [x] P10.6. Preview từng phiên bản, đủ ảnh/thứ tự/đích/giờ; cảnh báo trùng giữa hai tài khoản. *(Xem trước từng nhóm: ảnh theo thứ tự, caption (sửa riêng được), giờ hẹn theo giờ Việt Nam, chế độ mô phỏng/THẬT; cảnh báo cùng caption cho nhiều nhóm và giống bản đã lưu cho cùng nhóm. Cảnh báo trùng giữa hai tài khoản chưa có (chỉ một tài khoản mỗi lần).)*
+- [x] P10.7. Duyệt theo phiên bản, tạo job theo mã yêu cầu; ghi rõ mô phỏng/tự động/bán tự động/chưa hỗ trợ. *(`POST /api/posts`: tạo bản caption riêng từng đích, duyệt theo phiên bản máy và danh tính đã xác nhận, xếp job; mã yêu cầu chống bấm hai lần (kể cả mất phản hồi); tất cả hoặc không gì, nhóm bị chặn được liệt kê; chế độ THẬT cần tick xác nhận trước khi gửi.)*
+- [x] P10.8. Kết quả từng đích, bắt đầu/tạm dừng/dừng và lý do chưa chạy; không thành công chung khi chỉ một đích thành công. *(Kết quả từng nhóm hiển thị riêng (đã đăng/chờ duyệt/không rõ/lỗi kèm lý do); tạm dừng, hủy, chạy ngay, yêu cầu dừng từng job ở "Hàng chờ đăng".)*
 - [ ] P10.9. Máy đã bán/nguồn đổi phản ánh ở bài/lịch; mở được phiên bản cũ, không âm thầm sửa bài đã duyệt.
 
 **Đầu ra:** ba trang đăng cùng bố cục và backend/worker.

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { BusinessError, type IntegrationMode, JOB_STATUSES, type JobStatus } from '#domain';
-import { createAccountRepository, createContentRepository, createJobQueries, createJobRepository, type Database } from '#storage';
+import { createAccountRepository, createContentRepository, createJobQueries, createJobRepository, createPostBatchService, type Database, type PostBatchInput } from '#storage';
 
 const UUID = '^[a-fA-F0-9]{8}-(?:[a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}$';
 const uuid = { type: 'string', pattern: UUID } as const;
@@ -17,6 +17,7 @@ export function installJobsApi(app: FastifyInstance, db: Database, mode: Integra
   const content = createContentRepository(db);
   const jobs = createJobRepository(db);
   const queries = createJobQueries(db);
+  const posts = createPostBatchService(db, { mode });
 
   app.get<{ Querystring: { status?: JobStatus; accountId?: string; page?: number; pageSize?: number } }>('/api/jobs', {
     schema: { querystring: { type: 'object', additionalProperties: false, properties: {
@@ -46,6 +47,22 @@ export function installJobsApi(app: FastifyInstance, db: Database, mode: Integra
   }, async (request, reply) => {
     const result = jobs.enqueue({ requestKey: request.body.requestKey, mode, jobs: request.body.jobs });
     return reply.code(result.replayed ? 200 : 201).send({ requestId: result.requestId, replayed: result.replayed, jobIds: result.jobs.map((job) => job.id) });
+  });
+
+  // Một lần bấm "Bắt đầu" của trang đăng: tạo bản caption theo từng đích, duyệt và xếp job. Tất cả hoặc không gì; bị chặn thì
+  // trả 409 kèm danh sách đích bị chặn để người dùng bỏ chọn. Chống bấm hai lần theo requestKey.
+  app.post<{ Body: PostBatchInput }>('/api/posts', {
+    schema: { body: { type: 'object', additionalProperties: false, required: ['requestKey', 'accountId', 'productId', 'scheduledAt', 'items'], properties: {
+      requestKey: { type: 'string', minLength: 8, maxLength: 200 }, accountId: uuid, productId: uuid, scheduledAt: epochMs,
+      items: { type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', additionalProperties: false, required: ['destinationId', 'caption'], properties: {
+        destinationId: uuid, caption: { type: 'string', minLength: 1, maxLength: 10_000 }, source: { type: 'string', enum: ['template', 'manual'] } } } },
+    } } },
+  }, async (request, reply) => {
+    const result = posts.submit(request.body);
+    if (!result.ok) {
+      return reply.code(409).send({ error: 'items_not_ready', message: 'Một số đích chưa đủ điều kiện nên chưa xếp job nào.', failures: result.failures });
+    }
+    return reply.code(result.replayed ? 200 : 201).send({ requestId: result.requestId, replayed: result.replayed, jobs: result.jobs });
   });
 
   const state = (path: string, expected: JobStatus[], next: 'queued' | 'paused' | 'cancelled') =>

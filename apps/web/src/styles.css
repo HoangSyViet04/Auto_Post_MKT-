@@ -410,3 +410,30 @@ button.primary:disabled {
   font-size: 14px;
   font-weight: 600;
 }
+
+.preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.live-confirm {
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.result-panel {
+  margin-top: 24px;
+}
+
+.product-form textarea {
+  width: 100%;
+}
+
+.product-form label.check {
+  flex-direction: row;
+  align-items: center;
+}

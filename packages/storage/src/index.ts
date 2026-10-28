@@ -9,5 +9,6 @@ export * from './group-repository.ts';
 export * from './job-query.ts';
 export * from './job-repository.ts';
 export * from './media-store.ts';
+export * from './post-batch.ts';
 export * from './secret-store.ts';
 export * from './worker-status.ts';
