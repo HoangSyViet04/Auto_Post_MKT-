@@ -163,7 +163,7 @@ P00 đã hoàn thành; các phần tiếp theo theo trạng thái bên dưới. 
 | P06 | Quét nhóm và danh sách đích | P01–P03 (P04 hoãn: kết nối trực tiếp) | Có quét joined trong app, tiến độ/hủy/khóa profile, đạt offline + UI (40 nhóm → chọn 30 → xếp 30 job); chờ nghiệm thu Facebook thật. Keyword chưa hỗ trợ; P06.5 một phần |
 | P07 | Hàng chờ/lịch với mô phỏng | P02–P06 | Xong phần mô phỏng (P07.1, P07.3–P07.9); P07.2 còn ô nhập lịch (P10) và giới hạn/ngày |
 | P08 | Adapter TCN/group hoàn chỉnh | P01, P03–P07 | Đạt offline (Facebook giả) và **đạt thật một lần mỗi kênh** (nhóm, TCN) qua trang giao diện, 28/10/2026; người dùng đã đối chiếu bằng mắt (P08.8 đạt); còn chờ duyệt/từ chối (P08.5), nick không phải quản trị, lặp lại sau restart |
-| P09 | Kết nối và đăng fanpage | P01, P02, P05, P07 | Chưa bắt đầu |
+| P09 | Kết nối và đăng fanpage | P01, P02, P05, P07 | Đang làm: có client Graph, kho kết nối (token mã hóa) và lệnh `npm run page:connect` (chỉ đọc), đạt test với Graph giả; ứng dụng Meta đã tạo, `me/accounts` thấy Page thử. Chưa kết nối thật, chưa đăng |
 | P10 | Ba trang đăng tích hợp | P05–P09 | Trang đăng nhóm và trang cá nhân xong (P10.2/3/5/6/7/8/9), đạt mô phỏng và đã đăng thử thật; còn fanpage (P10.4) và composer chung (P10.1) |
 | P11 | Nhật ký, đối chiếu, phục hồi | P07–P10 | **Xong (P11.1–P11.9)**, đạt mô phỏng; đã thử trên trình duyệt và script thật trên dữ liệu tạm. Chưa thử mất điện/kill giữa lúc đăng thật, chưa thử backup/restore trên dữ liệu thật của người dùng |
 | P12 | Kiểm thử tổng thể, chạy Windows, bàn giao | P00–P11 | **Xong P12.1–P12.8**: đạt trên mô phỏng/dữ liệu tạm và một chu trình THẬT qua launcher (28/10/2026). Chưa bàn giao đủ phạm vi vì fanpage chưa làm |
@@ -334,8 +334,8 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Mục tiêu:** đăng Page qua API, độc lập browser.
 
-- [ ] P09.1. Chọn kết nối theo quyền ứng dụng thực tế; kiểm tra Page/quyền/token. Không mô tả token là không bao giờ bị thu hồi.
-- [ ] P09.2. Bảo vệ token, API danh sách Page chỉ trả metadata/trạng thái/khả năng, không token thô.
+- [ ] P09.1. Chọn kết nối theo quyền ứng dụng thực tế; kiểm tra Page/quyền/token. Không mô tả token là không bao giờ bị thu hồi. *(Đã làm phần mã: client Graph `packages/integrations/facebook-page/src/graph-client.ts` (đổi token dài hạn, liệt kê Page kèm `tasks`, kiểm tra token chỉ-đọc; phiên bản `APM_GRAPH_VERSION`, mặc định v23.0 CHƯA đối chiếu với Meta) và luồng `npm run page:connect`. Người dùng đã tạo ứng dụng Meta (loại Kinh doanh, chế độ Phát triển) và `me/accounts` trả Page "Góc Nghiện Đồ Hay" (ID 107892312229541) với đủ `tasks` gồm CREATE_CONTENT trong Graph API Explorer. CHƯA tick: chưa chạy `page:connect` thật, chưa thử đăng, chưa biết chế độ Development có đăng được không cần App Review)*
+- [ ] P09.2. Bảo vệ token, API danh sách Page chỉ trả metadata/trạng thái/khả năng, không token thô. *(Đã làm: `page-repository.ts` lưu Page token trong SecretStore (DPAPI), DB chỉ giữ tham chiếu, `list()` chỉ metadata, test chứng minh token không nằm dạng rõ ở file nào; token chỉ đi qua header/thân POST, lỗi không chứa nguyên văn thông báo của Meta. CHƯA tick: chưa có API HTTP và giao diện liệt kê Page)*
 - [ ] P09.3. Upload ảnh cục bộ bằng dữ liệu file; đủ ảnh đúng thứ tự trước tạo bài, không phụ thuộc URL công khai.
 - [ ] P09.4. Tạo bài chữ/ảnh theo khả năng đã kiểm chứng, lưu ID/nguồn xác nhận; phân loại hết quyền/hết hạn/rate limit/mạng.
 - [ ] P09.5. Lịch giữ cục bộ; gửi khi đến hạn và sau kiểm tra dữ liệu theo mục 3.
