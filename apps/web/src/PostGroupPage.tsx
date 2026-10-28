@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   type AccountSummary,
   type ContentVersionItem,
-  type GroupBlocker,
   type GroupItem,
   type GroupListResponse,
   type HealthResponse,
@@ -17,7 +16,6 @@ import {
 import { apiFetch } from './api.ts';
 import { clearHandoff, getHandoff } from './handoff.ts';
 import { networkMessage, readError } from './http.ts';
-import { describeJobResult, formatVn, JOB_STATUS_LABEL } from './job-view.ts';
 import {
   duplicateWarning,
   emptyDraft,
@@ -34,16 +32,8 @@ import {
 import { PresetPanel } from './PresetPanel.tsx';
 import { formFromDetail, previewCaption } from './product-form.ts';
 import { selectGroupCount } from './group-selection.ts';
+import { GroupComposerView } from './GroupComposerView.tsx';
 
-const BLOCKER_LABEL: Record<GroupBlocker, string> = {
-  no_external_id: 'chưa có ID số của nhóm',
-  not_joined: 'chưa tham gia',
-  no_permission: 'chưa xác nhận được phép đăng',
-  unsuitable: 'đã đánh dấu không phù hợp',
-  archived: 'đã ngừng dùng',
-  account_paused: 'tài khoản đang tạm dừng',
-};
-const APPROVAL_LABEL = { unknown: 'duyệt bài: chưa rõ', required: 'có duyệt bài', not_required: 'không duyệt bài' } as const;
 const FINAL = new Set(['published', 'pending_approval', 'failed', 'unknown', 'cancelled']);
 
 interface Failure { destinationId: string; code: string }
@@ -96,7 +86,13 @@ export function PostGroupPage() {
 
   useEffect(() => { remembered = draft; }, [draft]);
 
-  const set = (patch: Partial<PostDraft>) => { setDraft((current) => ({ ...current, ...patch })); setFailures([]); };
+  const currentAccount = useRef(draft.accountId);
+  currentAccount.current = draft.accountId;
+  const set = (patch: Partial<PostDraft>) => {
+    setDraft((current) => ({ ...current, ...patch })); setFailures([]); setLiveConfirm(false);
+    if (patch.productId !== undefined) { setDetail(null); setVersions([]); }
+    if (patch.accountId !== undefined) setGroups([]);
+  };
 
   useEffect(() => {
     (async () => {
@@ -111,27 +107,30 @@ export function PostGroupPage() {
     })().catch((e) => setMessage(networkMessage(e)));
   }, []);
 
-  useEffect(() => {
-    if (!draft.accountId) { setGroups([]); return; }
-    fetchAll<GroupItem>(`/api/groups?accountId=${draft.accountId}`, (body) => body as GroupListResponse)
-      .then((list) => {
-        setGroups(list);
-        const preset = pendingPreset.current;
-        if (preset) { pendingPreset.current = null; selectRef.current(preset, draft.accountId, list); }
-      })
-      .catch((e) => setMessage(networkMessage(e)));
+  const reloadGroups = useCallback(async () => {
+    const accountId = draft.accountId;
+    if (!accountId) { setGroups([]); return; }
+    const list = await fetchAll<GroupItem>(`/api/groups?accountId=${accountId}`, (body) => body as GroupListResponse);
+    if (currentAccount.current !== accountId) return;
+    setGroups(list);
+    const preset = pendingPreset.current;
+    if (preset) { pendingPreset.current = null; selectRef.current(preset, accountId, list); }
   }, [draft.accountId]);
+  useEffect(() => { reloadGroups().catch((e) => setMessage(networkMessage(e))); }, [reloadGroups]);
 
   useEffect(() => {
     if (!draft.productId) { setDetail(null); setVersions([]); return; }
+    let disposed = false;
     (async () => {
       const response = await apiFetch(`/api/products/${draft.productId}`);
       if (!response.ok) throw new Error(await readError(response));
       const loaded = (await response.json()) as ProductDetail;
+      if (disposed) return;
       setDetail(loaded);
       const history = await apiFetch(`/api/products/${draft.productId}/content-versions`);
-      if (history.ok) setVersions(((await history.json()) as { items: ContentVersionItem[] }).items);
+      if (history.ok) { const body = (await history.json()) as { items: ContentVersionItem[] }; if (!disposed) setVersions(body.items); }
     })().catch((e) => setMessage(networkMessage(e)));
+    return () => { disposed = true; };
   }, [draft.productId]);
 
   // Điền caption mẫu khi chưa có hoặc người dùng chưa sửa gì khỏi caption mẫu trước đó (đổi máy hoặc đổi mẫu thì điền lại).
@@ -162,15 +161,12 @@ export function PostGroupPage() {
   const template = detail ? defaultCaption(detail, templateText) : '';
   const items = planItems(draft, template);
   const problems = planProblems(draft, { accountSession: account?.sessionStatus ?? null, productSelling: detail?.status === 'selling', now: Date.now() });
-  const groupById = new Map(groups.map((group) => [group.id, group]));
-  const relationOf = (group: GroupItem) => group.accounts.find((relation) => relation.accountId === draft.accountId);
   const needle = filter.trim().toLowerCase();
   const visible = groups.filter((group) => !needle || `${group.name ?? ''} ${group.externalId ?? ''} ${group.region ?? ''} ${group.rulesNote ?? ''}`.toLowerCase().includes(needle));
-  const eligibleVisible = visible.filter((group) => relationOf(group)?.eligible);
   const duplicate = duplicateWarning(items);
   const similar = new Map(similarToHistory(items, versions).map((hit) => [hit.destinationId, hit.score]));
   const startAt = resolveStart(draft, Date.now());
-  const ready = problems.length === 0 && (!live || liveConfirm) && !busy;
+  const ready = health !== null && problems.length === 0 && account?.paused === false && (!live || liveConfirm) && !busy;
 
   /** Điền nhóm từ cấu hình: chỉ nhóm đã lưu cho đúng tài khoản này và còn đủ điều kiện; phần bị bỏ qua được báo rõ. */
   function selectFromPreset(preset: PresetItem, accountId: string, list: readonly GroupItem[]) {
@@ -186,6 +182,7 @@ export function PostGroupPage() {
   selectRef.current = selectFromPreset; // effect tải nhóm luôn gọi bản mới nhất mà không phải thêm vào danh sách phụ thuộc
 
   function applyPreset(preset: PresetItem) {
+    setLiveConfirm(false);
     setTemplateText(preset.captionTemplate ?? '');
     const start = preset.schedule.startMode === 'daily' && preset.schedule.timeOfDay ? nextDailyStart(preset.schedule.timeOfDay, Date.now()) : null;
     setDraft((current) => ({ ...current, startMode: start === null ? 'now' : 'later', startLocal: start === null ? '' : toVnLocal(start) }));
@@ -196,10 +193,6 @@ export function PostGroupPage() {
     if (accountId === draft.accountId) { selectFromPreset(preset, accountId, groups); return; }
     pendingPreset.current = preset; // nhóm của tài khoản mới chưa tải; áp dụng khi tải xong
     setDraft((current) => ({ ...current, accountId, selected: [], overrides: {} }));
-  }
-
-  function toggle(group: GroupItem, checked: boolean) {
-    set({ selected: checked ? [...draft.selected, group.id] : draft.selected.filter((id) => id !== group.id) });
   }
 
   async function submit() {
@@ -234,168 +227,19 @@ export function PostGroupPage() {
     }
   }
 
-  const failureOf = (id: string) => failures.find((failure) => failure.destinationId === id);
-
-  return (
-    <section>
-      <header className="page-header">
-        <h1>Đăng bài viết nhóm</h1>
-        <span className="tag">P10 · {live ? 'THẬT' : 'mô phỏng'}</span>
-      </header>
-      <p className="muted">Mỗi nhóm là một job riêng với kết quả riêng. Nhóm nào không đủ điều kiện sẽ không được xếp; bạn quyết định bỏ chọn.</p>
-      {health && !health.worker.alive && <p className="notice" role="status">Worker chưa chạy nên bài sẽ không được xử lý. Chạy "npm run dev:worker".</p>}
-      {message && <p className="notice" role="status">{message}</p>}
-
-      <div className="product-form">
-        <PresetPanel accountId={draft.accountId} selected={draft.selected} startMode={draft.startMode} startLocal={draft.startLocal}
-          templateText={templateText} onTemplateText={setTemplateText} onApply={applyPreset} notify={setMessage} />
-
-        <fieldset>
-          <legend>1. Tài khoản đăng</legend>
-          <select aria-label="Tài khoản" value={draft.accountId} onChange={(event) => set({ accountId: event.target.value, selected: [], overrides: {} })}>
-            <option value="">— chọn tài khoản —</option>
-            {accounts.map((item) => <option key={item.id} value={item.id}>{item.label}{item.sessionStatus === 'logged_in' ? '' : ' (chưa đăng nhập)'}</option>)}
-          </select>
-          {account && account.sessionStatus !== 'logged_in' && <span className="field-error">Tài khoản này chưa đăng nhập: dùng "Đăng nhập"/"Kiểm tra phiên" ở trang Quản lý tài khoản.</span>}
-        </fieldset>
-
-        <fieldset>
-          <legend>2. Máy</legend>
-          <select aria-label="Máy" value={draft.productId} onChange={(event) => set({ productId: event.target.value })}>
-            <option value="">— chọn máy đang bán —</option>
-            {products.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.mediaCount} ảnh</option>)}
-          </select>
-          {products.length === 0 && <span className="muted">Chưa có máy đang bán. Thêm ở trang "Quản lý máy".</span>}
-          {detail && (
-            <ol className="images">
-              {detail.mediaIds.map((id, index) => (
-                <li key={id}><img className="thumb" src={`/api/media/${id}?size=thumb`} alt={`Ảnh ${index + 1}`} /> <span className="muted">Ảnh {index + 1} (thứ tự đăng)</span></li>
-              ))}
-            </ol>
-          )}
-        </fieldset>
-
-        <fieldset>
-          <legend>3. Caption chung</legend>
-          <textarea aria-label="Caption" rows={6} value={draft.caption} onChange={(event) => set({ caption: event.target.value })} placeholder="Chọn máy để có caption mẫu" />
-          {detail && draft.caption !== template && <button type="button" onClick={() => set({ caption: template })}>Dùng lại caption mẫu</button>}
-          <p className="notice">Caption chỉ gồm dữ kiện bạn đã nhập cho máy. Có thể sửa riêng từng nhóm ở phần xem trước.</p>
-        </fieldset>
-
-        <fieldset>
-          <legend>4. Nhóm ({draft.selected.length} đã chọn)</legend>
-          {!draft.accountId && <span className="muted">Chọn tài khoản trước.</span>}
-          {draft.accountId && (
-            <>
-              <div className="actions">
-                <input className="inline-input" aria-label="Lọc nhóm" placeholder="Lọc theo tên, ID, khu vực, nội quy…" value={filter} onChange={(event) => setFilter(event.target.value)} />
-                <button type="button" onClick={() => set({ selected: [...new Set([...draft.selected, ...eligibleVisible.map((group) => group.id)])] })}>Chọn tất cả đủ điều kiện ({eligibleVisible.length})</button>
-                <button type="button" onClick={() => set({ selected: [] })}>Bỏ chọn hết</button>
-              </div>
-              <div className="actions">
-                <label>Số nhóm muốn đăng <input type="number" aria-label="Số nhóm muốn đăng" min={1} max={100} value={wantedCount} onChange={(event) => setWantedCount(event.target.value)} /></label>
-                <button type="button" onClick={() => {
-                  try {
-                    const result = selectGroupCount(visible, draft.accountId, Number(wantedCount));
-                    set({ selected: result.selected }); setLiveConfirm(false);
-                    setMessage(`Đã chọn ${result.selected.length}/${Number(wantedCount)} nhóm trong bộ lọc hiện tại (${result.available} nhóm đủ điều kiện). Ưu tiên nhóm đánh dấu ưu tiên, sau đó theo tên. Danh sách chọn cũ được thay thế; xem trước rồi duyệt để xếp lịch. Chưa tạo tác vụ nào.`);
-                  } catch (error) { setMessage(networkMessage(error)); }
-                }}>Chọn theo số lượng</button>
-                <a href="#/scan-joined">Quét / cập nhật nhóm đã tham gia</a>
-              </div>
-              {groups.length === 0 && <span className="muted">Tài khoản này chưa có nhóm nào. Thêm ở trang "Nhóm đã tham gia".</span>}
-              <table className="table">
-                <tbody>
-                  {visible.map((group) => {
-                    const relation = relationOf(group);
-                    const eligible = relation?.eligible === true;
-                    const failure = failureOf(group.id);
-                    return (
-                      <tr key={group.id} className={eligible ? undefined : 'archived'}>
-                        <td><input type="checkbox" aria-label={`Chọn ${group.name ?? group.externalId}`} disabled={!eligible} checked={draft.selected.includes(group.id)} onChange={(event) => toggle(group, event.target.checked)} /></td>
-                        <td>
-                          <strong>{group.name ?? 'Chưa đặt tên'}</strong> <span className="muted mono">{group.externalId}</span>
-                          <div className="muted">{group.region ?? 'chưa rõ khu vực'} · {APPROVAL_LABEL[group.approvalRequired]}</div>
-                          {group.rulesNote && <div className="clip" title={group.rulesNote}>Nội quy: {group.rulesNote}</div>}
-                        </td>
-                        <td>
-                          {eligible ? <span className="ok-text">Đủ điều kiện</span> : <span className="muted">Chưa đăng được: {(relation?.blockedBy ?? ['not_joined']).map((reason) => BLOCKER_LABEL[reason]).join(', ')}</span>}
-                          {failure && <div className="field-error">Bị chặn khi duyệt ({failure.code}). Bỏ chọn nhóm này.</div>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </>
-          )}
-        </fieldset>
-
-        <fieldset>
-          <legend>5. Lịch</legend>
-          <label className="check"><input type="radio" name="start" checked={draft.startMode === 'now'} onChange={() => set({ startMode: 'now' })} /> Bắt đầu ngay (worker giãn cách các bài của cùng tài khoản)</label>
-          <label className="check"><input type="radio" name="start" checked={draft.startMode === 'later'} onChange={() => set({ startMode: 'later' })} /> Hẹn giờ (giờ Việt Nam)
-            <input type="datetime-local" aria-label="Giờ hẹn" disabled={draft.startMode !== 'later'} value={draft.startLocal} onChange={(event) => set({ startLocal: event.target.value })} />
-          </label>
-        </fieldset>
-
-        <fieldset>
-          <legend>6. Xem trước từng nhóm</legend>
-          {items.length === 0 && <span className="muted">Chọn nhóm để xem trước.</span>}
-          {duplicate && <span className="field-warning">{duplicate}</span>}
-          {items.map((item) => {
-            const group = groupById.get(item.destinationId);
-            const score = similar.get(item.destinationId);
-            return (
-              <div key={item.destinationId} className="preview-card">
-                <strong>{group?.name ?? item.destinationId}</strong> <span className="muted mono">{group?.externalId}</span>
-                <div className="muted">
-                  {detail?.mediaIds.length ?? 0} ảnh theo thứ tự đã chọn · {startAt === null ? 'giờ hẹn chưa hợp lệ' : draft.startMode === 'now' ? 'bắt đầu ngay' : formatVn(startAt)} · {live ? 'ĐĂNG THẬT' : 'mô phỏng'}
-                </div>
-                {group?.rulesNote && <div className="clip" title={group.rulesNote}>Nội quy: {group.rulesNote}</div>}
-                <textarea aria-label={`Caption cho ${group?.name ?? item.destinationId}`} rows={4} value={draft.overrides[item.destinationId] ?? item.caption}
-                  onChange={(event) => set({ overrides: { ...draft.overrides, [item.destinationId]: event.target.value } })} />
-                {score !== undefined && <span className="field-warning">Giống {Math.round(score * 100)}% một bản đã lưu của máy này cho nhóm này.</span>}
-              </div>
-            );
-          })}
-        </fieldset>
-
-        {problems.length > 0 && <ul className="field-error" aria-label="Chưa gửi được">{problems.map((problem) => <li key={problem}>{problem}</li>)}</ul>}
-        {live && (
-          <label className="check live-confirm">
-            <input type="checkbox" checked={liveConfirm} onChange={(event) => setLiveConfirm(event.target.checked)} />
-            Tôi xác nhận ĐĂNG THẬT {items.length} bài lên Facebook bằng tài khoản {account?.label ?? '…'}.
-          </label>
-        )}
-        <div className="actions">
-          <button type="button" className="primary" disabled={!ready} onClick={submit}>Duyệt và xếp lịch ({items.length} nhóm)</button>
-        </div>
-      </div>
-
-      {batch && (
-        <div className="result-panel">
-          <h2>Kết quả từng nhóm{batch.replayed ? ' (yêu cầu đã ghi nhận trước đó)' : ''}</h2>
-          <table className="table">
-            <thead><tr><th>Nhóm</th><th>Trạng thái</th></tr></thead>
-            <tbody>
-              {batch.jobs.map((entry) => {
-                const job = jobs.get(entry.jobId);
-                return (
-                  <tr key={entry.jobId}>
-                    <td>{groupById.get(entry.destinationId)?.name ?? entry.destinationId}</td>
-                    <td>
-                      <strong>{job ? JOB_STATUS_LABEL[job.status] : 'Đang tải…'}</strong>
-                      {job && <div className={job.status === 'failed' || job.status === 'unknown' ? 'field-error' : 'muted'}>{describeJobResult(job)}</div>}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <p className="muted">Tạm dừng, hủy hoặc chạy ngay từng job ở trang <a href="#/queue">Hàng chờ đăng</a>.</p>
-        </div>
-      )}
-    </section>
-  );
+  return <GroupComposerView accounts={accounts} products={products} detail={detail} account={account}
+    draft={draft} groups={groups} visible={visible} filter={filter} wantedCount={wantedCount}
+    live={live} health={health} template={template} items={items} startAt={startAt} duplicate={duplicate}
+    similar={similar} problems={problems} ready={ready} busy={busy} message={message} liveConfirm={liveConfirm}
+    batch={batch} jobs={jobs} onChange={set} onFilter={setFilter} onWantedCount={setWantedCount}
+    onChooseCount={() => {
+      try {
+        const result = selectGroupCount(visible, draft.accountId, Number(wantedCount));
+        set({ selected: result.selected });
+        setMessage(`Đã chọn ${result.selected.length}/${Number(wantedCount)} nhóm trong bộ lọc hiện tại (${result.available} nhóm đủ điều kiện). Ưu tiên nhóm đánh dấu ưu tiên, sau đó theo tên. Xem trước rồi duyệt để xếp lịch. Chưa tạo tác vụ nào.`);
+      } catch (error) { setMessage(networkMessage(error)); }
+    }} onLiveConfirm={setLiveConfirm} onSubmit={submit} onRefreshGroups={reloadGroups}
+    failureFor={(id) => failures.find((failure) => failure.destinationId === id)?.code}
+    presets={<PresetPanel accountId={draft.accountId} selected={draft.selected} startMode={draft.startMode} startLocal={draft.startLocal}
+      templateText={templateText} onTemplateText={(value) => { setTemplateText(value); setLiveConfirm(false); }} onApply={applyPreset} notify={setMessage} />} />;
 }

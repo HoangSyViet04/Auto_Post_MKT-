@@ -778,3 +778,22 @@ Mẫu một mục:
 - **Dọn dẹp:** tắt launcher; gỡ junction `node_modules` bằng `rmdir`; xóa bản chạy tạm; `node_modules` dự án còn nguyên (83 thư mục); `.env` 0 byte. Một bản sao lưu mới `data/backups/20261028103338`.
 - **Việc người dùng:** xác nhận bằng mắt như trên và tự XÓA bài thử trên Page (liên kết `https://www.facebook.com/107892312229541/posts/1104216589257690`) cùng các bài thử cũ ở nhóm/TCN.
 - **Tiếp theo:** sau khi người dùng xác nhận: tick P09.3/P09.4/P10.4, cập nhật nghiệm thu (T03 Page đạt); sau đó còn P09 phần thử lỗi thật, hoặc quay lại các mục làm dở (P03/P06/P01).
+
+
+## 2026-10-28 17:43 — Áp dụng giao diện từ mockup v1 (shell + Đăng nhóm)
+
+- **Yêu cầu:** triển khai giao diện người dùng đã chọn ở `docs/design/ui-concept-v1.png` vào ứng dụng đang chạy.
+- **Phạm vi đã làm:**
+  - `App.tsx`, `Icon.tsx`, `styles.css`: sidebar navy/icon SVG, điều hướng trực tiếp, breadcrumb, nhãn chế độ, trạng thái app và kiểu bảng/form/nút thống nhất. Menu thu gọn trên mobile; vùng bảng các trang khác có cuộn riêng. Giữ trang `PostPagePage` và route fanpage của phiên khác; fanpage là link chức năng, chỉ proxy/keyword còn ghi chưa có.
+  - `GroupComposerView.tsx` + `PostGroupPage.tsx`: tách phần trình bày khỏi tải dữ liệu/gửi lệnh; chọn máy/tài khoản và nhóm bên trái, preview/lịch bên phải; bốn bước dẫn tới vùng trong trang. Quét joined mở ngay trong màn Đăng nhóm, dùng lại `JoinedScanPanel` và backend có sẵn, không tự quét/gửi khi mở trang.
+  - Bảng nhóm cuộn, lọc theo tên/khu vực/nội quy, lọc chỉ đủ điều kiện, chọn số lượng 1–100, nhóm ưu tiên/tên, giữ quyền riêng theo nick. Chọn cả bộ lọc tối đa 100; frontend báo rõ nếu bản nháp chọn vượt 100 (server đã có giới hạn này).
+  - Preview theo nhóm bằng dropdown (đủ 30 lựa chọn, thay vì 30 ô caption kéo dài): xem caption, ảnh đúng thứ tự, sửa riêng một nhóm hoặc mở caption chung. Tab nội dung/ảnh, thời gian hẹn, cấu hình đăng thường dùng thu gọn và nút Lưu cấu hình mở đúng form. Thanh duyệt dưới nội dung, không che bảng/lịch; kết quả từng nhóm giữ nguyên.
+  - Khi sửa nội dung/tài khoản/máy/nhóm/lịch/mẫu hoặc áp dụng preset thì bỏ xác nhận đăng thật cũ; chưa đọc được chế độ thì không bật nút duyệt. Chặn phản hồi tải nhóm/máy cũ ghi vào bản nháp mới khi đổi nhanh. Giữ idempotency, bản nháp khi đổi trang và server-side readiness.
+- **Kiểm chứng (kết quả thật):**
+  - Target `npm.cmd test -- tests/e2e/group-count.test.ts apps/web/src/post-plan.test.ts apps/web/src/group-selection.test.ts` -> 10/10 đạt. UI Edge headless + server/Vite thật + DB/ảnh giả: quét 40, chọn 30, quét lại ngay trong composer, chỉnh caption riêng bắt xác nhận lại, hẹn giờ, lưu preset thật trong DB test, đổi trang vẫn giữ bản nháp, menu mobile, duyệt đúng 30 job với caption đúng. Không publisher hoặc mạng Facebook thật.
+  - Kiểm tra desktop 1440px và mobile 390px không tràn ngang; đi qua máy/nhóm/TCN/fanpage/lịch sử/đơn hàng không pageerror. Đã mở và xem ảnh chụp desktop/mobile/empty, chỉnh thanh duyệt để không che bảng/lịch và ảnh để không crop mất nội dung máy.
+  - `npm.cmd run check` (ngoài sandbox để DPAPI có quyền ACL; runner vẫn ép test/fake và dữ liệu tạm) -> **320/320 test đạt**, 28 suite, không skip; typecheck/lint 195 file đạt, build:web 51 module đạt. Bộ gate bao gồm cả phần fanpage đã commit ở phiên khác.
+  - Các lỗi trong lúc làm đã sửa: TS của test phía Node không có DOM global (dùng biểu thức Playwright evaluate), nhãn/accessibility của vùng bảng/icon, một thông báo tiếng Việt bị PowerShell truyền qua ASCII khi cắt JSX (đã sửa lại UTF-8 bằng apply_patch; đọc lại và kiểm trên ảnh). Không còn lỗi ở gate cuối.
+- **Ảnh và tài liệu:** `docs/design/ui-implemented-desktop.png`, `ui-implemented-mobile.png`, `ui-implemented-empty.png` là ảnh app thật với dữ liệu test; nhãn ĐĂNG THẬT là tình huống kiểm thử xác nhận qua API live giả, không bằng chứng đăng thật. Hướng dẫn `docs/design/ui-implementation.md`; cập nhật plan và liên kết từ brief mockup. Giữ nguyên PNG mockup ban đầu.
+- **Giới hạn:** tập trung bố cục Đăng nhóm và shell/shared styles; chưa viết lại form đặc thù của mọi trang theo mockup. Không đăng/quét thật, không sửa DB/phiên Facebook thật trong lượt UI. App đang mở cần restart và Ctrl+F5 để nhận bundle mới.
+- **Tiếp theo:** người dùng mở `Auto-Post-MKT.cmd` hoặc `npm.cmd start`, vào Đăng nhóm dùng thử. Lưu commit riêng code/ảnh/tài liệu sau gate; chưa push.

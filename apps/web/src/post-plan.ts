@@ -57,6 +57,7 @@ export function planProblems(draft: PostDraft, context: PlanContext): string[] {
   if (!draft.productId) problems.push('Chọn máy.');
   else if (!context.productSelling) problems.push('Máy này đã bán hoặc ngừng bán nên không tạo bài mới.');
   if (draft.selected.length === 0) problems.push('Chọn ít nhất một nhóm.');
+  if (draft.selected.length > 100) problems.push('Mỗi lượt xếp tối đa 100 nhóm. Bỏ bớt nhóm trước khi duyệt.');
   const empty = draft.selected.filter((id) => !captionFor(draft, id)).length;
   if (empty > 0) problems.push(`${empty} nhóm chưa có caption.`);
   if (resolveStart(draft, context.now) === null) problems.push('Giờ hẹn không hợp lệ hoặc đã qua quá lâu (nhập theo giờ Việt Nam).');

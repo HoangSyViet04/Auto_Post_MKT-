@@ -2,6 +2,8 @@
 
 Ngày: 28/10/2026. Ảnh: `ui-concept-v1.png`. Tạo bằng công cụ imagegen tích hợp. Đây là mockup tham khảo với dữ liệu minh họa, chưa áp dụng vào React/CSS đang chạy.
 
+**Cập nhật:** đã triển khai bố cục dựa trên ảnh này vào UI; xem [giao diện đã triển khai và ảnh chụp thật](ui-implementation.md). Ảnh PNG v1 vẫn giữ nguyên để đối chiếu bản tham khảo ban đầu.
+
 ## Hướng thiết kế
 
 - Desktop sáng, sidebar xanh navy, nút chính cobalt, trạng thái teal, chữ tiếng Việt rõ và bố cục gọn.

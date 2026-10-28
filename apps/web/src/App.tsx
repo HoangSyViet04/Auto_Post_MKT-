@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { DEFAULT_PAGE_ID, findPage, findSection, NAV, type PageDef } from './nav.ts';
+import { DEFAULT_PAGE_ID, findPage, type PageDef } from './nav.ts';
 import { AccountsPage } from './AccountsPage.tsx';
 import { GroupsPage } from './GroupsPage.tsx';
 import { JobsPage } from './JobsPage.tsx';
@@ -10,6 +10,18 @@ import { clearHandoff, getHandoff } from './handoff.ts';
 import { ProductsPage } from './ProductsPage.tsx';
 import { SalesPage } from './SalesPage.tsx';
 import { type HealthState, useHealth } from './useHealth.ts';
+import { Icon, type IconName } from './Icon.tsx';
+
+const MAIN_NAV: Array<{ id: string; label: string; icon: IconName }> = [
+  { id: 'accounts', label: 'Quản lý tài khoản', icon: 'accounts' },
+  { id: 'products', label: 'Quản lý máy', icon: 'phone' },
+  { id: 'scan-joined', label: 'Nhóm đã tham gia', icon: 'groups' },
+  { id: 'post-group', label: 'Đăng nhóm', icon: 'send' },
+  { id: 'post-profile', label: 'Đăng trang cá nhân', icon: 'profile' },
+  { id: 'post-page', label: 'Đăng fanpage', icon: 'send' },
+  { id: 'queue', label: 'Hàng chờ & lịch sử', icon: 'history' },
+  { id: 'sales', label: 'Khách hỏi & đơn hàng', icon: 'sales' },
+];
 
 function readPageId(): string {
   const id = window.location.hash.replace(/^#\/?/, '');
@@ -18,64 +30,37 @@ function readPageId(): string {
 
 export function App() {
   const [pageId, setPageId] = useState(readPageId);
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set([findSection(readPageId())?.id ?? '']));
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const health = useHealth();
 
   useEffect(() => {
-    const onHash = () => setPageId(readPageId());
+    const onHash = () => { setPageId(readPageId()); setMobileNavOpen(false); };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
-
-  const toggle = (sectionId: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(sectionId)) next.delete(sectionId);
-      else next.add(sectionId);
-      return next;
-    });
 
   const page = findPage(pageId) ?? findPage(DEFAULT_PAGE_ID);
   if (!page) throw new Error('Thiếu trang điều hướng mặc định');
 
   return (
     <div className="layout">
-      <aside className="sidebar">
-        <div className="brand">Auto Post MKT</div>
-        <nav aria-label="Điều hướng chính">
-          {NAV.map((section) =>
-            section.pages.length === 1 ? (
-              <a
-                key={section.id}
-                href={`#/${section.pages[0].id}`}
-                className={`nav-item${pageId === section.pages[0].id ? ' active' : ''}`}
-              >
-                {section.title}
-              </a>
-            ) : (
-              <div key={section.id} className="nav-group">
-                <button
-                  type="button"
-                  className="nav-item nav-toggle"
-                  aria-expanded={expanded.has(section.id)}
-                  onClick={() => toggle(section.id)}
-                >
-                  {section.title}
-                  <span className="chevron">{expanded.has(section.id) ? '▾' : '▸'}</span>
-                </button>
-                {expanded.has(section.id) &&
-                  section.pages.map((sub) => (
-                    <a key={sub.id} href={`#/${sub.id}`} className={`nav-item sub${pageId === sub.id ? ' active' : ''}`}>
-                      {sub.title}
-                    </a>
-                  ))}
-              </div>
-            ),
-          )}
+      <aside className={`sidebar${mobileNavOpen ? ' is-open' : ''}`}>
+        <div className="brand"><span className="brand-mark"><Icon name="phone" /></span><div>Auto Post MKT<small>Cửa hàng điện thoại</small></div>
+          <button type="button" className="mobile-nav-toggle" aria-label="Mở hoặc đóng menu" aria-expanded={mobileNavOpen} aria-controls="app-navigation" onClick={() => setMobileNavOpen(!mobileNavOpen)}><Icon name="menu" /></button>
+        </div>
+        <nav id="app-navigation" aria-label="Điều hướng chính">
+          <div className="nav-caption">KHÔNG GIAN LÀM VIỆC</div>
+          {MAIN_NAV.map((item) => <a key={item.id} href={`#/${item.id}`} aria-current={pageId === item.id ? 'page' : undefined} className={`nav-item${pageId === item.id ? ' active' : ''}`}><Icon name={item.icon} /><span>{item.label}</span></a>)}
+          <div className="nav-caption nav-divider">TÍNH NĂNG MỞ RỘNG</div>
+          {([{ id: 'scan-keyword', label: 'Tìm nhóm từ khóa', icon: 'search' }, { id: 'proxies', label: 'Quản lý proxy', icon: 'sliders' }] as const).map((item) =>
+            <a key={item.id} href={`#/${item.id}`} aria-current={pageId === item.id ? 'page' : undefined} className={`nav-item secondary${pageId === item.id ? ' active' : ''}`}><Icon name={item.icon} /><span>{item.label}</span><small>Chưa có</small></a>)}
         </nav>
-        <HealthBadge health={health} />
+        <div className="sidebar-footer"><HealthBadge health={health} /><span className="local-storage-note">Dữ liệu lưu trên máy của bạn</span></div>
       </aside>
       <main className="content">
+        <div className="app-topbar"><span>Cửa hàng điện thoại <Icon name="chevron" /> <strong>{MAIN_NAV.find((item) => item.id === pageId)?.label ?? page.title}</strong></span>
+          {health.kind === 'ok' && <span className={`mode-pill ${health.data.integrations === 'live' ? 'is-live' : ''}`}>{health.data.integrations === 'live' ? 'ĐĂNG THẬT' : 'MÔ PHỎNG'}</span>}
+        </div>
         {health.kind === 'ok' && health.data.integrations === 'live' && (
           <div className="live-banner" role="status">
             Chế độ THẬT: bài đã duyệt sẽ được đăng lên Facebook bằng trình duyệt. Kiểm tra kỹ tài khoản, đích và nội dung trước khi xếp lịch.
@@ -83,10 +68,10 @@ export function App() {
         )}
         {health.kind === 'ok' && health.data.integrations === 'fake' && (
           <div className="sim-banner" role="status">
-            Chế độ mô phỏng: dùng adapter giả, không gửi gì tới Facebook.
+            Chế độ mô phỏng · Bạn có thể thử thao tác, không có bài nào được gửi tới Facebook.
           </div>
         )}
-        {page.id === 'products' ? <ProductsPage />
+        <div className={page.id === 'post-group' ? 'app-page' : 'app-page data-page'}>{page.id === 'products' ? <ProductsPage />
           : page.id === 'accounts' ? <AccountsPage />
           : page.id === 'scan-joined' ? <GroupsPage />
           : page.id === 'queue' ? <JobsPage />
@@ -94,7 +79,7 @@ export function App() {
           : page.id === 'post-profile' ? <PostProfilePage />
           : page.id === 'post-page' ? <PostPagePage />
           : page.id === 'sales' ? <SalesPage />
-          : <PlaceholderPage page={page} />}
+          : <PlaceholderPage page={page} />}</div>
       </main>
     </div>
   );
@@ -134,8 +119,7 @@ function HealthBadge({ health }: { health: HealthState }) {
   }
   return (
     <div className="health ok">
-      Server: {health.data.env} · DB v{health.data.schemaVersion} ·{' '}
-      {health.data.integrations === 'fake' ? 'mô phỏng' : 'tích hợp thật'}
+      <span className="status-dot" /> Ứng dụng sẵn sàng
     </div>
   );
 }

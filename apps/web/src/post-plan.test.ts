@@ -32,6 +32,7 @@ test('điều kiện gửi: báo đủ lý do thật sự chặn; sẵn sàng th
   assert.ok(planProblems({ ...ready, caption: '  ' }, context)[0]?.includes('2 nhóm chưa có caption'));
   assert.deepEqual(planProblems({ ...ready, caption: '  ', overrides: { g1: 'a', g2: 'b' } }, context), []); // đủ caption riêng thì không cần caption chung
   assert.ok(planProblems({ ...ready, startMode: 'later', startLocal: 'sai' }, context)[0]?.includes('Giờ hẹn'));
+  assert.ok(planProblems({ ...ready, selected: Array.from({ length: 101 }, (_, index) => `g${index}`) }, context).some((problem) => problem.includes('100 nhóm')));
 });
 
 test('cảnh báo trùng: nhiều nhóm cùng caption; giống bản đã lưu cho đúng đích đó', () => {
