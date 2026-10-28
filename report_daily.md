@@ -797,3 +797,14 @@ Mẫu một mục:
 - **Ảnh và tài liệu:** `docs/design/ui-implemented-desktop.png`, `ui-implemented-mobile.png`, `ui-implemented-empty.png` là ảnh app thật với dữ liệu test; nhãn ĐĂNG THẬT là tình huống kiểm thử xác nhận qua API live giả, không bằng chứng đăng thật. Hướng dẫn `docs/design/ui-implementation.md`; cập nhật plan và liên kết từ brief mockup. Giữ nguyên PNG mockup ban đầu.
 - **Giới hạn:** tập trung bố cục Đăng nhóm và shell/shared styles; chưa viết lại form đặc thù của mọi trang theo mockup. Không đăng/quét thật, không sửa DB/phiên Facebook thật trong lượt UI. App đang mở cần restart và Ctrl+F5 để nhận bundle mới.
 - **Tiếp theo:** người dùng mở `Auto-Post-MKT.cmd` hoặc `npm.cmd start`, vào Đăng nhóm dùng thử. Lưu commit riêng code/ảnh/tài liệu sau gate; chưa push.
+
+
+## 2026-10-28 21:04 — Review nhanh UI/UX qua trình duyệt và sửa chặn duyệt khi nhóm chưa tải
+
+- **Yêu cầu:** dùng thử nhanh qua UI, chụp và đánh giá giao diện, kiểm tra lỗi. Giữ phạm vi test mô phỏng; không đăng Facebook thật.
+- **Đã dùng thử:** Edge headless + API/Vite thật và dữ liệu tạm: quét 40/chọn 30, nhập 0/101/1,5 báo lỗi; xin 60 chỉ chọn đúng 40; lọc không mất lựa chọn; preview/sửa caption/hẹn giờ/lưu preset/đổi trang/mobile menu; duyệt 30, bấm lại vẫn 30. Các trang máy/nhóm/TCN/fanpage/lịch sử/đơn hàng không pageerror. Kích thước 1440×1000, 1024×768, 390×844 không tràn ngang.
+- **Lỗi tìm thấy và sửa:** bản nháp đã có nhóm, mở lại và GET nhóm trả 500 -> tick xác nhận vẫn bật nút duyệt dù chưa xem lại được danh sách. Đã tái hiện bằng test thất bại đúng `true !== false`. Frontend nay yêu cầu các nhóm đã chọn được tải và đủ điều kiện của đúng tài khoản; thêm Tải lại danh sách, lỗi riêng cho tải nhóm, bỏ xác nhận cũ khi tải lại. Test lỗi -> chặn -> tải lại -> xác nhận lại -> cho duyệt, không thêm job ngoài ý muốn.
+- **UI/UX:** desktop đủ rõ cho MVP; mobile dùng được nhưng trang Đăng nhóm dài khoảng 2,4k px, CTA dưới nếp gấp. Chữ phụ 10–11px hơi nhỏ; các trang phụ chưa đồng bộ chi tiết, còn mã Pxx/hướng dẫn dài; nhánh lỗi nên thay ID nội bộ/badge 30/0 bằng lời nhắc chờ đối chiếu. Ghi ưu tiên cụ thể trong `docs/design/review-20261028/review.md`; chưa tự mở rộng đợt thiết kế mới.
+- **Bằng chứng:** 10 ảnh mới trong `docs/design/review-20261028/` (desktop viewport/full, 1024px, mobile viewport/full, empty, tải lỗi, máy, hàng chờ, fanpage). Đã mở xem các ảnh chính và nhánh lỗi. Dữ liệu giả, không publisher/mạng Facebook; fanpage chỉ kiểm hiển thị chưa kết nối trong lượt này.
+- **Kiểm tra cuối:** target UI/post-plan/selection 10/10 đạt; lần chốt UI 1/1 đạt (~12 giây); typecheck/lint 195 file/build web 51 module đạt. Không chạy lại full gate để giữ review nhanh theo yêu cầu. Không sửa dữ liệu/phiên thật.
+- **Tiếp theo:** người dùng restart app để nhận bản sửa; ưu tiên thanh hành động gọn dễ tìm trên màn nhỏ và tăng độ đọc chữ phụ. Lưu commit riêng, chưa push.

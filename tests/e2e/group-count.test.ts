@@ -74,10 +74,24 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     await page.getByRole('combobox', { name: 'Tài khoản', exact: true }).selectOption(accountId);
     await page.getByRole('combobox', { name: 'Máy', exact: true }).selectOption(product.productId);
     await page.getByRole('checkbox', { name: 'Chọn Nhóm thử 00', exact: true }).waitFor();
+    for (const value of ['0', '101', '1.5']) {
+      await page.getByRole('spinbutton', { name: 'Số nhóm muốn đăng', exact: true }).fill(value);
+      await page.getByRole('button', { name: 'Chọn theo số lượng', exact: true }).click();
+      await page.getByRole('status').filter({ hasText: 'Nhập số nhóm từ 1 đến 100.' }).waitFor();
+      assert.equal(ws.db.prepare('SELECT count(*) AS n FROM publish_jobs').get()?.n, 0);
+    }
+    await page.getByRole('spinbutton', { name: 'Số nhóm muốn đăng', exact: true }).fill('60');
+    await page.getByRole('button', { name: 'Chọn theo số lượng', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Đã chọn 40/60 nhóm' }).waitFor();
+    assert.equal(await page.getByRole('combobox', { name: 'Nhóm xem trước', exact: true }).locator('option').count(), 40);
     await page.getByRole('spinbutton', { name: 'Số nhóm muốn đăng', exact: true }).fill('30');
     await page.getByRole('button', { name: 'Chọn theo số lượng', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Đã chọn 30/30 nhóm' }).waitFor();
     assert.equal(await page.getByRole('combobox', { name: 'Nhóm xem trước', exact: true }).locator('option').count(), 30);
+    await page.getByRole('textbox', { name: 'Lọc nhóm', exact: true }).fill('không-tồn-tại-123');
+    await page.getByText('Chưa có nhóm khớp bộ lọc', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('combobox', { name: 'Nhóm xem trước', exact: true }).locator('option').count(), 30, 'lọc không tự xóa nhóm đã chọn');
+    await page.getByRole('textbox', { name: 'Lọc nhóm', exact: true }).fill('');
     await page.getByRole('button', { name: 'Mở bảng quét nhóm', exact: true }).click();
     await page.getByRole('button', { name: 'Quét nhóm đã tham gia', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Đã lưu 40 nhóm' }).waitFor();
@@ -105,6 +119,7 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     assert.equal(ws.db.prepare('SELECT count(*) AS n FROM posting_presets').get()?.n, 1);
     await page.evaluate('window.scrollTo(0, 0)');
     if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'ui-implemented-desktop.png'), fullPage: true });
+    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'ui-review-desktop-viewport.png') });
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(await page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true, 'không tràn ngang trên mobile');
     await page.getByRole('button', { name: 'Mở hoặc đóng menu', exact: true }).click();
@@ -117,18 +132,39 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     assert.equal(await page.locator('.preview-caption').textContent(), ownCaption, 'đổi trang giữ bản nháp và caption từng nhóm');
     await page.evaluate('window.scrollTo(0, 0)');
     if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'ui-implemented-mobile.png'), fullPage: true });
+    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'ui-review-mobile-viewport.png') });
+    await page.setViewportSize({ width: 1024, height: 768 });
+    assert.equal(await page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true, 'không tràn ngang trên màn 1024px');
+    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'ui-review-compact.png'), fullPage: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByRole('checkbox', { name: /Tôi xác nhận ĐĂNG THẬT 30 bài/ }).check();
     await page.getByRole('button', { name: 'Duyệt và xếp lịch (30 nhóm)', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Đã duyệt và xếp 30 job.' }).waitFor();
     assert.equal(ws.db.prepare('SELECT count(*) AS n FROM publish_jobs').get()?.n, 30);
     assert.equal(ws.db.prepare("SELECT count(*) AS n FROM publish_jobs WHERE status='queued'").get()?.n, 30);
+    await page.getByRole('button', { name: 'Duyệt và xếp lịch (30 nhóm)', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Yêu cầu này đã được ghi nhận trước đó; không tạo thêm job.' }).waitFor();
+    assert.equal(ws.db.prepare('SELECT count(*) AS n FROM publish_jobs').get()?.n, 30, 'bấm duyệt lại không tạo trùng');
     assert.equal(ws.db.prepare('SELECT c.caption FROM publish_jobs j JOIN approvals a ON a.id=j.approval_id JOIN content_versions c ON c.id=a.content_version_id WHERE a.destination_id=?').get(previewGroup)?.caption, ownCaption);
     for (const [route, heading] of [['products', 'Quản lý máy'], ['scan-joined', 'Nhóm đã tham gia'], ['post-profile', 'Đăng bài viết cá nhân'], ['post-page', 'Đăng bài fanpage'], ['queue', 'Hàng chờ và lịch sử đăng'], ['sales', 'Khách hỏi và đơn hàng']]) {
       await page.goto(`http://127.0.0.1:${webPort}/#/${route}`);
       await page.getByRole('heading', { name: heading, exact: true }).waitFor();
       assert.equal(await page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true, `${route} không tràn khung`);
+      if (screenshotDir && ['products', 'queue', 'post-page'].includes(route ?? '')) { await page.evaluate('window.scrollTo(0, 0)'); await page.screenshot({ path: join(screenshotDir, `ui-review-${route}.png`), fullPage: true }); }
     }
+    await page.route('**/api/groups?**', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Không tải được danh sách nhóm.' }) }));
+    await page.goto(`http://127.0.0.1:${webPort}/#/post-group`);
+    await page.getByRole('status').filter({ hasText: 'Không tải được danh sách nhóm.' }).waitFor();
+    await page.getByRole('checkbox', { name: /Tôi xác nhận ĐĂNG THẬT 30 bài/ }).check();
+    assert.equal(await page.getByRole('button', { name: 'Duyệt và xếp lịch (30 nhóm)', exact: true }).isEnabled(), false, 'không duyệt khi danh sách nhóm chưa tải được để xem lại');
+    if (screenshotDir) { await page.evaluate('window.scrollTo(0, 0)'); await page.screenshot({ path: join(screenshotDir, 'ui-review-load-error.png'), fullPage: true }); }
+    await page.unroute('**/api/groups?**');
+    await page.getByRole('button', { name: 'Tải lại danh sách', exact: true }).click();
+    await page.getByRole('checkbox', { name: 'Chọn Nhóm thử 00', exact: true }).waitFor();
+    assert.equal(await page.getByRole('checkbox', { name: /Tôi xác nhận ĐĂNG THẬT 30 bài/ }).isChecked(), false, 'tải lại cần xác nhận lại');
+    await page.getByRole('checkbox', { name: /Tôi xác nhận ĐĂNG THẬT 30 bài/ }).check();
+    assert.equal(await page.getByRole('button', { name: 'Duyệt và xếp lịch (30 nhóm)', exact: true }).isEnabled(), true, 'tải lại thành công thì phục hồi luồng duyệt');
+    assert.equal(ws.db.prepare('SELECT count(*) AS n FROM publish_jobs').get()?.n, 30);
     // No publishing worker is started: these are local DB records in the test workspace only.
     assert.deepEqual(pageErrors, []);
   } finally {

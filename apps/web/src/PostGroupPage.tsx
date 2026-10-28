@@ -68,6 +68,7 @@ export function PostGroupPage() {
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [versions, setVersions] = useState<ContentVersionItem[]>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
+  const [groupError, setGroupError] = useState('');
   const [filter, setFilter] = useState('');
   const [wantedCount, setWantedCount] = useState('30');
   const [templateText, setTemplateText] = useState('');
@@ -91,7 +92,7 @@ export function PostGroupPage() {
   const set = (patch: Partial<PostDraft>) => {
     setDraft((current) => ({ ...current, ...patch })); setFailures([]); setLiveConfirm(false);
     if (patch.productId !== undefined) { setDetail(null); setVersions([]); }
-    if (patch.accountId !== undefined) setGroups([]);
+    if (patch.accountId !== undefined) { setGroups([]); setGroupError(''); }
   };
 
   useEffect(() => {
@@ -110,13 +111,16 @@ export function PostGroupPage() {
   const reloadGroups = useCallback(async () => {
     const accountId = draft.accountId;
     if (!accountId) { setGroups([]); return; }
-    const list = await fetchAll<GroupItem>(`/api/groups?accountId=${accountId}`, (body) => body as GroupListResponse);
+    let list: GroupItem[];
+    try { list = await fetchAll<GroupItem>(`/api/groups?accountId=${accountId}`, (body) => body as GroupListResponse); }
+    catch (error) { if (currentAccount.current === accountId) setGroupError(networkMessage(error)); throw error; }
     if (currentAccount.current !== accountId) return;
+    setGroupError('');
     setGroups(list);
     const preset = pendingPreset.current;
     if (preset) { pendingPreset.current = null; selectRef.current(preset, accountId, list); }
   }, [draft.accountId]);
-  useEffect(() => { reloadGroups().catch((e) => setMessage(networkMessage(e))); }, [reloadGroups]);
+  useEffect(() => { reloadGroups().catch(() => undefined); }, [reloadGroups]);
 
   useEffect(() => {
     if (!draft.productId) { setDetail(null); setVersions([]); return; }
@@ -161,6 +165,8 @@ export function PostGroupPage() {
   const template = detail ? defaultCaption(detail, templateText) : '';
   const items = planItems(draft, template);
   const problems = planProblems(draft, { accountSession: account?.sessionStatus ?? null, productSelling: detail?.status === 'selling', now: Date.now() });
+  const reviewableGroups = new Set(groups.filter((group) => group.accounts.some((relation) => relation.accountId === draft.accountId && relation.eligible)).map((group) => group.id));
+  if (draft.selected.some((id) => !reviewableGroups.has(id))) problems.push('Chưa xem lại được đủ nhóm đã chọn hoặc có nhóm không còn đủ điều kiện. Tải lại danh sách trước khi duyệt.');
   const needle = filter.trim().toLowerCase();
   const visible = groups.filter((group) => !needle || `${group.name ?? ''} ${group.externalId ?? ''} ${group.region ?? ''} ${group.rulesNote ?? ''}`.toLowerCase().includes(needle));
   const duplicate = duplicateWarning(items);
@@ -230,7 +236,7 @@ export function PostGroupPage() {
   return <GroupComposerView accounts={accounts} products={products} detail={detail} account={account}
     draft={draft} groups={groups} visible={visible} filter={filter} wantedCount={wantedCount}
     live={live} health={health} template={template} items={items} startAt={startAt} duplicate={duplicate}
-    similar={similar} problems={problems} ready={ready} busy={busy} message={message} liveConfirm={liveConfirm}
+    similar={similar} problems={problems} ready={ready} busy={busy} message={groupError || message} liveConfirm={liveConfirm}
     batch={batch} jobs={jobs} onChange={set} onFilter={setFilter} onWantedCount={setWantedCount}
     onChooseCount={() => {
       try {
@@ -239,6 +245,7 @@ export function PostGroupPage() {
         setMessage(`Đã chọn ${result.selected.length}/${Number(wantedCount)} nhóm trong bộ lọc hiện tại (${result.available} nhóm đủ điều kiện). Ưu tiên nhóm đánh dấu ưu tiên, sau đó theo tên. Xem trước rồi duyệt để xếp lịch. Chưa tạo tác vụ nào.`);
       } catch (error) { setMessage(networkMessage(error)); }
     }} onLiveConfirm={setLiveConfirm} onSubmit={submit} onRefreshGroups={reloadGroups}
+    onRetryGroups={() => { setLiveConfirm(false); reloadGroups().catch(() => undefined); }}
     failureFor={(id) => failures.find((failure) => failure.destinationId === id)?.code}
     presets={<PresetPanel accountId={draft.accountId} selected={draft.selected} startMode={draft.startMode} startLocal={draft.startLocal}
       templateText={templateText} onTemplateText={(value) => { setTemplateText(value); setLiveConfirm(false); }} onApply={applyPreset} notify={setMessage} />} />;

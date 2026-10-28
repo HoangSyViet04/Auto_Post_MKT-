@@ -15,6 +15,7 @@ export interface GroupComposerViewProps {
   jobs: Map<string, JobListItem>;
   onChange(patch: Partial<PostDraft>): void; onFilter(value: string): void; onWantedCount(value: string): void;
   onChooseCount(): void; onLiveConfirm(value: boolean): void; onSubmit(): void; onRefreshGroups(): Promise<void>;
+  onRetryGroups(): void;
   failureFor(id: string): string | undefined; presets: ReactNode;
 }
 
@@ -80,7 +81,7 @@ export function GroupComposerView(p: GroupComposerViewProps) {
           <div className="group-count-controls"><label htmlFor="group-count">Số nhóm muốn đăng</label><input id="group-count" type="number" aria-label="Số nhóm muốn đăng" min={1} max={100} value={p.wantedCount} onChange={(e) => p.onWantedCount(e.target.value)} /><button type="button" className="primary" aria-label="Chọn theo số lượng" disabled={!p.draft.accountId} onClick={p.onChooseCount}>Chọn {Number.isInteger(Number(p.wantedCount)) && Number(p.wantedCount) > 0 ? p.wantedCount : ''} nhóm</button><span className="status-badge success"><Icon name="check" /> {p.items.length} đã chọn / {allEligible.length} đủ điều kiện</span></div>
           <p className="group-selection-hint">Ưu tiên nhóm đã đánh dấu ưu tiên. Bạn có thể chỉnh lại danh sách.</p>
           <div className="group-filter"><label className="search-field"><Icon name="search" /><input aria-label="Lọc nhóm" placeholder="Tìm tên nhóm, khu vực, nội quy…" value={p.filter} onChange={(e) => p.onFilter(e.target.value)} /></label><button type="button" className={onlyEligible ? 'filter-button selected' : 'filter-button'} aria-pressed={onlyEligible} onClick={() => setOnlyEligible(!onlyEligible)}><Icon name="sliders" /> Đủ điều kiện</button></div>
-          <div className="group-list-actions"><button type="button" className="link" disabled={!available.length} onClick={() => p.onChange({ selected: available.slice(0, 100).map((group) => group.id) })}>Chọn {Math.min(100, available.length)} nhóm trong bộ lọc</button><button type="button" className="link" disabled={!p.items.length} onClick={() => p.onChange({ selected: [] })}>Bỏ chọn hết</button><span>{shown.length} nhóm</span></div>
+          <div className="group-list-actions"><button type="button" className="link" disabled={!available.length} onClick={() => p.onChange({ selected: available.slice(0, 100).map((group) => group.id) })}>Chọn {Math.min(100, available.length)} nhóm trong bộ lọc</button><button type="button" className="link" disabled={!p.items.length} onClick={() => p.onChange({ selected: [] })}>Bỏ chọn hết</button><button type="button" className="link" disabled={!p.draft.accountId} onClick={p.onRetryGroups}>Tải lại danh sách</button><span>{shown.length} nhóm</span></div>
           <section className="group-table-scroll" aria-label="Danh sách nhóm có thể cuộn"><table className="table group-table"><thead><tr><th aria-label="Chọn" /><th>Tên nhóm</th><th>Quyền đăng</th><th className="priority-cell">Ưu tiên</th></tr></thead><tbody>
             {shown.map((group) => {
               const r = relation(group); const eligible = r?.eligible === true; const selected = p.draft.selected.includes(group.id); const failure = p.failureFor(group.id);
