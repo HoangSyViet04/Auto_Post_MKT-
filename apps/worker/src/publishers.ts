@@ -1,5 +1,6 @@
 import type { Channel, IntegrationMode } from '#domain';
 import { createFakePublisher, type Publisher } from '#contracts';
+import type { DiagnosticHook } from '#browser';
 import { createGroupPublisher } from '#fb-group';
 import { createProfilePublisher } from '#fb-profile';
 
@@ -8,6 +9,8 @@ export interface LivePublisherDeps {
   profileDirFor(accountId: string): string;
   /** Trang cá nhân: đối tượng bắt buộc của bài (ví dụ "Công khai"); không đặt thì chỉ ghi lại, không kiểm tra. */
   profileAudience?: string;
+  /** Chụp màn hình chẩn đoán khi đăng dừng vì lỗi; chỉ truyền khi người dùng bật rõ (APM_DIAG_CAPTURE=on). */
+  diagnostics?: DiagnosticHook;
 }
 
 /** Kênh chưa có adapter thật: tắt rõ ràng, mọi việc đều dừng TRƯỚC khi gửi và báo "chưa hỗ trợ", không giả thành công. */
@@ -29,8 +32,8 @@ export function createPublishers(mode: IntegrationMode, live?: LivePublisherDeps
   if (mode === 'live') {
     if (!live) throw new Error('APM_INTEGRATIONS=live cần APM_BROWSER=real để worker mở trình duyệt đăng bài.');
     return {
-      profile: createProfilePublisher({ profileDirFor: live.profileDirFor, ...(live.profileAudience ? { requiredAudience: live.profileAudience } : {}) }),
-      group: createGroupPublisher({ profileDirFor: live.profileDirFor }),
+      profile: createProfilePublisher({ profileDirFor: live.profileDirFor, ...(live.profileAudience ? { requiredAudience: live.profileAudience } : {}), ...(live.diagnostics ? { diagnostics: live.diagnostics } : {}) }),
+      group: createGroupPublisher({ profileDirFor: live.profileDirFor, ...(live.diagnostics ? { diagnostics: live.diagnostics } : {}) }),
       page: unsupportedPublisher('page'),
     };
   }

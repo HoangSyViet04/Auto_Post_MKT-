@@ -4,8 +4,8 @@
  * Điều khiển trình duyệt mặc định TẮT (APM_BROWSER=off); chỉ chạy lệnh đăng nhập/kiểm tra phiên do người dùng bấm khi APM_BROWSER=real.
  * Chạy job đến hạn bằng adapter đã chọn (APM_INTEGRATIONS=fake: mô phỏng, không gọi Facebook). Khởi động worker không tự tạo job. `--once`: khởi động, ghi nhịp sống, thoát (dùng cho test).
  */
-import { acquireProfileLock, createPlaywrightDriver } from '#browser';
-import { getAppEnv, getBrowserMode, getDatabasePath, getDataDir, getIntegrationMode, getMinGapMs, getOverdueAfterMs, getProfileAudience } from '#config';
+import { acquireProfileLock, createDiagnosticCapture, createPlaywrightDriver } from '#browser';
+import { getAppEnv, getBrowserMode, getDatabasePath, getDataDir, getDiagnosticCapture, getIntegrationMode, getMinGapMs, getOverdueAfterMs, getProfileAudience } from '#config';
 import { join } from 'node:path';
 import { createLogger } from '#logging';
 import { createAccountRepository, createMediaStore, migrate, openDatabase, writeWorkerHeartbeat } from '#storage';
@@ -15,6 +15,7 @@ import { createPublishers } from './publishers.ts';
 
 const HEARTBEAT_MS = 5_000;
 const POLL_MS = 2_000;
+const PURGE_MS = 10 * 60_000;
 
 // Even startup/config errors pass through the safe logger.
 let log = createLogger({ env: 'production', name: 'worker' });
@@ -29,8 +30,18 @@ try {
   migrate(db);
   const accountRepo = createAccountRepository(db);
   const profileAudience = getProfileAudience();
+  // Ảnh chụp chẩn đoán: TẮT mặc định (có thể chứa thông tin cá nhân). Ảnh quá hạn luôn bị dọn, kể cả khi đã tắt thu.
+  const diagnostic = getDiagnosticCapture();
+  const captures = createDiagnosticCapture({ dir: join(dataDir, 'diagnostics'), retentionMs: diagnostic.retentionMs });
+  const purgedAtStart = captures.purgeExpired();
+  if (purgedAtStart > 0) log.info(`[worker] Đã xóa ${purgedAtStart} ảnh chụp chẩn đoán quá hạn`);
+  if (diagnostic.enabled) {
+    log.warn(`[worker] Thu ảnh chụp chẩn đoán: BẬT (APM_DIAG_CAPTURE=on). Khi một lần đăng dừng vì lỗi sẽ lưu ảnh màn hình trình duyệt vào thư mục "diagnostics" trong dữ liệu vận hành, giữ ${Math.round(diagnostic.retentionMs / 3_600_000)} giờ rồi tự xóa. Ảnh có thể chứa thông tin cá nhân; không chia sẻ.`);
+    if (mode !== 'live') log.info('[worker] Chế độ mô phỏng không mở trình duyệt đăng bài nên sẽ không có ảnh chụp.');
+  }
   const publishers = createPublishers(mode, mode === 'live'
-    ? { profileDirFor: (accountId) => join(dataDir, 'profiles', accountRepo.profileKey(accountId)), ...(profileAudience ? { profileAudience } : {}) }
+    ? { profileDirFor: (accountId) => join(dataDir, 'profiles', accountRepo.profileKey(accountId)), ...(profileAudience ? { profileAudience } : {}),
+      ...(diagnostic.enabled ? { diagnostics: captures.capture } : {}) }
     : undefined);
   const simulated = Object.values(publishers).every((p) => p.capabilities.simulated);
   log.info(
@@ -61,6 +72,9 @@ try {
     const beat = setInterval(() => {
       try { writeWorkerHeartbeat(db, browser); } catch (error) { log.error({ errorName: error instanceof Error ? error.name : 'unknown' }, 'Không ghi được nhịp sống'); }
     }, HEARTBEAT_MS);
+    const purgeTimer = setInterval(() => {
+      try { captures.purgeExpired(); } catch (error) { log.error({ errorName: error instanceof Error ? error.name : 'unknown' }, 'Không dọn được ảnh chụp chẩn đoán'); }
+    }, PURGE_MS);
     let busy = false;
     let jobsBusy = false;
     const poll = setInterval(() => {
@@ -81,6 +95,7 @@ try {
       log.info(`[worker] Nhận ${signal}, đang dừng`);
       clearInterval(beat);
       clearInterval(poll);
+      clearInterval(purgeTimer);
       instanceLock.release();
       db.close();
       process.exit(0);

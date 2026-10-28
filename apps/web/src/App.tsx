@@ -7,6 +7,7 @@ import { PostGroupPage } from './PostGroupPage.tsx';
 import { PostProfilePage } from './PostProfilePage.tsx';
 import { clearHandoff, getHandoff } from './handoff.ts';
 import { ProductsPage } from './ProductsPage.tsx';
+import { SalesPage } from './SalesPage.tsx';
 import { type HealthState, useHealth } from './useHealth.ts';
 
 function readPageId(): string {
@@ -90,6 +91,7 @@ export function App() {
           : page.id === 'queue' ? <JobsPage />
           : page.id === 'post-group' ? <PostGroupPage />
           : page.id === 'post-profile' ? <PostProfilePage />
+          : page.id === 'sales' ? <SalesPage />
           : <PlaceholderPage page={page} />}
       </main>
     </div>

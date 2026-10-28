@@ -6,8 +6,8 @@ import { openDatabase, type Database } from './db.ts';
 import { loadMigrations, migrate } from './migrate.ts';
 
 const BACKUP_FORMAT = 1;
-/** Không bao giờ nằm trong bản sao lưu thường: cookie/phiên trình duyệt, khóa/bí mật bảo vệ theo Windows, log, bản sao lưu khác. */
-export const EXCLUDED_FROM_BACKUP = ['profiles', 'secrets', 'logs', 'backups', 'spikes', 'cache'] as const;
+/** Không bao giờ nằm trong bản sao lưu thường: cookie/phiên trình duyệt, khóa/bí mật bảo vệ theo Windows, log, ảnh chụp chẩn đoán, bản sao lưu khác. */
+export const EXCLUDED_FROM_BACKUP = ['profiles', 'secrets', 'logs', 'backups', 'spikes', 'cache', 'diagnostics'] as const;
 
 export interface BackupManifest {
   format: number;

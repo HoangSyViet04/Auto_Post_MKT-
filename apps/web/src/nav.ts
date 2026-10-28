@@ -76,6 +76,13 @@ export const NAV: NavSection[] = [
         actions: ['Chọn máy', 'Xem trước theo tài khoản', 'Đăng ngay', 'Đặt lịch'],
       },
       {
+        id: 'sales',
+        title: 'Khách hỏi và đơn hàng',
+        description: 'Tự ghi nhận khách hỏi và đơn hàng từ bài đã đăng; ứng dụng không tự đọc tương tác từ Facebook.',
+        phase: 'P11',
+        actions: [],
+      },
+      {
         id: 'post-page',
         title: 'Đăng bài fanpage',
         description: 'Đăng qua Graph API lên các Page đã được cấp quyền.',

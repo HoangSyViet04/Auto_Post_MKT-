@@ -15,3 +15,4 @@ export * from './post-batch.ts';
 export * from './preset-repository.ts';
 export * from './secret-store.ts';
 export * from './worker-status.ts';
+export * from './sales-repository.ts';

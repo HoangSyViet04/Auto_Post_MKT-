@@ -238,3 +238,42 @@ export interface ProductImpact {
   settledJobs: number;
   byStatus: Record<string, number>;
 }
+
+/** Ghi nhận thủ công: khách hỏi hoặc đơn hàng. Không có dữ liệu nào ở đây được đọc tự động từ Facebook. */
+export type SalesKind = 'inquiry' | 'order';
+
+export interface SalesEventItem {
+  id: string;
+  kind: SalesKind;
+  productId: string;
+  productName: string;
+  /** Bài đăng đã mang khách đến; null khi không rõ nguồn. */
+  jobId: string | null;
+  source: { channel: Channel; destinationId: string; name: string | null; externalId: string | null } | null;
+  occurredAt: number;
+  customerLabel: string | null;
+  note: string | null;
+  amountVnd: number | null;
+  createdAt: number;
+  voided: boolean;
+}
+
+export interface SalesEventListResponse {
+  items: SalesEventItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface SalesSummaryRow {
+  inquiries: number;
+  orders: number;
+  orderAmountVnd: number;
+}
+
+export interface SalesSummary {
+  total: SalesSummaryRow;
+  byProduct: Array<SalesSummaryRow & { productId: string; productName: string }>;
+  /** Theo nơi đăng; destination null = không rõ nguồn. */
+  bySource: Array<SalesSummaryRow & { destination: { id: string; channel: Channel; name: string | null; externalId: string | null } | null }>;
+}

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, test } from 'node:test';
 import { createTestWorkspace, seedOfflineScenario } from '#test-support';
+import { loadMigrations } from './migrate.ts';
 import { createBackup, EXCLUDED_FROM_BACKUP, restoreBackup, verifyBackup } from './backup.ts';
 import { openDatabase } from './db.ts';
 
@@ -18,7 +19,7 @@ beforeEach(async () => {
   scenario.enqueue('b1'); // một job đang chờ để kiểm tra "lịch không tự chạy" sau phục hồi
   scratch = mkdtempSync(join(tmpdir(), 'apm sao lưu '));
   // Dữ liệu cục bộ KHÔNG được sao lưu: hồ sơ trình duyệt (cookie), khóa/bí mật, log
-  for (const [dir, name, content] of [['profiles/abc', 'Cookies', 'COOKIE-SENTINEL'], ['secrets', 'key.bin', 'SECRET-SENTINEL'], ['logs', 'app.log', 'LOG-SENTINEL']] as const) {
+  for (const [dir, name, content] of [['profiles/abc', 'Cookies', 'COOKIE-SENTINEL'], ['secrets', 'key.bin', 'SECRET-SENTINEL'], ['logs', 'app.log', 'LOG-SENTINEL'], ['diagnostics', 'chup.png', 'CAPTURE-SENTINEL']] as const) {
     mkdirSync(join(workspace.dataDir, dir), { recursive: true });
     writeFileSync(join(workspace.dataDir, dir, name), content);
   }
@@ -33,9 +34,9 @@ test('sao lưu: DB nhất quán + ảnh tham chiếu + manifest mã băm; không
   assert.deepEqual([...manifest.excluded], [...EXCLUDED_FROM_BACKUP]);
   assert.equal(verifyBackup(out).ok, true);
   const all = files(out);
-  assert.deepEqual(all.filter((name) => /cookie|key\.bin|app\.log|profiles|secrets/iu.test(name)), []);
+  assert.deepEqual(all.filter((name) => /cookie|key\.bin|app\.log|chup\.png|profiles|secrets|diagnostics/iu.test(name)), []);
   for (const name of all) assert.equal(readFileSync(join(out, name)).includes('SENTINEL'), false, name); // không có dữ liệu nhạy cảm nào
-  assert.equal(manifest.schemaVersion, 4);
+  assert.equal(manifest.schemaVersion, loadMigrations().at(-1)?.version);
   await assert.rejects(createBackup(workspace.db, { dataDir: workspace.dataDir, outDir: out }), /backup_dir_not_empty/u); // không ghi đè bản đã có
 });
 

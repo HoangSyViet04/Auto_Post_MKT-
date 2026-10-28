@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, afterEach, before, describe, test } from 'node:test';
 import sharp from 'sharp';
 import type { ApprovedPublishRequest } from '#contracts';
 import { createGroupPublisher } from '#fb-group';
+import { createDiagnosticCapture, type DiagnosticHook } from './diagnostic-capture.ts';
 import { createProfilePublisher } from '#fb-profile';
 import { type MockFacebook, type MockFacebookOptions, startMockFacebook } from '../../../../tests/fixtures/mock-facebook.ts';
 
@@ -169,5 +170,56 @@ describe('adapter trang cá nhân trên Facebook giả', () => {
     const invalid = await publisher.prepare(crossed);
     assert.deepEqual([invalid.ok, !invalid.ok && invalid.reasonCode], [false, 'invalid_request']); // hợp đồng chặn từ đầu
     assert.equal(mock.submits, 0);
+  });
+});
+
+describe('ảnh chụp chẩn đoán khi đăng dừng vì lỗi (chỉ khi được bật)', () => {
+  const groupWith = async (options: MockFacebookOptions, diagnostics: DiagnosticHook) => {
+    mock = await startMockFacebook(options);
+    return createGroupPublisher({ profileDirFor: () => 'khong-dung', launch: mock.launch, timing, diagnostics });
+  };
+  const capDir = () => join(dir, 'cap');
+
+  test('dừng trước khi gửi → chụp một ảnh PNG thật của trang với mã lý do; thành công thì KHÔNG chụp', async () => {
+    const capture = createDiagnosticCapture({ dir: capDir(), retentionMs: 3_600_000 });
+    const failing = await groupWith({ composer: false }, capture.capture);
+    const result = await failing.prepare(groupRequest());
+    assert.deepEqual([result.ok, !result.ok && result.reasonCode], [false, 'ui_changed']);
+    const files = readdirSync(capDir());
+    assert.equal(files.length, 1);
+    assert.match(files[0] as string, /^\d{14}-job-1-ui_changed\.png$/u);
+    assert.deepEqual([...readFileSync(join(capDir(), files[0] as string)).subarray(0, 4)], [0x89, 0x50, 0x4e, 0x47]); // đúng là PNG
+    await mock?.close();
+    rmSync(capDir(), { recursive: true, force: true });
+
+    const ok = await groupWith({}, capture.capture);
+    const request = groupRequest();
+    assert.deepEqual(await ok.prepare(request), { ok: true });
+    assert.equal((await ok.submit(request)).status, 'published');
+    assert.equal(existsSync(capDir()), false); // đăng thành công: không có ảnh nào
+  });
+
+  test('bấm Đăng mà không thấy bài (unknown) → chụp ảnh với mã unknown_after_submit', async () => {
+    const capture = createDiagnosticCapture({ dir: capDir(), retentionMs: 3_600_000 });
+    const publisher = await groupWith({ swallowPost: true }, capture.capture);
+    const request = groupRequest();
+    assert.deepEqual(await publisher.prepare(request), { ok: true });
+    assert.equal((await publisher.submit(request)).status, 'unknown');
+    assert.match(readdirSync(capDir()).join(), /-job-1-unknown_after_submit\.png$/u);
+  });
+
+  test('hook chụp lỗi hoặc ném lỗi không làm đổi kết quả đăng; dừng chủ động (stopped) không chụp', async () => {
+    const throwing = await groupWith({ composer: false }, async () => { throw new Error('hook hỏng'); });
+    const result = await throwing.prepare(groupRequest());
+    assert.deepEqual([result.ok, !result.ok && result.reasonCode], [false, 'ui_changed']); // vẫn đúng mã lỗi
+    await mock?.close();
+    mock = undefined;
+
+    let calls = 0;
+    const counting = await groupWith({}, async () => { calls += 1; });
+    await counting.stop();
+    const stopped = await counting.prepare(groupRequest());
+    assert.deepEqual([stopped.ok, !stopped.ok && stopped.reasonCode], [false, 'stopped']);
+    assert.equal(calls, 0);
   });
 });

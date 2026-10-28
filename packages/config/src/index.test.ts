@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, test } from 'node:test';
-import { getAppEnv, getDatabasePath, getDataDir, getIntegrationMode } from './index.ts';
+import { getAppEnv, getDatabasePath, getDataDir, getDiagnosticCapture, getIntegrationMode } from './index.ts';
 
-const KEYS = ['APM_ENV', 'APM_DATA_DIR', 'APM_INTEGRATIONS'] as const;
+const KEYS = ['APM_ENV', 'APM_DATA_DIR', 'APM_INTEGRATIONS', 'APM_DIAG_CAPTURE', 'APM_DIAG_RETENTION_HOURS'] as const;
 let saved: Record<string, string | undefined>;
 
 beforeEach(() => {
@@ -19,6 +19,18 @@ afterEach(() => {
 });
 
 describe('config', () => {
+  test('ảnh chụp chẩn đoán: TẮT mặc định, chỉ bật khi đặt rõ "on", hạn lưu 1–168 giờ (mặc định 24), giá trị lạ bị từ chối', () => {
+    assert.deepEqual(getDiagnosticCapture(), { enabled: false, retentionMs: 24 * 3_600_000 });
+    for (const value of ['off', '', ' OFF ']) { process.env.APM_DIAG_CAPTURE = value; assert.equal(getDiagnosticCapture().enabled, false, value); }
+    process.env.APM_DIAG_CAPTURE = 'On';
+    assert.equal(getDiagnosticCapture().enabled, true);
+    process.env.APM_DIAG_RETENTION_HOURS = '6';
+    assert.equal(getDiagnosticCapture().retentionMs, 6 * 3_600_000);
+    for (const bad of ['1', 'true', 'yes']) { process.env.APM_DIAG_CAPTURE = bad; assert.throws(getDiagnosticCapture, /APM_DIAG_CAPTURE không hợp lệ/u, bad); } // không đoán ý: "1/true" không bật
+    process.env.APM_DIAG_CAPTURE = 'on';
+    for (const bad of ['0', '169', '-1', 'abc', '1.5']) { process.env.APM_DIAG_RETENTION_HOURS = bad; assert.throws(getDiagnosticCapture, /APM_DIAG_RETENTION_HOURS/u, bad); }
+  });
+
   test('mặc định development và adapter giả', () => {
     assert.equal(getAppEnv(), 'development');
     assert.equal(getIntegrationMode(), 'fake');

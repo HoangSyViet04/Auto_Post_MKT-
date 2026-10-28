@@ -12,6 +12,7 @@ import type {
   VerifyResult,
 } from '#contracts';
 import { assertApprovedPublishRequest } from '#contracts';
+import type { DiagnosticHook } from './diagnostic-capture.ts';
 import {
   AUDIENCE_BUTTON,
   bigImages,
@@ -53,6 +54,11 @@ export interface BrowserPublisherDeps {
    * Không đặt thì chỉ ghi lại đối tượng đọc được, không kiểm tra.
    */
   requiredAudience?: string;
+  /**
+   * Chụp màn hình chẩn đoán khi một lần đăng DỪNG vì lỗi hoặc kết quả chưa rõ. Chỉ được truyền khi người dùng bật rõ (APM_DIAG_CAPTURE=on);
+   * không truyền thì không chụp gì. Lỗi của hook bị nuốt: chẩn đoán không được làm hỏng hay đổi kết quả việc đăng.
+   */
+  diagnostics?: DiagnosticHook;
   /** Thời gian chờ (ms); test rút ngắn. */
   timing?: { uploadMs?: number; closeMs?: number; settleMs?: number; retryMs?: number; pageMs?: number; stepMs?: number; scrollMs?: number };
 }
@@ -107,6 +113,11 @@ export function createBrowserPublisher(deps: BrowserPublisherDeps): Publisher {
       ...(remoteUrl ? { remoteUrl } : {}) });
   }
 
+  async function snap(profile: LaunchedProfile, jobId: string, code: string): Promise<void> {
+    if (!deps.diagnostics) return;
+    try { await deps.diagnostics(profile.page, { jobId, code }); } catch { /* chẩn đoán không được ảnh hưởng việc đăng */ }
+  }
+
   async function closeSession(jobId: string): Promise<void> {
     const session = sessions.get(jobId);
     sessions.delete(jobId);
@@ -141,7 +152,11 @@ export function createBrowserPublisher(deps: BrowserPublisherDeps): Publisher {
     } catch {
       return fail('unknown', 'Không mở được hồ sơ trình duyệt (có thể đang được dùng).');
     }
-    const abort = async (result: PrepareResult): Promise<PrepareResult> => { await profile.close(); return result; };
+    const abort = async (result: PrepareResult): Promise<PrepareResult> => {
+      if (!result.ok && result.reasonCode !== 'stopped') await snap(profile, approved.jobId, result.reasonCode); // chụp trước khi đóng trình duyệt
+      await profile.close();
+      return result;
+    };
     try {
       const poster = await confirmPoster(profile, approved);
       if (!poster.ok) return await abort(poster);
@@ -260,9 +275,11 @@ export function createBrowserPublisher(deps: BrowserPublisherDeps): Publisher {
         if (posted.found) {
           return { status: 'published', remoteId: posted.postId ?? 'observed:no_id', evidence: evidence(session.request, url) };
         }
+        await snap(session.profile, request.jobId, 'unknown_after_submit');
         return { status: 'unknown', reasonCode: 'unknown', evidence: evidence(session.request),
           reason: closed ? 'Đã bấm Đăng nhưng không thấy bài trong trang đích; cần đối chiếu bằng mắt.' : 'Đã bấm Đăng nhưng hộp soạn chưa đóng; cần đối chiếu bằng mắt.' };
       } catch {
+        await snap(session.profile, request.jobId, 'error_after_submit');
         return { status: 'unknown', reasonCode: 'unknown', evidence: evidence(session.request), reason: 'Lỗi sau khi bấm Đăng; có thể đã gửi.' };
       } finally {
         await closeSession(request.jobId);

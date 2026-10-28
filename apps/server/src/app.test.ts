@@ -23,7 +23,7 @@ describe('server API', () => {
     const body = res.json();
     assert.equal(body.status, 'ok');
     assert.equal(body.env, 'test');
-    assert.equal(body.schemaVersion, 4);
+    assert.equal(body.schemaVersion, 5);
     assert.equal(body.integrations, 'fake');
     assert.ok(!Number.isNaN(Date.parse(body.startedAt)));
   });

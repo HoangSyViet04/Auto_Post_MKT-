@@ -65,3 +65,12 @@ MediaStore P02.4 đã chép qua staging, giải mã ảnh, lưu MIME/hash/bytes,
 `packages/storage/src/schema.test.ts` dùng DB tạm/in-memory. Test nâng bản v1 có sentinel chưa checkpoint trong WAL, gọi `node:sqlite.backup()` online, nâng DB hiện tại lên v2 giữ dữ liệu; copy snapshot sang đường dẫn restore riêng, xác nhận vẫn v1 và dữ liệu cũ còn, rồi nâng bản restore lên v2. Không ghi đè DB vận hành và không phải chức năng restore production P11.
 
 Test còn xác nhận fresh/noop/rollback, FK identity/target/content/media, order/immutability, slot giới hạn, intent dedup, trạng thái/provenance, marker/fence không bị xóa và OR REPLACE không phá lịch sử qua connection được cấu hình. DO NOTHING giữ request cũ; conditional lease UPSERT chỉ nhận lease hết hạn với fence hợp lệ. Đây là ràng buộc/khả năng SQL, chưa phải repository hoàn chỉnh. Nhật ký `report_daily.md` ghi lệnh/kết quả cụ thể sau tích hợp.
+
+## Khách hỏi và đơn hàng nhập tay (migration 0005, P11.9)
+
+Bảng `sales_events`: mỗi dòng là một lần **người dùng tự ghi nhận** khách hỏi (`inquiry`) hoặc đơn hàng (`order`) của một máy, tùy chọn gắn với bài đã đăng (`job_id`) làm nguồn. Ứng dụng không đọc tin nhắn/bình luận/tương tác từ Facebook nên không có dòng nào do hệ thống tự tạo.
+
+- Bài nguồn phải thuộc đúng máy (trigger) và đã gửi đi (`published`/`pending_approval`/`unknown`, kiểm tra ở repository). Không có nguồn thì để trống.
+- `amount_vnd` chỉ cho đơn hàng. Thời điểm không được ở tương lai (cho lệch 5 phút).
+- Bất biến: không xóa; chỉ được đánh dấu hủy một lần bằng `voided_at` (trigger). Tổng hợp bỏ qua dòng đã hủy.
+- Tên khách và ghi chú là dữ liệu cá nhân do người dùng nhập: có trong bản sao lưu, không có trong báo cáo chẩn đoán.

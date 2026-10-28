@@ -9,7 +9,8 @@ npm run backup -- --out E:\sao-luu\2026-10-28
 
 - Có thể chạy khi server/worker đang chạy (dùng API sao lưu trực tuyến của SQLite, không chép file đang ghi).
 - Gồm: cơ sở dữ liệu (máy, bài, job, nhật ký, cấu hình), ảnh trong kho, `manifest.json` (mã băm SHA-256 từng file; ghi cuối cùng nên bản dở dang bị từ chối).
-- **Không** gồm: hồ sơ trình duyệt/cookie (`profiles`), khóa/bí mật (`secrets`), log, `backups`, `spikes`, `cache`.
+- **Không** gồm: hồ sơ trình duyệt/cookie (`profiles`), khóa/bí mật (`secrets`), log, ảnh chụp chẩn đoán (`diagnostics`), `backups`, `spikes`, `cache`.
+- Có gồm: ghi nhận khách hỏi/đơn hàng bạn đã nhập (tên khách, ghi chú).
 - Từ chối ghi vào trong thư mục repo. Nên chép bản sao lưu sang ổ khác/đám mây riêng; thư mục này chứa dữ liệu kinh doanh (tên máy, giá, ảnh) nhưng không chứa bí mật đăng nhập.
 
 ## Kiểm tra bản sao lưu

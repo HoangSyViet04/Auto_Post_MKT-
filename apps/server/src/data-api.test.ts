@@ -374,3 +374,44 @@ test('P10.5/P10.9: API cấu hình đăng thường dùng (lưu/sửa/ngừng, k
   assert.equal((await call('GET', '/api/products/00000000-0000-4000-8000-000000000000/impact')).statusCode, 404);
   assert.equal((await call('GET', '/api/products/khong-phai-uuid/impact')).statusCode, 400);
 });
+
+test('P11.9: API khách hỏi/đơn hàng nhập tay — ghi nhận, lọc, tổng hợp, đánh dấu hủy; thiếu token bị chặn, dữ liệu sai bị từ chối', async () => {
+  const { createAccountRepository, createGroupRepository, createJobRepository } = await import('#storage');
+  const call = (method: string, url: string, payload?: object) => app.inject({ method: method as 'GET', url, headers, ...(payload ? { payload } : {}) });
+  const accounts = createAccountRepository(db);
+  const account = accounts.create({ label: 'Nick A' }).id;
+  accounts.recordIdentity(account, 'vanity:nick.a'); accounts.recordSession(account, 'logged_in');
+  const group = createGroupRepository(db).add({ reference: '111111111111', accountId: account, name: 'Nhóm 1', membership: 'joined', permission: 'allowed' }).id;
+  const media = (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' }, payload: image })).json().id as string;
+  const product = (await call('POST', '/api/products', { name: 'iPhone 13', condition: 'Đẹp', mediaIds: [media] })).json();
+  const posted = await call('POST', '/api/posts', { requestKey: 'khoa-sales-0001', accountId: account, productId: product.productId, scheduledAt: Date.now(), items: [{ destinationId: group, caption: 'Bán iPhone 13' }] });
+  const jobId = posted.json().jobs[0].jobId as string;
+
+  // Bài còn đang chờ chưa thể là nguồn khách
+  assert.equal((await call('POST', '/api/sales-events', { kind: 'inquiry', productId: product.productId, jobId, occurredAt: Date.now() })).statusCode, 409);
+  const jobs = createJobRepository(db);
+  const claim = jobs.claimNext('worker-test', 'fake');
+  jobs.markSendStarted(claim as NonNullable<typeof claim>);
+  jobs.finish(claim as NonNullable<typeof claim>, { outcome: 'published', source: 'fake', remoteId: 'r1' });
+
+  const inquiry = await call('POST', '/api/sales-events', { kind: 'inquiry', productId: product.productId, jobId, occurredAt: Date.now() - 60_000, customerLabel: 'Anh Nam', note: 'Hỏi bảo hành' });
+  assert.equal(inquiry.statusCode, 201);
+  assert.deepEqual([inquiry.json().source.externalId, inquiry.json().voided], ['111111111111', false]);
+  const order = await call('POST', '/api/sales-events', { kind: 'order', productId: product.productId, jobId, occurredAt: Date.now() - 30_000, amountVnd: 9_500_000 });
+  assert.equal(order.statusCode, 201);
+  assert.equal((await call('GET', '/api/sales-events?kind=order')).json().total, 1);
+  assert.deepEqual((await call('GET', '/api/sales-events/summary')).json().total, { inquiries: 1, orders: 1, orderAmountVnd: 9_500_000 });
+
+  assert.equal((await call('POST', '/api/sales-events', { kind: 'inquiry', productId: product.productId, occurredAt: Date.now(), amountVnd: 1000 })).statusCode, 400); // tiền cho khách hỏi
+  assert.equal((await call('POST', '/api/sales-events', { kind: 'inquiry', productId: product.productId, occurredAt: Date.now() + 86_400_000 })).statusCode, 400); // tương lai
+  assert.equal((await call('POST', '/api/sales-events', { kind: 'inquiry', productId: product.productId, occurredAt: Date.now(), source: 'facebook' })).statusCode, 400); // trường lạ
+  assert.equal((await call('POST', '/api/sales-events', { kind: 'bot', productId: product.productId, occurredAt: Date.now() })).statusCode, 400);
+
+  assert.equal((await call('POST', `/api/sales-events/${order.json().id}/void`, {})).statusCode, 204);
+  assert.equal((await call('POST', `/api/sales-events/${order.json().id}/void`, {})).statusCode, 409);
+  assert.equal((await call('GET', '/api/sales-events')).json().total, 1);
+  assert.equal((await call('GET', '/api/sales-events?includeVoided=true')).json().total, 2);
+  assert.equal((await call('GET', '/api/sales-events/summary')).json().total.orders, 0);
+  const { 'x-apm-token': _token, ...noToken } = headers;
+  assert.equal((await app.inject({ method: 'POST', url: '/api/sales-events', headers: noToken, payload: { kind: 'inquiry', productId: product.productId, occurredAt: Date.now() } })).statusCode, 403);
+});

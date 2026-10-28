@@ -9,6 +9,8 @@ Cấu hình đọc từ biến môi trường (`packages/config`). `npm run dev:
 | `APM_SERVER_PORT` | `4317` | Server chỉ nghe `127.0.0.1`; Vite proxy `/api` dùng cùng cổng. |
 | `APM_INTEGRATIONS` | `fake` | `fake`: adapter giả, không gọi Facebook/LLM. `live`: adapter thật — chưa có (P08/P09), worker từ chối chạy. `live` bị cấm khi `APM_ENV=test`. |
 | `APM_BROWSER` | `off` | `off`: worker không mở trình duyệt. `real`: worker được mở Edge (hồ sơ riêng từng tài khoản, ngoài repo) để **người dùng tự đăng nhập** và kiểm tra phiên khi bấm nút ở trang Quản lý tài khoản. Không đăng bài. Bị cấm khi `APM_ENV=test`. Cần chạy cả `npm run dev:server`, `npm run dev:worker` (với `APM_BROWSER=real`) và `npm run dev:web`. |
+| `APM_DIAG_CAPTURE` | `off` | `on`: khi một lần đăng THẬT dừng vì lỗi (hoặc kết quả chưa rõ), worker lưu một ảnh chụp màn hình trình duyệt vào `<dataDir>diagnostics`. **Mặc định tắt** vì ảnh có thể chứa thông tin cá nhân (tên, tin nhắn, bài viết). Chỉ nhận `on`/`off`. Không bao giờ ghi trace. Ảnh không nằm trong bản sao lưu và không có trong báo cáo `npm run diagnostics` (chỉ đếm số ảnh). |
+| `APM_DIAG_RETENTION_HOURS` | `24` | Hạn lưu ảnh chụp (1–168 giờ). Worker xóa ảnh quá hạn khi khởi động và mỗi 10 phút, kể cả khi đã tắt `APM_DIAG_CAPTURE`. Dọn ngay: `npm run diagnostics -- --purge-captures`. |
 
 ## Bảo đảm "mở app không tự đăng Facebook"
 

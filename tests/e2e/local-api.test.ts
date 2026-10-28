@@ -62,7 +62,7 @@ test('server thật + Vite proxy giữ Host: health/session hợp lệ, request 
     assert.equal(health.status, 200);
     const healthBody = await health.json() as { integrations: string; schemaVersion: number };
     assert.equal(healthBody.integrations, 'fake');
-    assert.equal(healthBody.schemaVersion, 4);
+    assert.equal(healthBody.schemaVersion, 5);
     const session = await fetch(`${web}/api/session`, { headers: { Origin: web } });
     assert.equal(session.status, 200);
     assert.equal(session.headers.get('cache-control'), 'no-store');
@@ -92,6 +92,7 @@ test('server thật + Vite proxy giữ Host: health/session hợp lệ, request 
       child.kill();
       await stopped;
     }
-    rmSync(dataDir, { recursive: true, force: true });
+    // Vite có thể còn đang ghi vite-cache/deps_temp_* khi test kết thúc (bộ tối ưu phụ thuộc chạy nền): thử lại thay vì lỗi ENOTEMPTY.
+    rmSync(dataDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
   }
 });

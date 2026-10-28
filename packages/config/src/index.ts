@@ -85,3 +85,22 @@ export function getIntegrationMode(): IntegrationMode {
   if (value === 'live' && getAppEnv() === 'test') throw new Error('APM_INTEGRATIONS=live bị cấm khi APM_ENV=test');
   return value;
 }
+
+export interface DiagnosticCaptureConfig {
+  /** Chỉ true khi APM_DIAG_CAPTURE=on được đặt rõ ràng. */
+  enabled: boolean;
+  /** Ảnh chụp quá hạn này bị xóa tự động (APM_DIAG_RETENTION_HOURS, mặc định 24, tối đa 168). */
+  retentionMs: number;
+}
+
+/**
+ * Ảnh chụp màn hình chẩn đoán khi đăng bài lỗi. TẮT mặc định vì ảnh có thể chứa thông tin cá nhân (tên, tin nhắn, bài viết trên màn hình
+ * Facebook). Phải bật rõ bằng APM_DIAG_CAPTURE=on; luôn có hạn lưu và tự xóa khi quá hạn. Không bao giờ ghi trace (trace chứa cả cookie/header).
+ */
+export function getDiagnosticCapture(): DiagnosticCaptureConfig {
+  const value = (process.env.APM_DIAG_CAPTURE ?? '').trim().toLowerCase();
+  if (value !== '' && value !== 'off' && value !== 'on') throw new Error(`APM_DIAG_CAPTURE không hợp lệ: ${value} (chỉ nhận "on" hoặc "off")`);
+  const hours = nonNegativeInt('APM_DIAG_RETENTION_HOURS', 24, 168);
+  if (hours < 1) throw new Error('APM_DIAG_RETENTION_HOURS phải từ 1 đến 168');
+  return { enabled: value === 'on', retentionMs: hours * 3_600_000 };
+}

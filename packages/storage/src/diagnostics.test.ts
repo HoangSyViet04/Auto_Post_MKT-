@@ -24,10 +24,13 @@ test('chẩn đoán: có số liệu vận hành nhưng không lộ nội dung b
     writeFileSync(join(workspace.dataDir, dir, 'x.bin'), content);
   }
 
+  mkdirSync(join(workspace.dataDir, 'diagnostics'), { recursive: true });
+  writeFileSync(join(workspace.dataDir, 'diagnostics', '20261028080000-job-ui_changed.png'), 'SENTINEL-ANH-CHUP');
   const report = buildDiagnostics(workspace.db, { dataDir: workspace.dataDir, now: scenario.state.now });
   assert.deepEqual([report.integrity, report.jobsByStatus, report.jobsNeedingReconcile], ['ok', { unknown: 1 }, 1]);
   assert.deepEqual(report.accountsBySession, { logged_in: 1 });
   assert.deepEqual([report.media.ready, report.media.missingFiles], [1, 0]);
+  assert.equal(report.diagnosticCaptures.files, 1); // chỉ đếm, không đưa nội dung hay tên file
   assert.ok(report.dataDirBytes.profiles && report.dataDirBytes.profiles > 0); // chỉ tổng kích thước
 
   const json = JSON.stringify(report);

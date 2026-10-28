@@ -15,6 +15,8 @@ export interface DiagnosticsReport {
   /** Job đã gửi nhưng chưa rõ kết quả cần người dùng đối chiếu. */
   jobsNeedingReconcile: number;
   media: { ready: number; missingFiles: number };
+  /** Ảnh chụp chẩn đoán đang lưu (chỉ có khi người dùng bật APM_DIAG_CAPTURE=on); báo cáo này không chứa chính ảnh. */
+  diagnosticCaptures: { files: number; oldestAgeHours: number | null };
   recentActivity: Array<{ at: string; severity: string; action: string; reason: string | null }>;
   dataDirBytes: Record<string, number>;
   note: string;
@@ -38,14 +40,16 @@ function directoryBytes(path: string): number {
 
 /**
  * Báo cáo chẩn đoán CHỈ gồm đếm, mã trạng thái và kích thước. Cố ý không đọc và không in: caption, tên máy/nhóm/tài khoản, URL, danh tính,
- * cookie, token, bí mật, nội dung log hay đường dẫn tới hồ sơ trình duyệt. Không chụp màn hình và không ghi trace.
+ * cookie, token, bí mật, nội dung log hay đường dẫn tới hồ sơ trình duyệt. Báo cáo không chứa ảnh chụp màn hình (chỉ đếm số ảnh đang lưu) và không có trace.
  */
 export function buildDiagnostics(db: Database, options: { dataDir: string; now?: number }): DiagnosticsReport {
   const now = options.now ?? Date.now();
   const missingFiles = (db.prepare("SELECT storage_key FROM media WHERE state='ready'").all() as Array<{ storage_key: string }>)
     .filter((row) => !existsSync(join(options.dataDir, 'media', 'objects', `${row.storage_key}.blob`))).length;
   const sizes: Record<string, number> = {};
-  for (const name of ['db', 'media', 'logs', 'profiles', 'backups']) sizes[name] = directoryBytes(join(options.dataDir, name)); // chỉ tổng kích thước, không liệt kê file
+  for (const name of ['db', 'media', 'logs', 'profiles', 'backups', 'diagnostics']) sizes[name] = directoryBytes(join(options.dataDir, name)); // chỉ tổng kích thước, không liệt kê file
+  const captureDir = join(options.dataDir, 'diagnostics');
+  const captures = existsSync(captureDir) ? readdirSync(captureDir).filter((name) => name.endsWith('.png')).map((name) => statSync(join(captureDir, name)).mtimeMs) : [];
   const worker = readWorkerStatus(db, now);
   return {
     generatedAt: new Date(now).toISOString(),
@@ -60,7 +64,8 @@ export function buildDiagnostics(db: Database, options: { dataDir: string; now?:
     media: { ready: Number(db.prepare("SELECT count(*) AS n FROM media WHERE state='ready'").get()?.n), missingFiles },
     recentActivity: (db.prepare('SELECT occurred_at,severity,action_code,reason_code FROM activity_log ORDER BY occurred_at DESC,rowid DESC LIMIT 20').all() as Array<Record<string, unknown>>)
       .map((row) => ({ at: new Date(Number(row.occurred_at)).toISOString(), severity: String(row.severity), action: String(row.action_code), reason: row.reason_code === null ? null : String(row.reason_code) })),
+    diagnosticCaptures: { files: captures.length, oldestAgeHours: captures.length ? Math.max(0, Math.round(((now - Math.min(...captures)) / 3_600_000) * 10) / 10) : null },
     dataDirBytes: sizes,
-    note: 'Báo cáo không chứa nội dung bài, tên, liên kết, cookie hay bí mật. Chưa thu ảnh chụp màn hình hay trace.',
+    note: 'Báo cáo không chứa nội dung bài, tên, liên kết, cookie hay bí mật. Không bao giờ thu trace. Ảnh chụp màn hình chỉ có khi bật APM_DIAG_CAPTURE=on.',
   };
 }
