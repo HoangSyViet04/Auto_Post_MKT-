@@ -379,7 +379,7 @@ Các mục từ 1 đến 10 phía trên mô tả **mục tiêu và thiết kế*
 
 - **Fanpage** (cần ứng dụng Meta được cấp quyền) — chưa làm; **proxy** — hoãn có chủ đích; **LLM** — chưa làm (bản cơ bản không cần AI).
 - Đọc tự động danh sách nhóm đã tham gia / tìm nhóm theo từ khóa: chưa bàn giao.
-- Chưa nghiệm thu một chu trình thật qua launcher; chưa thử nhóm kiểm duyệt thật, nick không phải quản trị, hai nick đồng thời.
+- Đã nghiệm thu một chu trình thật qua launcher (28/10/2026: nick phụ đăng một bài vào nhóm, khởi động lại không đăng lại, sao lưu khi đang chạy); chưa thử nhóm kiểm duyệt thật, nick không phải quản trị, hai nick đồng thời.
 
 ### Chạy ứng dụng
 

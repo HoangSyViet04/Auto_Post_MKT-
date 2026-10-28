@@ -39,27 +39,34 @@ Quy ước cột "Kết quả": **Đạt** = có test tự động (và/hoặc t
 | P12.4 Build và phục vụ UI cục bộ | Đạt | `apps/server/src/static-ui.ts` + `static-ui.test.ts`: chỉ `/` và file phẳng trong `/assets/` theo danh sách đuôi cho phép, CSP, không `.map`, không thoát đường dẫn; vẫn chặn Host/Origin lạ; chỉ nghe 127.0.0.1 |
 | P12.5 Backup trước cập nhật | Đạt (mô phỏng) | `npm run update`/`Cap-nhat-Auto-Post-MKT.cmd` + `update.test.ts`: sao lưu đã kiểm tra trước khi đổi gì, dừng đúng chỗ, không lệnh phá hủy, in cách quay về; cập nhật thật trên dữ liệu tạm giữ nguyên hồ sơ đăng nhập/khóa/ảnh. Chưa chạy `npm run update` trên bản cài thật (cần `git pull` từ kho từ xa) |
 | P12.6 Hướng dẫn | Đạt (viết) | [huong-dan.md](huong-dan.md). Chưa có người dùng ngoài tác giả đọc thử |
-| P12.7 Nghiệm thu một chu trình với cấu hình thật | **Chưa** | Xem mục dưới |
+| P12.7 Nghiệm thu một chu trình với cấu hình thật | Đạt (một chu trình) | Xem mục dưới: launcher chế độ THẬT, một bài thật ở nhóm bằng nick phụ, khởi động lại không đăng lại, sao lưu khi đang chạy |
 | P12.8 README đúng thực tế | Đạt | README mục 11 và "Chạy ứng dụng"; ghi rõ máy phải bật và cửa sổ đang mở thì lịch mới chạy |
 
-## Nghiệm thu một chu trình thật (P12.7) — chưa thực hiện
+## Nghiệm thu một chu trình thật (P12.7) — 28/10/2026
 
-Chu trình cần chạy bằng launcher ở chế độ THẬT với tài khoản và đích do người dùng chọn rõ cho lượt này:
+**Phạm vi do người dùng cho phép riêng cho lượt này:** nick phụ `phu1` đăng MỘT bài (chữ + 2 ảnh) vào nhóm `1357510931662685` (nhóm người dùng quản trị). Phiên bản: commit `eee44bb` (xuất sạch ra thư mục riêng, không lẫn phần dở của phiên khác), dữ liệu thật của người dùng (`%LOCALAPPDATA%AutoPostMKT`), Windows 10, Node 24.16, Edge.
 
-1. Đặt `APM_INTEGRATIONS=live` trong `.env`, chạy `Auto-Post-MKT.cmd`, kiểm tra banner "Chế độ: THẬT".
-2. Đăng nhập tay nick, "Kiểm tra phiên" đạt.
-3. Tạo máy (ảnh, tên, tình trạng), chọn nhóm/TCN đã chọn, xem trước, tick xác nhận THẬT, xếp lịch.
-4. Worker đăng; kết quả hiện đúng; người dùng đối chiếu bằng mắt.
-5. Đóng cửa sổ giữa chừng và mở lại: không phát dồn, job chưa rõ hiện để đối chiếu.
-6. `npm run backup`, `npm run restore -- <thư mục> --verify-only`.
+| Bước | Kết quả |
+| --- | --- |
+| 1. Sao lưu dữ liệu thật rồi kiểm tra | Đạt: 2 ảnh, mã băm khớp, `--verify-only` hợp lệ |
+| 2. `APM_INTEGRATIONS=live`, chạy launcher | Đạt: banner "Chế độ: THẬT", mọi mục kiểm tra [ĐẠT], tự build giao diện, `/api/health` báo `live`, worker sống với trình duyệt thật |
+| 3. Phiên đăng nhập | Dùng phiên `phu1` đã có (`logged_in`); worker tự xác nhận danh tính trước khi gửi. Không phải đăng nhập lại |
+| 4. Xếp lịch qua trang "Đăng bài viết nhóm" (chọn `phu1`, máy thử, đúng 1 nhóm, tick xác nhận THẬT) | Đạt: đúng 1 job. Giao diện được điều khiển bằng Edge ngầm do tôi thao tác, không phải người dùng bấm tay |
+| 5. Worker đăng | Đạt: `queued` → `running` → `published` trong khoảng 43 giây. ID `2307345636679205`, có liên kết bài, nguồn `ui_observation`, 2 ảnh, 1 lần thử, nhật ký `send_started` → `job_published` |
+| 6. Giết launcher đột ngột | Đạt: server và worker dừng trong 12 giây, Edge của worker đóng; khóa worker mồ côi còn sót |
+| 7. Mở lại launcher | Đạt: khóa mồ côi không chặn; tổng job vẫn 4 (3 đã đăng + 1 lỗi cũ), bài vừa đăng vẫn 1 lần thử, **không đăng lại, không phát dồn** |
+| 8. `npm run backup` khi ứng dụng đang chạy, `--verify-only`, phục hồi sang thư mục tạm | Đạt: schema v5, 2 ảnh, phục hồi báo "1 tài khoản cần đăng nhập lại", dữ liệu thật không bị đụng |
 
-Đã có (chưa đi qua launcher): đăng thật một lần cho nhóm và TCN qua trang giao diện ngày 28/10/2026, người dùng xác nhận đạt.
+**Phát hiện và đã sửa trong lượt này:** script `backup` tự chạy migration trước khi sao lưu nên dữ liệu thật bị nâng lên v5 ngay ở bước 1 và không còn bản sao lưu ở schema cũ. Migration 0005 chỉ thêm một bảng nên không ảnh hưởng dữ liệu cũ; script đã sửa để chụp dữ liệu nguyên trạng, không bao giờ migrate.
+
+**Chưa kiểm chứng trong chu trình này:** người dùng tự bấm trên giao diện (tôi điều khiển); đóng cửa sổ GIỮA LÚC đang gửi (cố ý không làm trên Facebook thật; đã có test với worker thật ở `tests/e2e/lifecycle.test.ts`); đối chiếu thủ công một job `unknown`; nhóm kiểm duyệt; trang cá nhân và hai nick qua launcher.
+
+**Việc người dùng còn lại:** tự xóa bài thử mới trên Facebook (`https://www.facebook.com/groups/1357510931662685/posts/2307345636679205`) và các bài thử cũ.
 
 ## Tồn đọng chính trước khi bàn giao đủ phạm vi
 
 1. Fanpage (P09/P10.4): cần Meta app và thử thật.
-2. P12.7: chu trình thật qua launcher (cần người dùng chọn tài khoản/đích).
-3. Proxy (P04): hoãn có chủ đích.
-4. Quét nhóm đã tham gia (P06): đã có trong ứng dụng và đạt kiểm thử offline; cần nghiệm thu đọc thật trên tài khoản được chọn. Chưa tìm nhóm theo từ khóa. Có chọn theo số lượng ở trang Đăng nhóm; xem [joined-groups.md](joined-groups.md).
-5. Nhóm kiểm duyệt thật (P08.5), nick không phải quản trị, hai nick đồng thời.
-6. LLM (P13): ngoài bản cơ bản.
+2. Proxy (P04): hoãn có chủ đích.
+3. Quét nhóm đã tham gia (P06): đã có trong ứng dụng và đạt kiểm thử offline; cần nghiệm thu đọc thật trên tài khoản được chọn. Chưa tìm nhóm theo từ khóa. Có chọn theo số lượng ở trang Đăng nhóm; xem [joined-groups.md](joined-groups.md).
+4. Nhóm kiểm duyệt thật (P08.5), nick không phải quản trị, hai nick đồng thời.
+5. LLM (P13): ngoài bản cơ bản.
