@@ -7,7 +7,7 @@ Dành cho người vận hành đăng bài bán điện thoại lên Facebook b�
 1. Cài **Node.js 24 LTS** (nodejs.org), **Git for Windows** và **Microsoft Edge**.
 2. Tải mã nguồn vào một thư mục thường (ví dụ `D:\Project\Auto_Post_MKT`). **Đừng đặt trong OneDrive/Dropbox**: dịch vụ đồng bộ làm hỏng thư mục `node_modules`.
 3. Mở cửa sổ lệnh tại thư mục đó và chạy `npm ci` một lần.
-4. Dữ liệu của bạn (cơ sở dữ liệu, ảnh, hồ sơ đăng nhập Facebook, bản sao lưu) nằm ngoài mã nguồn, tại `%LOCALAPPDATA%\AutoPostMKT`. Muốn đổi chỗ, đặt `APM_DATA_DIR` trong file `.env`.
+4. Code và dữ liệu cùng nằm trong thư mục dự án. Dữ liệu (DB, ảnh, hồ sơ đăng nhập Facebook, bản sao lưu, cache) ở **`data/`**, ví dụ `D:\project\Auto_Post_MKT\data`. Git bỏ qua data và bản dự phòng `local-backups/`. Muốn đổi chỗ, đặt `APM_DATA_DIR` trong `.env`; đường dẫn tương đối tính từ project root. Đóng app trước khi chuyển cả folder; sang máy khác có thể cần đăng nhập lại.
 
 Đường dẫn có dấu tiếng Việt hoặc khoảng trắng đều dùng được.
 
@@ -107,7 +107,7 @@ Trang **Khách hỏi và đơn hàng** để bạn **tự ghi** khách hỏi và
 - **Phục hồi:** đóng ứng dụng rồi `npm run restore -- "<thư mục sao lưu>" --verify-only` để kiểm tra, sau đó bỏ `--verify-only` (thêm `--replace` nếu đang có dữ liệu; dữ liệu cũ được đổi tên, không xóa). Sau phục hồi các bài chờ ở trạng thái tạm dừng và bạn phải đăng nhập lại tài khoản.
 - **Cập nhật:** đóng ứng dụng, chạy `Cap-nhat-Auto-Post-MKT.cmd` (hoặc `npm run update`). Nó sao lưu và kiểm tra trước, rồi tải bản mới, nâng cơ sở dữ liệu và dựng lại giao diện; dừng ngay khi có gì bất thường và in cách quay về. Hồ sơ đăng nhập, ảnh và dữ liệu giữ nguyên.
 - **Chẩn đoán:** `npm run diagnostics` in báo cáo chỉ gồm số đếm và trạng thái (không có nội dung bài, tên, link hay bí mật) để gửi khi cần hỗ trợ.
-- **Ảnh chụp màn hình khi lỗi** (tùy chọn): đặt `APM_DIAG_CAPTURE=on` thì mỗi lần đăng thật dừng vì lỗi sẽ lưu một ảnh vào `%LOCALAPPDATA%\AutoPostMKT\diagnostics`, giữ 24 giờ rồi tự xóa (`APM_DIAG_RETENTION_HOURS`). Ảnh có thể chứa thông tin cá nhân; không chia sẻ. Xóa ngay: `npm run diagnostics -- --purge-captures`.
+- **Ảnh chụp màn hình khi lỗi** (tùy chọn): đặt `APM_DIAG_CAPTURE=on` thì mỗi lần đăng thật dừng vì lỗi sẽ lưu một ảnh vào `data/diagnostics`, giữ 24 giờ rồi tự xóa (`APM_DIAG_RETENTION_HOURS`). Ảnh có thể chứa thông tin cá nhân; không chia sẻ. Xóa ngay: `npm run diagnostics -- --purge-captures`.
 
 ## 9. Gặp sự cố
 

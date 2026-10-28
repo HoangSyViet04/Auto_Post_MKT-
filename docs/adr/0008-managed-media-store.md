@@ -4,6 +4,8 @@
 - Trạng thái: Đã chấp nhận
 - Phạm vi: P02.4, thư viện nội bộ; chưa upload API/UI hoặc thumbnail
 
+> Vị trí dữ liệu cập nhật theo [ADR 0012](0012-project-local-data.md): cho phép `<project>/data/` bị Git bỏ qua; vẫn chặn các thư mục mã nguồn và `.git`. Quy định từ chối mọi đường dẫn trong repo bên dưới là lịch sử.
+
 ## Quyết định
 
 - Thêm dependency runtime **sharp 0.35.5**, khóa chính xác. Dùng bộ giải mã ảnh để kiểm pixel thật, không chỉ tin đuôi file/header. Bản này yêu cầu Node>=20.9, phù hợp Node24 của dự án; đã chạy thực tế trên Windows hiện tại. Máy khác chạy `npm ci` sau pull. Không viết parser ảnh riêng. [Constructor/giới hạn giải mã sharp](https://sharp.pixelplumbing.com/api-constructor/).

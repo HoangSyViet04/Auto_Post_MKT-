@@ -1,5 +1,7 @@
 # ADR 0009 — Secrets bằng Windows DPAPI CurrentUser
 
+> Vị trí dữ liệu cập nhật theo [ADR 0012](0012-project-local-data.md): secrets nằm trong `<project>/data/secrets/` bị Git bỏ qua. DPAPI CurrentUser và ACL giữ nguyên; quy định vị trí ngoài repo trước đây được thay thế.
+
 - Ngày: 2026-10-27
 - Trạng thái: Đã chấp nhận
 - Phạm vi: P02.5, thư viện nội bộ; không có HTTP endpoint trả plaintext

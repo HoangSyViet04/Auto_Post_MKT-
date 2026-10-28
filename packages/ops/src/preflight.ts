@@ -61,7 +61,7 @@ export function checkDataDir(dir: string): Check {
     rmSync(probe, { force: true });
     return pass('data-dir', 'Thư mục dữ liệu ghi được.');
   } catch {
-    return failed('data-dir', 'error', 'Không tạo/ghi được thư mục dữ liệu.', 'Kiểm tra quyền ghi và đường dẫn (APM_DATA_DIR hoặc %LOCALAPPDATA%\\AutoPostMKT), ổ đĩa còn chỗ trống.');
+    return failed('data-dir', 'error', 'Không tạo/ghi được thư mục dữ liệu.', 'Kiểm tra quyền ghi thư mục data/ của dự án (hoặc APM_DATA_DIR), ổ đĩa còn chỗ trống.');
   }
 }
 

@@ -3,7 +3,7 @@ import { constants } from 'node:fs';
 import { lstat, mkdir, open, readFile, realpath, rename, unlink } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import sharp from 'sharp';
-import { getDataDir } from '#config';
+import { getDataDir, isRuntimeDataDirAllowed } from '#config';
 import { BusinessError } from '#domain';
 import type { Database } from './db.ts';
 import { atomic, identifier, mediaIds as validateMediaIds, one, timestamp } from './repository-common.ts';
@@ -19,7 +19,6 @@ export interface MediaStoreOptions {
 }
 export const DEFAULT_MEDIA_MAX_BYTES = 20 * 1024 * 1024;
 export const DEFAULT_MEDIA_MAX_PIXELS = 25_000_000;
-const REPO_ROOT = resolve(import.meta.dirname, '../../..');
 
 function inside(parent: string, child: string): boolean {
   const path = relative(parent, child);
@@ -41,13 +40,13 @@ export function createMediaStore(db: Database, options: MediaStoreOptions = {}) 
   const dataDir = resolve(options.dataDir ?? getDataDir());
   const maxBytes = options.maxBytes ?? DEFAULT_MEDIA_MAX_BYTES;
   const maxPixels = options.maxPixels ?? DEFAULT_MEDIA_MAX_PIXELS;
-  if (inside(REPO_ROOT, dataDir) || !Number.isSafeInteger(maxBytes) || maxBytes < 1
+  if (!isRuntimeDataDirAllowed(dataDir) || !Number.isSafeInteger(maxBytes) || maxBytes < 1
     || !Number.isSafeInteger(maxPixels) || maxPixels < 1) throw new BusinessError('invalid_input');
 
   async function directories() {
     await mkdir(dataDir, { recursive: true, mode: 0o700 });
     const base = await realpath(dataDir);
-    if (inside(REPO_ROOT, base)) throw new BusinessError('invalid_input');
+    if (!isRuntimeDataDirAllowed(base)) throw new BusinessError('invalid_input');
     const root = join(base, 'media'); const staging = join(root, 'staging'); const objects = join(root, 'objects');
     for (const dir of [root, staging, objects]) {
       await mkdir(dir, { recursive: true, mode: 0o700 });

@@ -3,7 +3,7 @@
 ## Sao lưu
 
 ```
-npm run backup                      # ghi vào %LOCALAPPDATA%\AutoPostMKT\backups\<thời điểm>
+npm run backup                      # ghi vào <project>\data\backups\<thời điểm>, Git bỏ qua
 npm run backup -- --out E:\sao-luu\2026-10-28
 ```
 

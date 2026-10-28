@@ -8,8 +8,12 @@ coverage/
 test-results/
 playwright-report/
 
-# Runtime data must live outside the repo (%LOCALAPPDATA%/AutoPostMKT) — guard against accidents
+# Runtime data is project-local but never tracked by Git.
 data/
+/local-backups/
+/data.relocating-*/
+/data.restoring-*/
+/data.before-restore-*/
 *.db
 *.db-*
 *.sqlite

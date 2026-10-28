@@ -2,8 +2,8 @@ import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { lstat, mkdir, open, readFile, realpath, unlink } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve } from 'node:path';
-import { getDataDir } from '#config';
+import { join, relative, resolve } from 'node:path';
+import { getDataDir, isRuntimeDataDirAllowed } from '#config';
 import { BusinessError } from '#domain';
 import type { Database } from './db.ts';
 import { atomic, identifier, one } from './repository-common.ts';
@@ -11,12 +11,7 @@ import { atomic, identifier, one } from './repository-common.ts';
 const PROVIDER = 'windows-dpapi-v1';
 const SCRIPT = readFileSync(new URL('./windows-secrets.ps1', import.meta.url), 'utf8');
 const ENCODED_SCRIPT = Buffer.from(SCRIPT, 'utf16le').toString('base64');
-const REPO_ROOT = resolve(import.meta.dirname, '../../..');
 interface SecretReference { id: string; provider: string; reference_id: string; status: string }
-function within(parent: string, child: string) {
-  const part = relative(parent, child);
-  return part === '' || (!isAbsolute(part) && part !== '..' && !part.startsWith('..\\') && !part.startsWith('../'));
-}
 
 /** Constant trusted script in argv; all values travel via stdin, never shell interpolation. */
 async function windows(input: Record<string, string>): Promise<{ protected?: boolean; value?: string }> {
@@ -40,14 +35,14 @@ async function windows(input: Record<string, string>): Promise<{ protected?: boo
 /** Only internal consumers can reveal plaintext. Never expose get() through HTTP or logs. */
 export function createSecretStore(db: Database, options: { dataDir?: string } = {}) {
   const dataDir = resolve(options.dataDir ?? getDataDir());
-  if (within(REPO_ROOT, dataDir)) throw new BusinessError('invalid_input');
+  if (!isRuntimeDataDirAllowed(dataDir)) throw new BusinessError('invalid_input');
   let initialized: Promise<string> | undefined;
   async function directory(): Promise<string> {
     if (!initialized) {
       initialized = (async () => {
         await mkdir(dataDir, { recursive: true });
         const base = await realpath(dataDir);
-        if (within(REPO_ROOT, base)) throw new BusinessError('invalid_input');
+        if (!isRuntimeDataDirAllowed(base)) throw new BusinessError('invalid_input');
         const dir = join(base, 'secrets');
         await mkdir(dir, { recursive: true, mode: 0o700 });
         const info = await lstat(dir);

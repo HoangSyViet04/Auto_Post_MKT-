@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, test } from 'node:test';
-import { getAppEnv, getDatabasePath, getDataDir, getDiagnosticCapture, getIntegrationMode, getLogLevel, getServeWeb } from './index.ts';
+import { DEFAULT_DATA_DIR, getAppEnv, getDatabasePath, getDataDir, getDiagnosticCapture, getIntegrationMode, getLogLevel, getServeWeb, isRuntimeDataDirAllowed, PROJECT_ROOT } from './index.ts';
 
 const KEYS = ['APM_ENV', 'APM_DATA_DIR', 'APM_INTEGRATIONS', 'APM_DIAG_CAPTURE', 'APM_DIAG_RETENTION_HOURS', 'APM_SERVE_WEB', 'APM_LOG_LEVEL'] as const;
 let saved: Record<string, string | undefined>;
@@ -71,5 +71,24 @@ describe('config', () => {
   test('APM_DATA_DIR ghi đè thư mục dữ liệu', () => {
     process.env.APM_DATA_DIR = join(tmpdir(), 'apm dữ liệu');
     assert.equal(getDatabasePath(), join(tmpdir(), 'apm dữ liệu', 'db', 'development.sqlite'));
+  });
+  test('dữ liệu mặc định ở project/data; đường dẫn tương đối theo project, không phụ thuộc cwd', () => {
+    assert.equal(getDataDir(), DEFAULT_DATA_DIR);
+    assert.equal(getDatabasePath(), join(PROJECT_ROOT, 'data', 'db', 'development.sqlite'));
+    process.env.APM_DATA_DIR = './data';
+    assert.equal(getDataDir(), DEFAULT_DATA_DIR);
+    const previousCwd = process.cwd();
+    try { process.chdir(tmpdir()); assert.equal(getDataDir(), DEFAULT_DATA_DIR); }
+    finally { process.chdir(previousCwd); }
+  });
+  test('chỉ cho dữ liệu trong data khi nằm trong repo, vẫn chặn mã nguồn/.git và tên gần giống data', () => {
+    assert.equal(isRuntimeDataDirAllowed(DEFAULT_DATA_DIR), true);
+    assert.equal(isRuntimeDataDirAllowed(join(DEFAULT_DATA_DIR, 'backups', 'sample')), true);
+    assert.equal(isRuntimeDataDirAllowed(tmpdir()), true);
+    for (const path of [PROJECT_ROOT, join(PROJECT_ROOT, '.git'), join(PROJECT_ROOT, 'packages'), join(PROJECT_ROOT, 'data-other')]) {
+      assert.equal(isRuntimeDataDirAllowed(path), false);
+      process.env.APM_DATA_DIR = path;
+      assert.throws(getDataDir, /APM_DATA_DIR/u);
+    }
   });
 });

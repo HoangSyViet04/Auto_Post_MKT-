@@ -90,7 +90,7 @@ README.md
 plan.md
 ```
 
-Đã tạo ở P00.3. Bản làm việc đặt tại `D:/Project/Auto_Post_MKT` (ngoài OneDrive), hai máy đồng bộ qua git/GitHub. Dùng **một `package.json` npm, không workspaces/pnpm**. Các module tham chiếu nhau qua `#domain`, `#config`, `#storage`, ... (xem [ADR 0001](docs/adr/0001-onedrive-single-package.md)). Dữ liệu vận hành đặt ngoài mã nguồn, mặc định `%LOCALAPPDATA%/AutoPostMKT/`: DB, media, log, browser profiles, cache. Ghi đè được bằng `APM_DATA_DIR`, không ghi cứng theo máy hiện tại.
+Đã tạo ở P00.3. Bản làm việc đặt tại `D:/Project/Auto_Post_MKT` (ngoài OneDrive), hai máy đồng bộ qua git/GitHub. Dùng **một `package.json` npm, không workspaces/pnpm**. Các module tham chiếu nhau qua `#domain`, `#config`, `#storage`, ... (xem [ADR 0001](docs/adr/0001-onedrive-single-package.md)). Theo yêu cầu người dùng 28/10/2026, code và dữ liệu cùng một folder: dữ liệu vận hành mặc định `<project>/data/` (DB, media, log, browser profiles, cache), Git bỏ qua; bản dự phòng chuyển vị trí ở `local-backups/`. Ghi đè bằng `APM_DATA_DIR`, đường dẫn tương đối theo project root; xem ADR 0012.
 
 ## 4. Dữ liệu và giao ước cần thiết kế
 

@@ -1,6 +1,6 @@
 /** Cấu hình runtime cho server/worker: thư mục dữ liệu, môi trường, chế độ tích hợp. */
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import type { IntegrationMode } from '#domain';
 
 export type AppEnv = 'development' | 'test' | 'production';
@@ -11,16 +11,29 @@ export function getAppEnv(): AppEnv {
   throw new Error(`APM_ENV không hợp lệ: ${value}`);
 }
 
-/**
- * Dữ liệu vận hành (DB, media, log, browser profiles) nằm ngoài repo.
- * APM_ENV=test không có APM_DATA_DIR thì dùng thư mục tạm để không đụng dữ liệu thật.
- */
+export const PROJECT_ROOT = resolve(import.meta.dirname, '../../..');
+export const DEFAULT_DATA_DIR = join(PROJECT_ROOT, 'data');
+
+const inside = (parent: string, child: string): boolean => {
+  const part = relative(parent, child);
+  return part === '' || (!isAbsolute(part) && part !== '..' && !part.startsWith('..\\') && !part.startsWith('../'));
+};
+
+/** In-repo runtime files belong only in the Git-ignored data folder; source/config/.git remain protected. */
+export function isRuntimeDataDirAllowed(path: string): boolean {
+  const full = resolve(path);
+  return !inside(PROJECT_ROOT, full) || inside(DEFAULT_DATA_DIR, full);
+}
+
+/** Default is <project>/data regardless of cwd. Test fixtures stay in a separate temporary directory. */
 export function getDataDir(): string {
-  if (process.env.APM_DATA_DIR) return process.env.APM_DATA_DIR;
+  if (process.env.APM_DATA_DIR) {
+    const dir = resolve(PROJECT_ROOT, process.env.APM_DATA_DIR);
+    if (!isRuntimeDataDirAllowed(dir)) throw new Error('APM_DATA_DIR phải nằm trong data/ hoặc ngoài thư mục mã nguồn.');
+    return dir;
+  }
   if (getAppEnv() === 'test') return join(tmpdir(), 'AutoPostMKT-test');
-  const localAppData = process.env.LOCALAPPDATA;
-  if (!localAppData) throw new Error('Không xác định được LOCALAPPDATA; đặt APM_DATA_DIR.');
-  return join(localAppData, 'AutoPostMKT');
+  return DEFAULT_DATA_DIR;
 }
 
 export const DEFAULT_SERVER_PORT = 4317;

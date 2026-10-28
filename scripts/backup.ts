@@ -1,15 +1,12 @@
 /**
  * Sao lưu dữ liệu vận hành: DB (nhất quán) + ảnh + manifest mã băm. Không chứa cookie, hồ sơ trình duyệt, khóa hay log.
- * Dùng: npm run backup [-- --out <thư mục>]. Mặc định ghi vào <dữ liệu>\backups\<thời điểm>. Không ghi vào trong repo.
+ * Dùng: npm run backup [-- --out <thư mục>]. Mặc định ghi vào <dữ liệu>\backups\<thời điểm> (Git bỏ qua data/).
  */
 import { existsSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
-import { getAppEnv, getDataDir, getDatabasePath } from '#config';
+import { join, resolve } from 'node:path';
+import { getAppEnv, getDataDir, getDatabasePath, isRuntimeDataDirAllowed } from '#config';
 import { createLogger } from '#logging';
 import { createBackup, openDatabase, verifyBackup } from '#storage';
-
-const repoRoot = resolve(import.meta.dirname, '..');
-const insideRepo = (path: string) => path === repoRoot || path.startsWith(`${repoRoot}${sep}`);
 
 let log = createLogger({ env: 'production', name: 'backup' });
 try {
@@ -19,7 +16,7 @@ try {
   const stamp = new Date().toISOString().replace(/\D/gu, '').slice(0, 14);
   const outDir = resolve(flag >= 0 ? (process.argv[flag + 1] ?? '') : join(dataDir, 'backups', stamp));
   if (flag >= 0 && !process.argv[flag + 1]) throw new Error('Thiếu giá trị cho --out');
-  if (insideRepo(outDir)) throw new Error('Không ghi bản sao lưu vào trong repo (dữ liệu vận hành không được vào Git).');
+  if (!isRuntimeDataDirAllowed(outDir)) throw new Error('Bản sao lưu trong dự án phải nằm trong data/ để không vào Git.');
 
   // Sao lưu chụp dữ liệu NGUYÊN TRẠNG: tuyệt đối không migrate ở đây (migration thuộc bước cập nhật, sau khi đã sao lưu).
   if (!existsSync(getDatabasePath())) throw new Error('Chưa có cơ sở dữ liệu để sao lưu (ứng dụng chưa từng chạy với thư mục dữ liệu này).');

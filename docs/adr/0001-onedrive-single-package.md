@@ -3,6 +3,8 @@
 - Ngày: 2026-10-26
 - Trạng thái: **Thay thế một phần** (2026-10-26 23:18). Mục 1 bị bỏ, các mục 2–6 vẫn giữ. Xem phần "Cập nhật" ở cuối file.
 
+> Cập nhật 28/10/2026: mục 6 về vị trí dữ liệu được thay bởi [ADR 0012](0012-project-local-data.md): mặc định `<project>/data/`, cùng folder dự án, Git bỏ qua. Các đoạn AppData bên dưới mô tả quyết định lịch sử.
+
 ## Bối cảnh
 
 Người vận hành làm việc trên hai máy Windows và đồng bộ thư mục dự án qua OneDrive (`D:\OneDrive - EDUPIA\Auto_Post_MKT`).

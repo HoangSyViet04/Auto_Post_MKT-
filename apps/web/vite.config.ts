@@ -2,15 +2,15 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import { getServerPort } from '#config';
+import { getDataDir, getServerPort } from '#config';
 
 const root = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root,
   plugins: [react()],
-  // Giữ cache ngoài OneDrive để tránh đồng bộ file tạm
-  cacheDir: process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, 'AutoPostMKT', 'cache', 'vite') : undefined,
+  // Runtime cache follows the same project-local data directory as DB/media/profiles.
+  cacheDir: join(getDataDir(), 'cache', 'vite'),
   server: {
     host: '127.0.0.1',
     port: 5173,

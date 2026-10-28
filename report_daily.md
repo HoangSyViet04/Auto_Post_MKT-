@@ -701,3 +701,28 @@ Mẫu một mục:
 - **Giới hạn:** giao diện do tôi điều khiển (chưa phải người dùng tự bấm); chưa thử đóng giữa LÚC đang gửi trên Facebook thật (cố ý; đã có test worker thật); chưa đối chiếu một job `unknown` thật; một nhóm, một nick.
 - **Việc người dùng:** tự xóa bài thử mới `https://www.facebook.com/groups/1357510931662685/posts/2307345636679205` và các bài thử cũ; dữ liệu thật hiện ở schema v5 (phiên quét nhóm sẽ nâng tiếp lên v6 khi chạy).
 - **Tiếp theo:** **fanpage (P09/P10.4)**: cần người dùng tạo ứng dụng Meta (miễn phí) và là quản trị Page; tôi hướng dẫn từng bước, người dùng tự đăng nhập, không gửi mật khẩu/mã cho tôi; cần chốt Page nào, kiểm chứng phiên bản Graph API và quyền thật trước khi viết. Sau đó P12 đủ phạm vi.
+
+## 2026-10-28 16:56 — Gom dữ liệu vận hành vào cùng folder dự án (ADR 0012)
+
+- **Yêu cầu trực tiếp:** người dùng muốn toàn bộ code và dữ liệu của Auto Post MKT nằm trong `D:\project\Auto_Post_MKT`, thay vì dữ liệu ở AppData. Yêu cầu này thay thế quy định vị trí dữ liệu ngoài repo trước đây; vẫn không đưa dữ liệu riêng tư vào Git.
+- **Đã thay đổi:**
+  - `#config.getDataDir()` mặc định `<project>/data`, suy root từ vị trí module, không phụ thuộc cwd hoặc LOCALAPPDATA. `APM_DATA_DIR` vẫn ghi đè; đường dẫn tương đối theo project root. Trong repo chỉ cho data và con, chặn root/.git/mã nguồn/data-other. Test tiếp tục dùng tmp riêng.
+  - MediaStore/SecretStore dùng chung quy tắc vị trí mới cả trước và sau realpath; giữ UUID/hash, symlink guards, DPAPI CurrentUser và ACL. Backup mặc định được phép vào `data/backups`, vẫn chặn thư mục mã nguồn. Cache Vite cũng theo dataDir tại `data/cache/vite`.
+  - Git bỏ qua `data/`, `local-backups/`, `data.relocating-*`, `data.restoring-*`, `data.before-restore-*`; kiểm tra cả Cookies/ảnh trong vùng restore để không lộ dữ liệu sau đổi tên thư mục.
+  - Cập nhật `.env.example`, CLAUDE, README, plan, hướng dẫn vận hành/backup/environment, ADR 0012 và ghi chú thay thế vị trí trong ADR 0001/0008/0009. Không sửa migration cũ.
+- **Chuyển dữ liệu thật (đã thực hiện):**
+  - Xác nhận không có server/worker/Edge profile dự án đang chạy, cổng 4317/5173 không nghe; nguồn không có reparse point. Chưa mở Facebook hay gửi bài trong lượt này.
+  - Nguồn cũ: `C:\Users\VIET_HS\AppData\Local\AutoPostMKT`.
+  - Đích đang dùng: `D:\project\Auto_Post_MKT\data`; DB hiện tại: `data\db\development.sqlite`.
+  - Bản dự phòng đầy đủ trước chuyển: `D:\project\Auto_Post_MKT\local-backups\pre-relocation-20261028-164658` (gồm hồ sơ đăng nhập/cache, khác backup thông thường). Đã so sánh danh sách và SHA-256 đủ **4.161 file / 727.311.354 byte** cho cả bản staged và bản dự phòng.
+  - SQLite integrity_check=ok, foreign_key_check rỗng; giữ nguyên số dòng: 1 tài khoản, 82 đích đăng, 1 máy, 2 media, 4 job, 0 scan, 0 sales. Bản gốc v5 giữ trong local-backups; chạy `npm.cmd run db:migrate` ở đích mới nâng đúng migration 6, số dòng nghiệp vụ không đổi.
+  - Chạy đọc lại bằng cấu hình mặc định: DB v6 integrity/FK đạt, 2 ảnh xác minh hash và API trả 200, 1 hồ sơ tài khoản còn tồn tại; API health/accounts/products/groups/jobs đều 200. Không mở trình duyệt tài khoản.
+  - Sau khi kiểm lại bản dự phòng khớp đủ 4.161 file và đọc đích mới thành công, đã dọn **đúng** thư mục AppData nguồn cũ. Giữ hai bản dữ liệu trong project (data đang dùng + local-backups dự phòng), không xóa bản duy nhất. Không sửa cấu hình Windows toàn cục, PATH hay ExecutionPolicy; không cần tạo/sửa `.env` cục bộ.
+- **Kiểm thử:**
+  - Target config + MediaStore: 14/14 đạt, gồm mặc định project/data, đường dẫn tương đối theo root dù cwd đổi, chặn mã nguồn/.git/tên gần giống data.
+  - `npm.cmd start -- --check` trên dữ liệu mới: toàn bộ preflight đạt, không khởi động server/worker.
+  - `npm.cmd run backup`: tạo và xác minh bản thật `data/backups/20261028095039`, DB v6 + 2 ảnh. `npm.cmd run restore -- data/backups/20261028095039 --verify-only`: hợp lệ, không phục hồi đè.
+  - `npm.cmd run check` ngoài sandbox để test ACL Windows đúng quyền; runner ép test/fake + DB tạm -> **275/275 test đạt**, 28 suite, typecheck đạt, lint 175 file đạt, build:web 47 module đạt. Không có đăng/quét Facebook thật.
+  - `git check-ignore` xác nhận data/profile/media/backup và các vùng restore bị bỏ qua; dữ liệu không được stage/commit.
+- **Giới hạn:** chỉ chuyển dữ liệu trên máy Windows hiện tại. Khi sang máy khác, DPAPI/phiên Facebook có thể cần đăng nhập/kết nối lại. Bản dự phòng local-backups giữ lại để quay về, chỉ xóa tay khi người dùng chắc chắn không cần.
+- **Tiếp theo:** mở app như cũ bằng `Auto-Post-MKT.cmd` hoặc `npm start`; dữ liệu mặc định đã ở data. Lưu commit riêng cho thay đổi đường dẫn/tài liệu, chưa push.

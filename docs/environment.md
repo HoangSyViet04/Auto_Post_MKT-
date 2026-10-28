@@ -5,10 +5,10 @@ Cấu hình đọc từ biến môi trường (`packages/config`). `npm run dev:
 | Biến | Mặc định | Ý nghĩa |
 | --- | --- | --- |
 | `APM_ENV` | `development` | `development` / `test` / `production`. Mỗi môi trường một DB: `<dataDir>/db/<APM_ENV>.sqlite`. |
-| `APM_DATA_DIR` | `%LOCALAPPDATA%\AutoPostMKT`; riêng `test` là `<thư mục tạm>\AutoPostMKT-test` | DB, media, log, browser profiles. Không bao giờ đặt trong repo. |
+| `APM_DATA_DIR` | `<project>/data`; riêng `test` là `<thư mục tạm>\AutoPostMKT-test` | DB, media, log, browser profiles, cache. Đường dẫn tương đối tính từ project root. Trong repo chỉ cho data/; Git bỏ qua dữ liệu. ADR 0012. |
 | `APM_SERVER_PORT` | `4317` | Server chỉ nghe `127.0.0.1`; Vite proxy `/api` dùng cùng cổng. |
 | `APM_INTEGRATIONS` | `fake` | `fake`: adapter giả, không gọi Facebook/LLM. `live`: adapter thật — chưa có (P08/P09), worker từ chối chạy. `live` bị cấm khi `APM_ENV=test`. |
-| `APM_BROWSER` | `off` | `off`: worker không mở trình duyệt. `real`: worker được mở Edge (hồ sơ riêng từng tài khoản, ngoài repo) để **người dùng tự đăng nhập** và kiểm tra phiên khi bấm nút ở trang Quản lý tài khoản. Không đăng bài. Bị cấm khi `APM_ENV=test`. Cần chạy cả `npm run dev:server`, `npm run dev:worker` (với `APM_BROWSER=real`) và `npm run dev:web`. |
+| `APM_BROWSER` | `off` | `off`: worker không mở trình duyệt. `real`: worker mở Edge với hồ sơ riêng tại `<dataDir>/profiles` để đăng nhập/kiểm tra phiên, và khi integrations=live thì thực hiện đăng/quét đã được người dùng yêu cầu. Bị cấm khi `APM_ENV=test`. Khi phát triển, chạy server, worker và web; launcher khởi động server/worker và phục vụ UI đã build. |
 | `APM_SERVE_WEB` | `off` | `on`: server phục vụ giao diện đã build (`apps/web/dist`) trên cùng cổng API, không cần Vite. Chỉ `on`/`off`. Launcher (`npm start`, `Auto-Post-MKT.cmd`) tự bật; khi phát triển giao diện do `npm run dev:web` phục vụ. Chỉ phục vụ `/` và file phẳng trong `/assets/` (không `.map`, không file khác). |
 | `APM_LOG_LEVEL` | theo môi trường (`debug` ở dev/test, `info` ở production) | `debug`/`info`/`warn`/`error`. Launcher đặt `warn` nếu bạn không đặt, để cửa sổ không bị ngập log từng request. Log luôn được lọc bí mật. |
 | `APM_PARENT_PID` | _(launcher tự đặt)_ | PID của launcher. Server/worker tự dừng khi tiến trình này biến mất (đóng cửa sổ, kết thúc đột ngột) để không còn worker nhận việc ngầm. Không đặt tay. |
@@ -72,7 +72,7 @@ Scanner phân biệt joined/keyword, giới hạn1..1000 kết quả, nguồn/th
 
 ## MediaStore (P02.4)
 
-Sau pull lockfile mới, chạy `npm ci` để cài `sharp@0.35.5` và binary phù hợp máy. Thư viện `#storage.createMediaStore` dùng dataDir cấu hình, lưu file trong `media/staging` và `media/objects` ngoài repo. Nhập JPEG/PNG/WebP tĩnh, mặc định20MiB/25MP, giữ nguyên bytes và SHA256. Chưa có màn hình/upload API hoặc thumbnail.
+Sau pull lockfile mới, chạy `npm ci` để cài `sharp@0.35.5` và binary phù hợp máy. `#storage.createMediaStore` dùng dataDir cấu hình, mặc định `<project>/data/media/staging` và `objects` (Git bỏ qua). Nhập JPEG/PNG/WebP tĩnh, mặc định20MiB/25MP, giữ nguyên bytes và SHA256. Đã có màn hình quản lý máy, upload API và thumbnail.
 
 Caller nội bộ dùng `importFile(pathĐãChọn)` lấy media ID; trước sử dụng gọi `resolveForPublish(idsTheoThứTự)`. Không nhận đường dẫn hệ thống tùy ý từ web, không tự bỏ qua ảnh lỗi. Mất/hỏng file chuyển missing/failed và chặn thao tác. Crash có thể còn staging/orphan không được coi ready; chưa tự quét/dọn khi có tiến trình khác có thể đang import. Xem [ADR0008](adr/0008-managed-media-store.md).
 

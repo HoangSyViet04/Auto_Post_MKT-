@@ -3,6 +3,8 @@
 > Trạng thái: MVP nội bộ Windows đã có luồng quản lý máy, duyệt/xếp lịch, đăng nhóm/trang cá nhân và theo dõi kết quả. Một lần đăng thật mỗi kênh đã được ghi nhận; chưa nghiệm thu đầy đủ vận hành. Các phần dự kiến bên dưới cần đối chiếu `plan.md` và `report_daily.md` để biết trạng thái triển khai.
 > Cập nhật: 28/10/2026. Hướng dẫn mới: [Quét nhóm đã tham gia và chọn số nhóm muốn đăng](docs/joined-groups.md).
 
+Code và dữ liệu cùng nằm trong thư mục dự án: **`data/`** chứa DB, ảnh, hồ sơ đăng nhập, cache và backup; `local-backups/` giữ bản dự phòng khi chuyển từ AppData. Git bỏ qua cả hai thư mục. Xem [ADR 0012](docs/adr/0012-project-local-data.md).
+
 ## 1. Tổng quan bài toán
 
 Người dùng bán nhiều dòng điện thoại và muốn giảm thời gian chuẩn bị, đăng và theo dõi bài bán hàng trên Facebook. Phạm vi sử dụng ban đầu là **một người vận hành, hai tài khoản Facebook**, đăng lên trang cá nhân (TCN), các group đã tham gia và fanpage được phép quản lý.
