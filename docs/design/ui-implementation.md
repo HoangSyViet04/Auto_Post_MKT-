@@ -1,5 +1,7 @@
 # Giao diện đã triển khai từ bản tham khảo v1
 
+Tinh chỉnh phản hồi và chuyển động 29/10/2026: [motion-20261029/motion.md](motion-20261029/motion.md).
+
 Review nhanh tiếp theo, gồm lỗi tải nhóm đã sửa và ảnh nhiều kích thước: [review-20261028/review.md](review-20261028/review.md).
 
 Đã áp dụng vào React/CSS, tập trung màn **Đăng nhóm** và giao diện khung chung. Không dùng ảnh mockup làm nền hay thay thế thao tác thật bằng ảnh.

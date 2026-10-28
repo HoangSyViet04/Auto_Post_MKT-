@@ -699,9 +699,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .brand small { font-size: 10px; }
   .brand-mark { flex-basis: 30px; height: 35px; }
   .mobile-nav-toggle { display: inline-flex; margin-left: auto; padding: 7px; background: #ffffff0c; color: white; border-color: #ffffff30; }
-  .sidebar nav, .sidebar-footer { display: none; }
-  .sidebar.is-open nav { display: flex; padding-top: 14px; }
-  .sidebar.is-open .sidebar-footer { display: block; padding: 15px 12px 5px; }
+  .sidebar .sidebar-body nav { display: flex; padding-top: 14px; }
+  .sidebar .sidebar-footer { display: block; padding: 15px 12px 5px; }
   .nav-item.secondary small { margin-left: 0; }
   .content { padding: 16px 12px 25px; }
   .app-topbar { padding-bottom: 10px; margin-bottom: 12px; font-size: 10px; gap: 8px; }
@@ -751,3 +750,61 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .clip { max-width: 140px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+
+/* Short, restrained motion: user actions and network requests never wait for these effects. */
+:root {
+  --ease-ui: cubic-bezier(.22, 1, .36, 1);
+  --motion-fast: 150ms;
+  --motion-panel: 240ms;
+}
+button { transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, color var(--motion-fast) ease, box-shadow 180ms ease, transform var(--motion-fast) var(--ease-ui), opacity var(--motion-fast) ease; }
+button:active:not(:disabled):not(.link):not(.group-preview-link):not(.disclosure-trigger) { transform: translateY(0) scale(.98); box-shadow: none; }
+.nav-item { transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease; }
+.nav-item .icon { transition: transform 180ms var(--ease-ui), color 180ms ease; }
+input, select, textarea { transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: #84acf4; box-shadow: 0 0 0 3px #1260f60b; }
+.app-page { animation: surface-enter 180ms var(--ease-ui) both; }
+.composer-message, .preview-transition { animation: surface-enter 180ms var(--ease-ui) both; }
+.selection-feedback { animation: selection-enter 190ms var(--ease-ui) both; }
+.step-number { transition: background-color 180ms ease, color 180ms ease, box-shadow 220ms ease; }
+.composer-steps li, .composer-steps li::after { transition: color 180ms ease, background-color 180ms ease; }
+.group-table td { transition: background-color 180ms ease; }
+.group-table tr.is-selected td { background-color: #f1f6ff; }
+.group-table tr:hover td { background-color: #f5f8fe; }
+.group-table tr.is-selected:hover td { background-color: #eaf2ff; }
+.group-list-actions .icon { width: 12px; height: 12px; }
+.loading-state { min-height: 180px; animation: surface-enter 150ms ease 90ms both; }
+.is-spinning { animation: busy-spin .85s linear infinite; }
+.motion-collapse { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--motion-panel) var(--ease-ui), opacity 160ms ease; }
+.motion-collapse.is-expanded { grid-template-rows: 1fr; opacity: 1; }
+.motion-clip { min-height: 0; overflow: hidden; }
+.sidebar-content { flex: 1; min-height: 0; }
+.sidebar-content > .motion-clip { display: flex; flex-direction: column; }
+.sidebar-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.disclosure-trigger { display: flex; width: 100%; justify-content: flex-start; padding: 0; border: 0; background: none; color: #5f7291; font-size: 12px; text-align: left; }
+.disclosure-trigger:hover:not(:disabled) { background: none; color: var(--accent); }
+.disclosure-trigger > .icon:last-child { margin-left: auto; width: 14px; height: 14px; transition: transform 220ms var(--ease-ui); }
+.disclosure-trigger[aria-expanded='true'] > .icon:last-child { transform: rotate(90deg); }
+.schedule-input { padding: 12px 0 2px; }
+.preview-tabs { display: grid; grid-template-columns: 1fr 1fr; position: relative; gap: 0; }
+.preview-tabs button, .preview-tabs button.active { border-bottom: 0; background: none; }
+.preview-tab-indicator { position: absolute; bottom: -1px; left: 0; width: 50%; height: 2px; border-radius: 2px; background: var(--accent); pointer-events: none; transition: transform 220ms var(--ease-ui); }
+.preview-tabs[data-tab='photos'] .preview-tab-indicator { transform: translateX(100%); }
+.preview-photos img { transition: height 220ms var(--ease-ui); }
+.preview-transition { min-width: 0; }
+@keyframes surface-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes selection-enter { from { opacity: .45; transform: scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes busy-spin { to { transform: rotate(360deg); } }
+@media (hover: hover) and (pointer: fine) {
+  button:hover:not(:disabled):not(.link):not(.group-preview-link):not(.disclosure-trigger):not(.subtle-action) { transform: translateY(-1px); box-shadow: 0 3px 8px #173a7110; }
+  button:active:not(:disabled):not(.link):not(.group-preview-link):not(.disclosure-trigger) { transform: translateY(0) scale(.98); }
+  .nav-item:hover .icon { transform: translateX(2px); }
+  .preview-tabs button:hover:not(:disabled), .composer-steps button:hover:not(:disabled) { transform: none; box-shadow: none; }
+}
+@media (max-width: 720px) {
+  .sidebar-content { flex: 0 0 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:hover:not(:disabled), button:active:not(:disabled), .nav-item:hover .icon { transform: none !important; }
+}

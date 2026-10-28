@@ -69,6 +69,8 @@ export function PostGroupPage() {
   const [versions, setVersions] = useState<ContentVersionItem[]>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [groupError, setGroupError] = useState('');
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const groupRequest = useRef(0);
   const [filter, setFilter] = useState('');
   const [wantedCount, setWantedCount] = useState('30');
   const [templateText, setTemplateText] = useState('');
@@ -110,11 +112,14 @@ export function PostGroupPage() {
 
   const reloadGroups = useCallback(async () => {
     const accountId = draft.accountId;
-    if (!accountId) { setGroups([]); return; }
+    const request = ++groupRequest.current;
+    if (!accountId) { setGroups([]); setGroupsLoading(false); return; }
+    setGroupsLoading(true);
     let list: GroupItem[];
     try { list = await fetchAll<GroupItem>(`/api/groups?accountId=${accountId}`, (body) => body as GroupListResponse); }
-    catch (error) { if (currentAccount.current === accountId) setGroupError(networkMessage(error)); throw error; }
-    if (currentAccount.current !== accountId) return;
+    catch (error) { if (currentAccount.current === accountId && groupRequest.current === request) setGroupError(networkMessage(error)); throw error; }
+    finally { if (currentAccount.current === accountId && groupRequest.current === request) setGroupsLoading(false); }
+    if (currentAccount.current !== accountId || groupRequest.current !== request) return;
     setGroupError('');
     setGroups(list);
     const preset = pendingPreset.current;
@@ -236,7 +241,7 @@ export function PostGroupPage() {
   return <GroupComposerView accounts={accounts} products={products} detail={detail} account={account}
     draft={draft} groups={groups} visible={visible} filter={filter} wantedCount={wantedCount}
     live={live} health={health} template={template} items={items} startAt={startAt} duplicate={duplicate}
-    similar={similar} problems={problems} ready={ready} busy={busy} message={groupError || message} liveConfirm={liveConfirm}
+    similar={similar} problems={problems} ready={ready} busy={busy} message={groupError || message} liveConfirm={liveConfirm} groupsLoading={groupsLoading}
     batch={batch} jobs={jobs} onChange={set} onFilter={setFilter} onWantedCount={setWantedCount}
     onChooseCount={() => {
       try {

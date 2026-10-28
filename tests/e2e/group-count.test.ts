@@ -70,7 +70,7 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     await page.goto(`http://127.0.0.1:${webPort}/#/post-group`);
     await page.getByText('Chọn tài khoản để xem nhóm', { exact: true }).waitFor();
     const screenshotDir = process.env.APM_UI_SCREENSHOTS;
-    if (screenshotDir) { mkdirSync(screenshotDir, { recursive: true }); await page.screenshot({ path: join(screenshotDir, 'ui-implemented-empty.png'), fullPage: true }); }
+    if (screenshotDir) { mkdirSync(screenshotDir, { recursive: true }); await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-implemented-empty.png'), fullPage: true }); }
     await page.getByRole('combobox', { name: 'Tài khoản', exact: true }).selectOption(accountId);
     await page.getByRole('combobox', { name: 'Máy', exact: true }).selectOption(product.productId);
     await page.getByRole('checkbox', { name: 'Chọn Nhóm thử 00', exact: true }).waitFor();
@@ -88,6 +88,20 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     await page.getByRole('button', { name: 'Chọn theo số lượng', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Đã chọn 30/30 nhóm' }).waitFor();
     assert.equal(await page.getByRole('combobox', { name: 'Nhóm xem trước', exact: true }).locator('option').count(), 30);
+    const sharedCaption = page.getByRole('button', { name: 'Caption chung', exact: true });
+    await sharedCaption.click();
+    const originalCaption = await page.getByRole('textbox', { name: 'Caption', exact: true }).inputValue();
+    assert.ok((await page.evaluate('getComputedStyle(document.querySelector("#shared-caption")).transitionDuration') as string).split(',').some((duration) => Number.parseFloat(duration) > 0), 'mở bảng có transition ở chế độ bình thường');
+    await sharedCaption.click(); await sharedCaption.click(); await sharedCaption.click();
+    assert.equal(await page.locator('#shared-caption').getAttribute('inert'), '', 'đóng bảng chặn focus/thao tác ngay cả lúc animation chưa xong');
+    assert.equal(await page.getByRole('textbox', { name: 'Caption', exact: true }).count(), 0);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await sharedCaption.click();
+    assert.equal(await page.getByRole('textbox', { name: 'Caption', exact: true }).inputValue(), originalCaption, 'bấm mở/đóng nhanh không mất caption');
+    assert.equal(await page.evaluate('getComputedStyle(document.querySelector("#shared-caption")).transitionDuration'), '0s');
+    assert.equal(await page.evaluate('getComputedStyle(document.querySelector(".app-page")).animationName'), 'none');
+    await sharedCaption.click();
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.getByRole('textbox', { name: 'Lọc nhóm', exact: true }).fill('không-tồn-tại-123');
     await page.getByText('Chưa có nhóm khớp bộ lọc', { exact: true }).waitFor();
     assert.equal(await page.getByRole('combobox', { name: 'Nhóm xem trước', exact: true }).locator('option').count(), 30, 'lọc không tự xóa nhóm đã chọn');
@@ -113,13 +127,17 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     await page.getByRole('radio', { name: 'Bắt đầu ngay', exact: true }).check();
     await page.getByRole('button', { name: 'Lưu cấu hình', exact: true }).click();
     await page.getByRole('textbox', { name: 'Tên cấu hình', exact: true }).fill('Mẫu 30 nhóm');
+    await page.getByRole('button', { name: 'Cấu hình đăng thường dùng', exact: true }).click();
+    assert.equal(await page.getByRole('textbox', { name: 'Tên cấu hình', exact: true }).count(), 0);
+    await page.getByRole('button', { name: 'Cấu hình đăng thường dùng', exact: true }).click();
+    assert.equal(await page.getByRole('textbox', { name: 'Tên cấu hình', exact: true }).inputValue(), 'Mẫu 30 nhóm', 'thu gọn vẫn giữ cấu hình đang nhập');
     await page.getByRole('button', { name: 'Lưu thành cấu hình mới (30 nhóm)', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Đã lưu cấu hình mới.' }).waitFor();
-    await page.locator('#posting-presets > summary').click();
+    await page.getByRole('button', { name: 'Cấu hình đăng thường dùng', exact: true }).click();
     assert.equal(ws.db.prepare('SELECT count(*) AS n FROM posting_presets').get()?.n, 1);
     await page.evaluate('window.scrollTo(0, 0)');
-    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'ui-implemented-desktop.png'), fullPage: true });
-    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'ui-review-desktop-viewport.png') });
+    if (screenshotDir) await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-implemented-desktop.png'), fullPage: true });
+    if (screenshotDir) await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-review-desktop-viewport.png') });
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(await page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true, 'không tràn ngang trên mobile');
     await page.getByRole('button', { name: 'Mở hoặc đóng menu', exact: true }).click();
@@ -131,11 +149,11 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     await page.getByRole('combobox', { name: 'Nhóm xem trước', exact: true }).selectOption(previewGroup);
     assert.equal(await page.locator('.preview-caption').textContent(), ownCaption, 'đổi trang giữ bản nháp và caption từng nhóm');
     await page.evaluate('window.scrollTo(0, 0)');
-    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'ui-implemented-mobile.png'), fullPage: true });
-    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'ui-review-mobile-viewport.png') });
+    if (screenshotDir) await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-implemented-mobile.png'), fullPage: true });
+    if (screenshotDir) await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-review-mobile-viewport.png') });
     await page.setViewportSize({ width: 1024, height: 768 });
     assert.equal(await page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true, 'không tràn ngang trên màn 1024px');
-    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'ui-review-compact.png'), fullPage: true });
+    if (screenshotDir) await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-review-compact.png'), fullPage: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByRole('checkbox', { name: /Tôi xác nhận ĐĂNG THẬT 30 bài/ }).check();
     await page.getByRole('button', { name: 'Duyệt và xếp lịch (30 nhóm)', exact: true }).click();
@@ -150,17 +168,26 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
       await page.goto(`http://127.0.0.1:${webPort}/#/${route}`);
       await page.getByRole('heading', { name: heading, exact: true }).waitFor();
       assert.equal(await page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true, `${route} không tràn khung`);
-      if (screenshotDir && ['products', 'queue', 'post-page'].includes(route ?? '')) { await page.evaluate('window.scrollTo(0, 0)'); await page.screenshot({ path: join(screenshotDir, `ui-review-${route}.png`), fullPage: true }); }
+      if (screenshotDir && ['products', 'queue', 'post-page'].includes(route ?? '')) { await page.evaluate('window.scrollTo(0, 0)'); await page.screenshot({ animations: 'disabled', path: join(screenshotDir, `ui-review-${route}.png`), fullPage: true }); }
     }
     await page.route('**/api/groups?**', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Không tải được danh sách nhóm.' }) }));
     await page.goto(`http://127.0.0.1:${webPort}/#/post-group`);
     await page.getByRole('status').filter({ hasText: 'Không tải được danh sách nhóm.' }).waitFor();
     await page.getByRole('checkbox', { name: /Tôi xác nhận ĐĂNG THẬT 30 bài/ }).check();
     assert.equal(await page.getByRole('button', { name: 'Duyệt và xếp lịch (30 nhóm)', exact: true }).isEnabled(), false, 'không duyệt khi danh sách nhóm chưa tải được để xem lại');
-    if (screenshotDir) { await page.evaluate('window.scrollTo(0, 0)'); await page.screenshot({ path: join(screenshotDir, 'ui-review-load-error.png'), fullPage: true }); }
+    if (screenshotDir) { await page.evaluate('window.scrollTo(0, 0)'); await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-review-load-error.png'), fullPage: true }); }
     await page.unroute('**/api/groups?**');
-    await page.getByRole('button', { name: 'Tải lại danh sách', exact: true }).click();
+    let resumeGroups: () => void = () => undefined;
+    const groupsGate = new Promise<void>((resolveGate) => { resumeGroups = resolveGate; });
+    await page.route('**/api/groups?**', async (route) => { await groupsGate; await route.continue(); });
+    try {
+      await page.getByRole('button', { name: 'Tải lại danh sách', exact: true }).click();
+      await page.getByRole('button', { name: 'Đang tải…', exact: true }).waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Chọn theo số lượng', exact: true }).isEnabled(), false);
+      assert.equal(ws.db.prepare('SELECT count(*) AS n FROM publish_jobs').get()?.n, 30, 'loading không kích hoạt gửi');
+    } finally { resumeGroups(); }
     await page.getByRole('checkbox', { name: 'Chọn Nhóm thử 00', exact: true }).waitFor();
+    await page.unroute('**/api/groups?**');
     assert.equal(await page.getByRole('checkbox', { name: /Tôi xác nhận ĐĂNG THẬT 30 bài/ }).isChecked(), false, 'tải lại cần xác nhận lại');
     await page.getByRole('checkbox', { name: /Tôi xác nhận ĐĂNG THẬT 30 bài/ }).check();
     assert.equal(await page.getByRole('button', { name: 'Duyệt và xếp lịch (30 nhóm)', exact: true }).isEnabled(), true, 'tải lại thành công thì phục hồi luồng duyệt');
