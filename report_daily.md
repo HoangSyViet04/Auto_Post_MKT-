@@ -636,3 +636,10 @@ Mẫu một mục:
 - **Chưa kiểm tra / giới hạn:** chưa chụp ảnh trên một lỗi đăng THẬT (chưa có lỗi thật nào xảy ra khi bật); số khách hỏi/đơn chưa hiện trong chi tiết job; chưa xuất CSV; số liệu bán hàng chỉ là số người dùng nhập; chưa thử backup/restore trên dữ liệu thật; chưa thử mất điện/kill giữa lúc đăng thật.
 - **P08.8 (cần người dùng):** xác nhận bằng mắt trên Facebook — (1) bài ở nhóm `1357510931662685` có xuất hiện không; (2) trong bài có đúng 2 ảnh theo thứ tự xanh rồi đỏ; (3) nội dung đúng 2 dòng caption mẫu; (4) đúng người đăng (nick phụ `phu1`) ở cả nhóm và trang cá nhân. Chỉ khi đủ mới tick.
 - **Tiếp theo:** P08.8 sau khi người dùng xác nhận; P09/P10.4 fanpage (cần Meta app); P03/P06/P01 còn nhiều mục làm dở; P12 kiểm thử tổng thể/bàn giao; dùng cấu hình thường dùng cho trang cá nhân; cuối ngày khi người dùng nói mới `git push` một lần.
+
+## 2026-10-28 15:46 — P08.8: người dùng xác nhận thấy bài ở cả nhóm và trang cá nhân
+
+- **Người dùng báo:** "đã thấy của cả trong nhóm và TCN đã đăng rồi".
+- **Mức xác nhận được ghi nhận:** bài thử có xuất hiện ở cả nhóm `1357510931662685` và trang cá nhân nick phụ. **Chưa** có xác nhận riêng về thứ tự ảnh (xanh rồi đỏ), đủ 2 dòng nội dung, và đúng người đăng, nên P08.8 vẫn để mở trong `plan.md` (đã ghi chú).
+- **Việc người dùng còn lại:** tự xóa các bài thử trên Facebook (nhóm và trang cá nhân).
+- **Tiếp theo:** khi người dùng xác nhận nốt ba điểm trên thì tick P08.8; sau đó P12, hoặc làm dở P03/P06/P01, hoặc fanpage (cần Meta app).
