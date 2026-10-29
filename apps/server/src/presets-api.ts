@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { postingIntervalSchema } from './posting-interval-schema.ts';
 import type { PresetListResponse } from '#domain';
 import { createPresetRepository, type Database, type PresetInput } from '#storage';
 
@@ -11,7 +12,7 @@ const presetBody = {
     label: { type: 'string', minLength: 1, maxLength: 200 },
     captionTemplate: { anyOf: [{ type: 'string', minLength: 1, maxLength: 10_000 }, { type: 'null' }] },
     schedule: { type: 'object', additionalProperties: false, required: ['startMode'], properties: {
-      startMode: { type: 'string', enum: ['now', 'daily'] }, timeOfDay: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' } } },
+      startMode: { type: 'string', enum: ['now', 'daily'] }, timeOfDay: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }, postingInterval: postingIntervalSchema } },
     targets: { type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', additionalProperties: false, required: ['accountId', 'destinationId'],
       properties: { accountId: uuid, destinationId: uuid } } },
   },

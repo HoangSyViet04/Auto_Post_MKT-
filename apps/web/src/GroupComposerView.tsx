@@ -5,6 +5,7 @@ import { JoinedScanPanel } from './JoinedScanPanel.tsx';
 import type { PostDraft, PlanItem } from './post-plan.ts';
 import { describeJobResult, formatVn, JOB_STATUS_LABEL } from './job-view.ts';
 import { Collapse, scrollToSection } from './motion.tsx';
+import { PostingIntervalFields } from './PostingIntervalFields.tsx';
 
 export interface GroupComposerViewProps {
   accounts: AccountSummary[]; products: ProductListItem[]; detail: ProductDetail | null; account: AccountSummary | undefined;
@@ -106,7 +107,7 @@ export function GroupComposerView(p: GroupComposerViewProps) {
           {active && p.similar.has(active.destinationId) && <p className="field-warning">Giống {Math.round((p.similar.get(active.destinationId) ?? 0) * 100)}% một bản đã lưu cho nhóm này.</p>}
           {p.duplicate && <p className="field-warning">{p.duplicate}</p>}
         </section>
-        <section className="surface-card schedule-card" aria-label="Lịch đăng"><h2><Icon name="clock" /> Lịch đăng</h2><div className="schedule-options"><label className="check"><input type="radio" name="start" checked={p.draft.startMode === 'now'} onChange={() => p.onChange({ startMode: 'now' })} /> Bắt đầu ngay</label><label className="check"><input type="radio" name="start" checked={p.draft.startMode === 'later'} onChange={() => p.onChange({ startMode: 'later' })} /> Hẹn giờ</label></div><Collapse open={p.draft.startMode === "later"}><label className="schedule-input">Giờ Việt Nam<input type="datetime-local" aria-label="Giờ hẹn" value={p.draft.startLocal} onChange={(e) => p.onChange({ startLocal: e.target.value })} /></label></Collapse><p className="muted">{p.draft.startMode === 'later' && p.startAt !== null ? formatVn(p.startAt) : 'Các bài được đăng lần lượt.'}</p></section>
+        <section className="surface-card schedule-card" aria-label="Lịch đăng"><h2><Icon name="clock" /> Lịch đăng</h2><div className="schedule-options"><label className="check"><input type="radio" name="start" checked={p.draft.startMode === 'now'} onChange={() => p.onChange({ startMode: 'now' })} /> Bắt đầu ngay</label><label className="check"><input type="radio" name="start" checked={p.draft.startMode === 'later'} onChange={() => p.onChange({ startMode: 'later' })} /> Hẹn giờ</label></div><Collapse open={p.draft.startMode === "later"}><label className="schedule-input">Giờ Việt Nam<input type="datetime-local" aria-label="Giờ hẹn" value={p.draft.startLocal} onChange={(e) => p.onChange({ startLocal: e.target.value })} /></label></Collapse><p className="muted">{p.draft.startMode === 'later' && p.startAt !== null ? formatVn(p.startAt) : 'Các bài được đăng lần lượt.'}</p><PostingIntervalFields draft={p.draft} onChange={p.onChange} /></section>
       </aside>
     </div>
     <div id="approval-bar" className="approval-area">

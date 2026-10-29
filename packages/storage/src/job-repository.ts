@@ -1,5 +1,5 @@
-import { createHash, randomUUID } from 'node:crypto';
-import { BusinessError, type IntegrationMode, type JobStatus } from '#domain';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
+import { BusinessError, type IntegrationMode, type JobStatus, parsePostingInterval, type PostingInterval } from '#domain';
 import type { PublishContext } from '#contracts';
 import type { Database } from './db.ts';
 import { atomic, identifier, mode, objectInput, one, readiness, type RepositoryOptions, selectedMedia, snapshot,
@@ -12,6 +12,7 @@ export interface StoredJob {
 }
 export interface JobClaim { jobId: string; workerId: string; generation: number; attemptId: string }
 export interface EnqueueInput {
+  postingInterval?: PostingInterval;
   requestKey: string; mode: IntegrationMode;
   jobs: readonly { approvalId: string; scheduledAt: number }[];
 }
@@ -54,12 +55,28 @@ export function createJobRepository(db: Database, options: RepositoryOptions = {
   function end(jobId: string, attemptId: string, status: JobStatus, now: number) {
     db.prepare('UPDATE publish_attempts SET finished_at=? WHERE id=? AND finished_at IS NULL').run(now, attemptId);
     db.prepare(`UPDATE publish_jobs SET status=?,claim_owner_id=NULL,claimed_at=NULL,claim_expires_at=NULL WHERE id=?`).run(status, jobId);
+    const interval = one<{ rest_seconds: number; request_id: string }>(db, `SELECT i.rest_seconds,j.request_id FROM job_posting_intervals i
+      JOIN publish_jobs j ON j.id=i.job_id JOIN publish_attempts t ON t.id=?
+      WHERE i.job_id=? AND i.rest_until IS NULL AND t.send_started_at IS NOT NULL`, attemptId, jobId);
+    if (interval) {
+      const until = timestamp(now + interval.rest_seconds * 1000);
+      db.prepare('UPDATE job_posting_intervals SET rest_until=? WHERE job_id=? AND rest_until IS NULL').run(until, jobId);
+      // Roll the remaining batch forward after each send: deliberate rest must not become an overdue burst.
+      // Paused/cancelled jobs are left alone. Future start times are never pulled forward.
+      db.prepare("UPDATE publish_jobs SET scheduled_at=MAX(scheduled_at,?) WHERE request_id=? AND status='queued'").run(until, interval.request_id);
+    }
+  }
+
+  function restUntil(accountId: string): number {
+    return one<{ t: number | null }>(db, `SELECT MAX(i.rest_until) AS t FROM job_posting_intervals i
+      JOIN publish_jobs j ON j.id=i.job_id JOIN approvals a ON a.id=j.approval_id WHERE a.account_id=?`, accountId)?.t ?? 0;
   }
 
   return {
     get,
     enqueue(input: EnqueueInput): { requestId: string; replayed: boolean; jobs: StoredJob[] } {
       objectInput(input);
+      const postingInterval = input.postingInterval === undefined ? undefined : parsePostingInterval(input.postingInterval);
       text(input.requestKey, 200); mode(input.mode);
       if (!Array.isArray(input.jobs) || !input.jobs.length || input.jobs.length > 100) throw new BusinessError('invalid_input');
       const targets = input.jobs.map((target) => {
@@ -68,7 +85,7 @@ export function createJobRepository(db: Database, options: RepositoryOptions = {
         return { approvalId: target.approvalId, scheduledAt: target.scheduledAt };
       }).sort((a, b) => a.approvalId.localeCompare(b.approvalId));
       if (new Set(targets.map((target) => target.approvalId)).size !== targets.length) throw new BusinessError('invalid_input');
-      const fingerprint = createHash('sha256').update(JSON.stringify({ mode: input.mode, targets })).digest('hex');
+      const fingerprint = createHash('sha256').update(JSON.stringify({ mode: input.mode, targets, ...(postingInterval ? { postingInterval } : {}) })).digest('hex');
       return atomic(db, () => {
         const previous = one<{ id: string; payload_fingerprint: string }>(db,
           "SELECT id,payload_fingerprint FROM command_requests WHERE scope='publish' AND request_key=?", input.requestKey);
@@ -78,7 +95,9 @@ export function createJobRepository(db: Database, options: RepositoryOptions = {
             jobs: db.prepare('SELECT * FROM publish_jobs WHERE request_id=? ORDER BY approval_id').all(previous.id) as unknown as StoredJob[] };
         }
         for (const target of targets) {
-          const problem = readiness(db, snapshot(db, target.approvalId), input.mode);
+          const approved = snapshot(db, target.approvalId);
+          if (postingInterval && approved.channel !== 'group') throw new BusinessError('invalid_input');
+          const problem = readiness(db, approved, input.mode);
           if (problem) throw new BusinessError(problem.code);
         }
         const requestId = randomUUID(); const now = clock();
@@ -88,6 +107,11 @@ export function createJobRepository(db: Database, options: RepositoryOptions = {
           const id = randomUUID();
           db.prepare('INSERT INTO publish_jobs(id,request_id,approval_id,scheduled_at,created_at) VALUES(?,?,?,?,?)')
             .run(id, requestId, target.approvalId, target.scheduledAt, now);
+          if (postingInterval) {
+            const { minSeconds, maxSeconds } = postingInterval;
+            db.prepare('INSERT INTO job_posting_intervals(job_id,min_seconds,max_seconds,rest_seconds) VALUES(?,?,?,?)')
+              .run(id, minSeconds, maxSeconds, randomInt(minSeconds, maxSeconds + 1));
+          }
           return id;
         });
         return { requestId, replayed: false, jobs: ids.map(get) };
@@ -105,7 +129,9 @@ export function createJobRepository(db: Database, options: RepositoryOptions = {
           .all(now, claimOptions.overdueAfterMs === undefined ? 0 : Math.max(0, now - claimOptions.overdueAfterMs), integrationMode) as { id: string }[];
         for (const candidate of due) {
           const job = get(candidate.id);
-          const problem = readiness(db, snapshot(db, job.approval_id), integrationMode);
+          const approved = snapshot(db, job.approval_id);
+          if (approved.account_id && now < restUntil(approved.account_id)) continue;
+          const problem = readiness(db, approved, integrationMode);
           if (problem) {
             db.prepare("UPDATE publish_jobs SET status=? WHERE id=? AND status='queued'").run(problem.status, job.id);
             continue;
@@ -177,10 +203,11 @@ export function createJobRepository(db: Database, options: RepositoryOptions = {
     },
 
     /** Mốc gửi gần nhất của tài khoản (để giãn cách giữa các lần đăng cùng một tài khoản); null nếu chưa gửi lần nào. */
-    lastSendStartedAt(accountId: string): number | null {
+    lastSendStartedAt(accountId: string, legacyOnly = false): number | null {
       identifier(accountId);
       return one<{ t: number | null }>(db, `SELECT MAX(t.send_started_at) AS t FROM publish_attempts t JOIN publish_jobs j ON j.id=t.job_id
-        JOIN approvals a ON a.id=j.approval_id WHERE a.account_id=?`, accountId)?.t ?? null;
+        JOIN approvals a ON a.id=j.approval_id WHERE a.account_id=?
+        AND (?=0 OR NOT EXISTS (SELECT 1 FROM job_posting_intervals i WHERE i.job_id=j.id))`, accountId, legacyOnly ? 1 : 0)?.t ?? null;
     },
 
     hasRunningJob(accountId: string): boolean {

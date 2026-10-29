@@ -1,11 +1,22 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { ContentVersionItem, GroupItem, PresetItem } from '#domain';
-import { captionFor, duplicateWarning, emptyDraft, nextDailyStart, planItems, planProblems, planSignature, presetSelection, resolveStart, similarToHistory, toVnLocal } from './post-plan.ts';
+import { captionFor, duplicateWarning, emptyDraft, nextDailyStart, planItems, planProblems, planSignature, presetSelection, resolvePostingInterval, resolveStart, similarToHistory, toVnLocal } from './post-plan.ts';
 
 const NOW = Date.UTC(2026, 9, 27, 7, 0); // 14:00 giờ Việt Nam
 const ready = { ...emptyDraft(), accountId: 'a', productId: 'p', caption: 'iPhone 13\nTình trạng: đẹp', selected: ['g1', 'g2'] };
 const context = { accountSession: 'logged_in', productSelling: true, now: NOW };
+
+test('khoảng nghỉ: kiểm tra số nguyên/min-max, cho nghỉ cố định/0, đổi khoảng đổi chữ ký gửi', () => {
+  for (const [intervalMin, intervalMax] of [['', '2'], ['-1', '2'], ['1.5', '3'], ['20', '10'], ['0', '86401']]) {
+    const draft = { ...ready, intervalMin: intervalMin ?? '', intervalMax: intervalMax ?? '' };
+    assert.equal(resolvePostingInterval(draft), null);
+    assert.ok(planProblems(draft, context).some((p) => p.includes('Khoảng nghỉ')));
+  }
+  assert.deepEqual(resolvePostingInterval({ intervalMin: '0', intervalMax: '0' }), { minSeconds: 0, maxSeconds: 0 });
+  const a = { minSeconds: 60, maxSeconds: 120 }; const b = { minSeconds: 60, maxSeconds: 180 };
+  assert.notEqual(planSignature('a', 'p', 'now', [], a), planSignature('a', 'p', 'now', [], b));
+});
 
 test('caption từng đích: sửa riêng thì dùng bản riêng, trống thì dùng caption chung; nguồn template chỉ khi bằng caption mẫu', () => {
   const draft = { ...ready, overrides: { g2: '  Bản riêng cho nhóm 2  ', g1: '   ' } };

@@ -20,7 +20,7 @@ export interface JobRunnerDeps {
   publishers: Record<Channel, Publisher>;
   media: ReturnType<typeof createMediaStore>;
   clock?: () => number;
-  /** Chính sách vận hành (không phải ngưỡng chống khóa nick): tối thiểu bao lâu giữa hai lần đăng của CÙNG một tài khoản. */
+  /** Fallback for sends without an explicit, durable posting interval (legacy jobs/profile). */
   minGapMs?: number;
   /** Job hẹn trễ hơn ngưỡng này không tự chạy; người dùng chọn tiếp tục hoặc bỏ. */
   overdueAfterMs?: number;
@@ -159,7 +159,7 @@ export function createJobRunner(deps: JobRunnerDeps) {
         eligible: ({ accountId }) => {
           if (!accountId) return true;
           if (leases.isBrowserBusy(accountId) || jobs.hasRunningJob(accountId)) return false; // tuần tự trong từng tài khoản
-          const last = jobs.lastSendStartedAt(accountId);
+          const last = jobs.lastSendStartedAt(accountId, true); // explicit group intervals are enforced durably by claimNext
           return last === null || now() - last >= minGapMs; // giãn cách giữa hai lần đăng cùng tài khoản
         },
       });

@@ -1,7 +1,9 @@
-import { type ContentVersionItem, findSimilarCaptions, type GroupItem, type PresetItem } from '#domain';
+import { type ContentVersionItem, findSimilarCaptions, type GroupItem, parsePostingInterval, type PostingInterval, type PresetItem } from '#domain';
 import { parseVnLocal } from './job-view.ts';
 
 export interface PostDraft {
+  intervalMin: string;
+  intervalMax: string;
   accountId: string;
   productId: string;
   /** Caption chung cho các đích (mặc định lấy từ caption mẫu của máy, người dùng sửa được). */
@@ -15,7 +17,15 @@ export interface PostDraft {
   startLocal: string;
 }
 
-export const emptyDraft = (): PostDraft => ({ accountId: '', productId: '', caption: '', overrides: {}, selected: [], startMode: 'now', startLocal: '' });
+export const emptyDraft = (): PostDraft => ({ intervalMin: '60', intervalMax: '120', accountId: '', productId: '', caption: '', overrides: {}, selected: [], startMode: 'now', startLocal: '' });
+
+export function resolvePostingInterval(draft: Pick<PostDraft, 'intervalMin' | 'intervalMax'>): PostingInterval | null {
+  if (!/^\d+$/u.test(draft.intervalMin) || !/^\d+$/u.test(draft.intervalMax)) return null;
+  try { return parsePostingInterval({ minSeconds: Number(draft.intervalMin), maxSeconds: Number(draft.intervalMax) }); }
+  catch { return null; }
+}
+
+export const INTERVAL_ERROR = 'Khoảng nghỉ phải là số giây nguyên từ 0 đến 86400; tối đa phải lớn hơn hoặc bằng tối thiểu.';
 
 export const captionFor = (draft: PostDraft, destinationId: string): string => {
   const own = draft.overrides[destinationId]?.trim();
@@ -52,6 +62,7 @@ export interface PlanContext {
 /** Lý do chưa gửi được (rỗng = sẵn sàng). Chỉ chặn việc thật sự sai; thiếu thông tin tùy chọn không chặn. */
 export function planProblems(draft: PostDraft, context: PlanContext): string[] {
   const problems: string[] = [];
+  if (!resolvePostingInterval(draft)) problems.push(INTERVAL_ERROR);
   if (!draft.accountId) problems.push('Chọn tài khoản đăng.');
   else if (context.accountSession !== 'logged_in') problems.push('Tài khoản chưa ở trạng thái đã đăng nhập (dùng "Kiểm tra phiên" ở trang Quản lý tài khoản).');
   if (!draft.productId) problems.push('Chọn máy.');
@@ -84,8 +95,8 @@ export function similarToHistory(items: readonly PlanItem[], versions: readonly 
 }
 
 /** Chữ ký nội dung gửi: đổi nội dung thì phải dùng mã yêu cầu mới; không đổi thì giữ mã cũ để bấm lại không tạo job trùng. */
-export function planSignature(accountId: string, productId: string, start: number | 'now', items: readonly PlanItem[]): string {
-  return JSON.stringify([accountId, productId, start, items.map(({ destinationId, caption }) => [destinationId, caption])]);
+export function planSignature(accountId: string, productId: string, start: number | 'now', items: readonly PlanItem[], postingInterval?: PostingInterval): string {
+  return JSON.stringify([accountId, productId, start, items.map(({ destinationId, caption }) => [destinationId, caption]), ...(postingInterval ? [postingInterval] : [])]);
 }
 
 const VN_OFFSET_MS = 7 * 3_600_000;

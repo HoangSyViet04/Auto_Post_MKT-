@@ -129,6 +129,10 @@ export interface GroupListResponse {
 }
 
 export interface JobListItem {
+  /** Saved posting policy; absent on jobs approved before interval settings existed. */
+  postingInterval?: import('./posting-interval.ts').PostingInterval;
+  /** Durable account rest deadline; changing schedules cannot bypass it. */
+  restUntil?: number;
   id: string;
   status: JobStatus;
   /** Giờ hẹn (UTC, mili giây). Hiển thị/lập lịch theo múi giờ Asia/Ho_Chi_Minh ở giao diện. */
@@ -200,6 +204,7 @@ export interface ProductDetail extends ProductFacts {
 
 /** Cấu hình đăng thường dùng: cặp tài khoản–đích do người dùng chọn rõ, mẫu caption và cách hẹn giờ. */
 export interface PresetSchedule {
+  postingInterval?: import('./posting-interval.ts').PostingInterval;
   /** `now`: bắt đầu ngay khi duyệt. `daily`: lần kế tiếp của giờ `timeOfDay` (giờ Việt Nam, dạng "HH:MM"). */
   startMode: 'now' | 'daily';
   timeOfDay?: string;

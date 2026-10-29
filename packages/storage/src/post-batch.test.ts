@@ -47,6 +47,22 @@ test('tạo bản caption riêng từng đích (đúng ảnh và thứ tự củ
   assert.deepEqual(workspace.db.prepare("SELECT DISTINCT status FROM publish_jobs WHERE request_id=?").all(result.requestId).map((r) => r.status), ['queued']);
 });
 
+test('khoảng nghỉ: lưu min/max và draw trong giới hạn; replay không rút lại, đổi khoảng phải dùng mã mới', () => {
+  const payload = input({ postingInterval: { minSeconds: 2, maxSeconds: 8 } });
+  assert.ok(service.submit(payload).ok);
+  const rows = workspace.db.prepare('SELECT * FROM job_posting_intervals ORDER BY job_id').all();
+  assert.equal(rows.length, 2);
+  assert.ok(rows.every((r) => r.min_seconds === 2 && r.max_seconds === 8 && Number(r.rest_seconds) >= 2 && Number(r.rest_seconds) <= 8));
+  assert.ok(service.submit(payload).ok);
+  assert.deepEqual(workspace.db.prepare('SELECT * FROM job_posting_intervals ORDER BY job_id').all(), rows);
+  assert.throws(() => service.submit(input({ postingInterval: { minSeconds: 3, maxSeconds: 8 } })), code('idempotency_conflict'));
+  for (const postingInterval of [{ minSeconds: 5, maxSeconds: 4 }, { minSeconds: -1, maxSeconds: 5 }, { minSeconds: 1.5, maxSeconds: 5 },
+    { minSeconds: 0, maxSeconds: 86401 }, { minSeconds: '2', maxSeconds: 5 }, { minSeconds: 0 }, null]) {
+    assert.throws(() => service.submit(input({ postingInterval })), code('invalid_input'));
+  }
+  assert.equal(count('publish_jobs'), 2);
+});
+
 test('bấm gửi hai lần cùng mã yêu cầu: trả lại kết quả cũ, không tạo thêm bản/duyệt/job; cùng mã nhưng nội dung khác bị từ chối', () => {
   const first = service.submit(input());
   assert.equal(first.ok, true);

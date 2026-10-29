@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BusinessError, captionTemplateProblems, type PresetItem, type PresetSchedule, type PresetTarget } from '#domain';
+import { BusinessError, captionTemplateProblems, parsePostingInterval, type PresetItem, type PresetSchedule, type PresetTarget } from '#domain';
 import type { Database } from './db.ts';
 import { atomic, identifier, objectInput, one, type RepositoryOptions, text, timestamp } from './repository-common.ts';
 
@@ -16,12 +16,13 @@ const TIME_OF_DAY = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
 
 function schedule(value: unknown): PresetSchedule {
   objectInput(value);
-  const input = value as { startMode?: unknown; timeOfDay?: unknown };
+  const input = value as { startMode?: unknown; timeOfDay?: unknown; postingInterval?: unknown };
+  const interval = input.postingInterval === undefined ? {} : { postingInterval: parsePostingInterval(input.postingInterval) };
   if (input.startMode === 'now') {
     if (input.timeOfDay !== undefined) throw new BusinessError('invalid_input');
-    return { startMode: 'now' };
+    return { startMode: 'now', ...interval };
   }
-  if (input.startMode === 'daily' && typeof input.timeOfDay === 'string' && TIME_OF_DAY.test(input.timeOfDay)) return { startMode: 'daily', timeOfDay: input.timeOfDay };
+  if (input.startMode === 'daily' && typeof input.timeOfDay === 'string' && TIME_OF_DAY.test(input.timeOfDay)) return { startMode: 'daily', timeOfDay: input.timeOfDay, ...interval };
   throw new BusinessError('invalid_input');
 }
 

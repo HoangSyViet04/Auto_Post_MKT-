@@ -60,7 +60,7 @@ function nonNegativeInt(name: string, fallback: number, max: number): number {
   return value;
 }
 
-/** Giãn cách tối thiểu giữa hai lần đăng của CÙNG một tài khoản (APM_MIN_GAP_SECONDS, mặc định 60). Chính sách vận hành, không phải ngưỡng chống khóa nick. */
+/** Giãn cách dự phòng khi bài chưa lưu khoảng nghỉ riêng (APM_MIN_GAP_SECONDS, mặc định 60). Không phải ngưỡng chống khóa nick. */
 export function getMinGapMs(): number {
   return nonNegativeInt('APM_MIN_GAP_SECONDS', 60, 86_400) * 1_000;
 }

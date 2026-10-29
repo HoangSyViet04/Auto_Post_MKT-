@@ -56,6 +56,7 @@ export function jobActions(job: Pick<JobListItem, 'status' | 'sendStarted' | 'ov
 }
 
 export function describeJobResult(job: JobListItem): string {
+  if (job.status === 'queued' && job.restUntil && job.restUntil > Date.now()) return `Đang nghỉ giữa các nhóm, sớm nhất ${formatVn(job.restUntil)}.`;
   const reason = job.lastObservation?.reasonCode ? ` (${REASON_LABEL[job.lastObservation.reasonCode] ?? job.lastObservation.reasonCode})` : '';
   switch (job.status) {
     case 'unknown': return 'Có thể đã gửi đến Facebook. Không tự gửi lại; cần đối chiếu bằng mắt.';

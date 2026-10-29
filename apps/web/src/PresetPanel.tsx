@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CAPTION_PLACEHOLDERS, captionTemplateProblems, type PresetItem, type PresetListResponse, type PresetSchedule } from '#domain';
+import { CAPTION_PLACEHOLDERS, captionTemplateProblems, type PostingInterval, type PresetItem, type PresetListResponse, type PresetSchedule } from '#domain';
 import { apiFetch } from './api.ts';
 import { networkMessage, readError } from './http.ts';
 
 interface Props {
+  postingInterval: PostingInterval | null;
   accountId: string;
   /** Nhóm đang chọn trong form (sẽ được lưu thành cặp tài khoản–nhóm). */
   selected: string[];
@@ -19,7 +20,7 @@ interface Props {
  * Cấu hình đăng thường dùng (P10.5): lưu/áp dụng chỉ điền sẵn form, không tạo job và không gửi gì tới Facebook.
  * Mỗi cặp tài khoản–nhóm do bạn chọn rõ; không có cách nào tự nhân một nhóm sang tài khoản khác.
  */
-export function PresetPanel({ accountId, selected, startMode, startLocal, templateText, onTemplateText, onApply, notify }: Props) {
+export function PresetPanel({ postingInterval, accountId, selected, startMode, startLocal, templateText, onTemplateText, onApply, notify }: Props) {
   const [presets, setPresets] = useState<PresetItem[]>([]);
   const [activeId, setActiveId] = useState('');
   const [label, setLabel] = useState('');
@@ -35,8 +36,8 @@ export function PresetPanel({ accountId, selected, startMode, startLocal, templa
   const active = presets.find((preset) => preset.id === activeId);
   const templateProblems = templateText.trim() ? captionTemplateProblems(templateText) : [];
   const dailyTime = startMode === 'later' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/u.test(startLocal) ? startLocal.slice(11, 16) : null;
-  const schedule: PresetSchedule = repeatDaily && dailyTime ? { startMode: 'daily', timeOfDay: dailyTime } : { startMode: 'now' };
-  const canSave = accountId !== '' && selected.length > 0 && templateProblems.length === 0 && !busy;
+  const schedule: PresetSchedule = { ...(repeatDaily && dailyTime ? { startMode: 'daily' as const, timeOfDay: dailyTime } : { startMode: 'now' as const }), ...(postingInterval ? { postingInterval } : {}) };
+  const canSave = postingInterval !== null && accountId !== '' && selected.length > 0 && templateProblems.length === 0 && !busy;
 
   const body = (name: string) => JSON.stringify({
     label: name, captionTemplate: templateText.trim() ? templateText : null, schedule,

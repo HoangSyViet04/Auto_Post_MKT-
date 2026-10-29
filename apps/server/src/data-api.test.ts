@@ -259,7 +259,7 @@ test('P10: POST /api/posts — một lần gửi tạo bản caption riêng, duy
   const media = (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' }, payload: image })).json().id as string;
   const product = (await call('POST', '/api/products', { name: 'iPhone 13', condition: 'Đẹp', mediaIds: [media] })).json();
   const when = Date.now(); // cố định: cùng mã yêu cầu phải cùng nội dung (kể cả giờ hẹn)
-  const body = (items: object[], requestKey = 'khoa-dang-bai-0001') => ({ requestKey, accountId: account, productId: product.productId, scheduledAt: when, items });
+  const body = (items: object[], requestKey = 'khoa-dang-bai-0001') => ({ requestKey, accountId: account, productId: product.productId, scheduledAt: when, items, postingInterval: { minSeconds: 5, maxSeconds: 9 } });
 
   const blockedResult = await call('POST', '/api/posts', body([{ destinationId: g1, caption: 'A' }, { destinationId: blocked, caption: 'B' }]));
   assert.equal(blockedResult.statusCode, 409);
@@ -271,6 +271,12 @@ test('P10: POST /api/posts — một lần gửi tạo bản caption riêng, duy
   assert.equal(ok.statusCode, 201); assert.equal(ok.json().jobs.length, 2);
   const replay = await call('POST', '/api/posts', body(items));
   assert.deepEqual([replay.statusCode, replay.json().replayed, replay.json().jobs.length], [200, true, 2]);
+  assert.equal((await call('GET', '/api/jobs')).json().items[0].postingInterval.maxSeconds, 9);
+  assert.equal((await call('POST', '/api/posts', { ...body(items), postingInterval: { minSeconds: 6, maxSeconds: 9 } })).statusCode, 409);
+  for (const postingInterval of [{ minSeconds: 10, maxSeconds: 9 }, { minSeconds: -1, maxSeconds: 10 }, { minSeconds: 0.5, maxSeconds: 10 },
+    { minSeconds: 0, maxSeconds: 86401 }, { minSeconds: 0 }, { minSeconds: 0, maxSeconds: 1, extra: 1 }]) {
+    assert.equal((await call('POST', '/api/posts', { ...body(items, 'invalid-interval-api'), postingInterval })).statusCode, 400);
+  }
   assert.equal((await call('POST', '/api/posts', body([{ destinationId: g1, caption: 'Khác' }]))).statusCode, 409); // cùng mã, khác nội dung
   assert.equal((await call('GET', '/api/jobs')).json().total, 2);
   assert.equal((await call('POST', '/api/posts', { ...body(items, 'x'), requestKey: 'x' })).statusCode, 400);
@@ -347,10 +353,11 @@ test('P10.5/P10.9: API cấu hình đăng thường dùng (lưu/sửa/ngừng, k
   const group = createGroupRepository(db).add({ reference: '111111111111', accountId: account, name: 'Nhóm 1', membership: 'joined', permission: 'allowed' }).id;
   const media = (await app.inject({ method: 'POST', url: '/api/media', headers: { ...headers, 'content-type': 'image/png' }, payload: image })).json().id as string;
   const product = (await call('POST', '/api/products', { name: 'iPhone 13', condition: 'Đẹp', mediaIds: [media] })).json();
-  const body = { label: 'Buổi sáng', captionTemplate: '{ten}\nGiá: {gia}', schedule: { startMode: 'daily', timeOfDay: '08:30' }, targets: [{ accountId: account, destinationId: group }] };
+  const body = { label: 'Buổi sáng', captionTemplate: '{ten}\nGiá: {gia}', schedule: { startMode: 'daily', timeOfDay: '08:30', postingInterval: { minSeconds: 90, maxSeconds: 180 } }, targets: [{ accountId: account, destinationId: group }] };
 
   const created = await call('POST', '/api/presets', body);
   assert.equal(created.statusCode, 201);
+  assert.deepEqual(created.json().schedule.postingInterval, body.schedule.postingInterval);
   assert.deepEqual(created.json().targets.map((t: { name: string }) => t.name), ['Nhóm 1']);
   assert.equal((await call('GET', '/api/presets')).json().items.length, 1);
   assert.equal((await call('GET', '/api/jobs')).json().total, 0); // lưu cấu hình không tạo job

@@ -27,6 +27,13 @@ test('cấu hình thường dùng: lưu cặp tài khoản–đích rõ ràng, s
   assert.deepEqual(created.targets.map((t) => [t.accountId, t.destinationId, t.channel, t.externalId]), [[scenario.accountId, scenario.groupId, 'group', 'fake-group']]);
   assert.equal(presets.list().length, 1);
 
+  const withInterval = presets.update(created.id, { label: created.label, schedule: { startMode: 'now', postingInterval: { minSeconds: 90, maxSeconds: 180 } },
+    targets: [{ accountId: scenario.accountId, destinationId: scenario.groupId }] });
+  assert.deepEqual(withInterval.schedule.postingInterval, { minSeconds: 90, maxSeconds: 180 });
+  assert.deepEqual(createPresetRepository(workspace.db).list()[0]?.schedule.postingInterval, withInterval.schedule.postingInterval);
+  assert.throws(() => presets.update(created.id, { label: created.label, schedule: { startMode: 'now', postingInterval: { minSeconds: 90, maxSeconds: 30 } },
+    targets: [{ accountId: scenario.accountId, destinationId: scenario.groupId }] }), code('invalid_input'));
+
   const updated = presets.update(created.id, { label: 'Đổi tên', captionTemplate: null, schedule: { startMode: 'now' }, targets: [{ accountId: scenario.accountId, destinationId: scenario.groupId }] });
   assert.deepEqual([updated.label, updated.captionTemplate, updated.schedule], ['Đổi tên', null, { startMode: 'now' }]);
   assert.equal(count('preset_targets'), 1); // thay hẳn danh sách đích, không cộng dồn

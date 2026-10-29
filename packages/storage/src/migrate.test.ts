@@ -21,6 +21,18 @@ const m1 = defineMigration(1, 'one', 'CREATE TABLE a (id INTEGER PRIMARY KEY) ST
 const m2 = defineMigration(2, 'two', 'CREATE TABLE b (id INTEGER PRIMARY KEY) STRICT;');
 
 describe('migrate', () => {
+  test('nâng từ schema trước khoảng nghỉ: giữ nguyên tài khoản, thêm bảng mới và chạy lại không đổi dữ liệu', () => {
+    const db = openDatabase(dbPath());
+    const migrations = loadMigrations();
+    try {
+      migrate(db, migrations.filter((m) => m.version < 7));
+      db.prepare('INSERT INTO accounts(id,label,slot,created_at) VALUES(?,?,1,0)').run('11111111-1111-4111-8111-111111111111', 'Tài khoản đang dùng');
+      assert.deepEqual(migrate(db).applied, [7]);
+      assert.equal(db.prepare('SELECT label FROM accounts').get()?.label, 'Tài khoản đang dùng');
+      assert.equal(db.prepare('SELECT count(*) AS n FROM job_posting_intervals').get()?.n, 0);
+      assert.deepEqual(migrate(db).applied, []);
+    } finally { db.close(); }
+  });
   test('migration thật của dự án chạy được trên DB mới', () => {
     const db = openDatabase(dbPath());
     try {

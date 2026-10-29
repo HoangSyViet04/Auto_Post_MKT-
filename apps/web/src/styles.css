@@ -791,6 +791,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { border-color
 .disclosure-trigger > .icon:last-child { margin-left: auto; width: 14px; height: 14px; transition: transform 220ms var(--ease-ui); }
 .disclosure-trigger[aria-expanded='true'] > .icon:last-child { transform: rotate(90deg); }
 .schedule-input { padding: 12px 0 2px; }
+.posting-interval { min-width: 0; margin: 20px 0 0; padding: 14px 0 0; border: 0; border-top: 1px solid var(--border); }
+.posting-interval legend { padding: 0 6px 0 0; font-size: 12px; font-weight: 600; color: var(--text); }
+.interval-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.interval-fields input { width: 100%; }
+.posting-interval p { line-height: 1.65; font-size: 11px; margin: 10px 0 0; }
+.interval-fields input[aria-invalid='true'] { border-color: #e5a4a4; }
 .preview-tabs { display: grid; grid-template-columns: 1fr 1fr; position: relative; gap: 0; }
 .preview-tabs button, .preview-tabs button.active { border-bottom: 0; background: none; }
 .preview-tab-indicator { position: absolute; bottom: -1px; left: 0; width: 50%; height: 2px; border-radius: 2px; background: var(--accent); pointer-events: none; transition: transform 220ms var(--ease-ui); }

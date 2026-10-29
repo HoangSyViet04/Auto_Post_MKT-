@@ -44,7 +44,8 @@ export function createJobQueries(db: Database, options: RepositoryOptions = {}) 
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const joins = `FROM publish_jobs j JOIN approvals a ON a.id=j.approval_id JOIN destinations d ON d.id=a.destination_id
       LEFT JOIN accounts ac ON ac.id=a.account_id JOIN content_versions c ON c.id=a.content_version_id
-      JOIN product_revisions r ON r.id=c.product_revision_id JOIN products p ON p.id=r.product_id`;
+      JOIN product_revisions r ON r.id=c.product_revision_id JOIN products p ON p.id=r.product_id
+      LEFT JOIN job_posting_intervals ji ON ji.job_id=j.id`;
     const latest = (column: string) => `(SELECT o.${column} FROM publish_observations o JOIN publish_attempts t ON t.id=o.attempt_id
       WHERE t.job_id=j.id ORDER BY o.observed_at DESC,o.rowid DESC LIMIT 1)`;
     return atomic(db, () => {
@@ -52,7 +53,9 @@ export function createJobQueries(db: Database, options: RepositoryOptions = {}) 
       const total = Number(db.prepare(`SELECT count(*) AS n ${joins} ${clause}`).get(...params)?.n ?? 0);
       const rows = db.prepare(`SELECT j.id,j.status,j.scheduled_at,j.created_at,j.stop_requested_at,a.channel,a.mode,a.destination_id,
         d.name AS destination_name,d.external_id AS destination_external_id,a.account_id,ac.label AS account_label,r.name AS product_name,
-        r.product_id,r.revision_no AS approved_revision_no,p.status AS product_status,
+        r.product_id,r.revision_no AS approved_revision_no,p.status AS product_status,ji.min_seconds,ji.max_seconds,
+        (SELECT MAX(i.rest_until) FROM job_posting_intervals i JOIN publish_jobs pj ON pj.id=i.job_id
+          JOIN approvals pa ON pa.id=pj.approval_id WHERE pa.account_id=a.account_id) AS rest_until,
         (SELECT cr.revision_no FROM product_revisions cr WHERE cr.id=p.current_revision_id) AS current_revision_no,
         (SELECT count(*) FROM publish_attempts t WHERE t.job_id=j.id) AS attempts,
         EXISTS(SELECT 1 FROM publish_attempts t WHERE t.job_id=j.id AND t.send_started_at IS NOT NULL) AS send_started,
@@ -67,6 +70,8 @@ export function createJobQueries(db: Database, options: RepositoryOptions = {}) 
         productName: String(row.product_name), productId: String(row.product_id), approvedRevisionNo: Number(row.approved_revision_no),
         currentRevisionNo: Number(row.current_revision_no), productStatus: row.product_status as JobListItem['productStatus'],
         attempts: Number(row.attempts), sendStarted: Number(row.send_started) === 1, stopRequested: row.stop_requested_at !== null,
+        ...(row.min_seconds === null ? {} : { postingInterval: { minSeconds: Number(row.min_seconds), maxSeconds: Number(row.max_seconds) } }),
+        ...(row.rest_until === null ? {} : { restUntil: Number(row.rest_until) }),
         overdue: row.status === 'queued' && Number(row.scheduled_at) < now - overdueAfterMs,
         lastObservation: row.obs_outcome === null ? null : { outcome: String(row.obs_outcome),
           reasonCode: row.obs_reason === null ? null : String(row.obs_reason), remoteId: row.obs_remote === null ? null : String(row.obs_remote),

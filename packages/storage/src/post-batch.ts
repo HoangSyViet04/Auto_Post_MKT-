@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { BusinessError, type BusinessErrorCode, type IntegrationMode } from '#domain';
+import { BusinessError, type BusinessErrorCode, type IntegrationMode, parsePostingInterval, type PostingInterval } from '#domain';
 import { createAccountRepository } from './account-repository.ts';
 import { createContentRepository } from './content-repository.ts';
 import type { Database } from './db.ts';
@@ -7,6 +7,7 @@ import { createJobRepository } from './job-repository.ts';
 import { atomic, identifier, objectInput, one, type RepositoryOptions, text, timestamp } from './repository-common.ts';
 
 export interface PostBatchInput {
+  postingInterval?: PostingInterval;
   /** Mã yêu cầu do giao diện tạo cho MỖI lần bấm gửi; cùng mã + cùng nội dung → trả lại kết quả cũ, không tạo job mới. */
   requestKey: string;
   accountId: string;
@@ -98,6 +99,7 @@ export function createPostBatchService(db: Database, deps: { mode: IntegrationMo
 
     submit(input: PostBatchInput): PostBatchResult {
       objectInput(input);
+      const postingInterval = input.postingInterval === undefined ? undefined : parsePostingInterval(input.postingInterval);
       text(input.requestKey, 200);
       identifier(input.accountId);
       identifier(input.productId);
@@ -112,7 +114,7 @@ export function createPostBatchService(db: Database, deps: { mode: IntegrationMo
       });
       if (new Set(items.map((item) => item.destinationId)).size !== items.length) throw new BusinessError('invalid_input');
       const fingerprint = createHash('sha256').update(JSON.stringify({ mode: deps.mode, accountId: input.accountId, productId: input.productId,
-        scheduledAt: input.scheduledAt, items: [...items].sort((a, b) => a.destinationId.localeCompare(b.destinationId))
+        scheduledAt: input.scheduledAt, ...(postingInterval ? { postingInterval } : {}), items: [...items].sort((a, b) => a.destinationId.localeCompare(b.destinationId))
           .map(({ destinationId, caption }) => ({ destinationId, caption })) })).digest('hex');
 
       const replayed = replay(input.requestKey, fingerprint);
@@ -140,7 +142,7 @@ export function createPostBatchService(db: Database, deps: { mode: IntegrationMo
 
       // enqueue tự có giao dịch nên không lồng được. Nếu tiến trình chết giữa hai bước, lần gửi lại cùng mã sẽ bị báo xung đột
       // (idempotency_conflict) chứ không tạo job trùng.
-      const queued = jobs.enqueue({ requestKey: input.requestKey, mode: deps.mode, jobs: approved.map((entry) => ({ approvalId: entry.approvalId, scheduledAt: input.scheduledAt })) });
+      const queued = jobs.enqueue({ requestKey: input.requestKey, mode: deps.mode, ...(postingInterval ? { postingInterval } : {}), jobs: approved.map((entry) => ({ approvalId: entry.approvalId, scheduledAt: input.scheduledAt })) });
       atomic(db, () => {
         db.prepare("INSERT INTO command_requests(id,scope,request_key,payload_fingerprint,created_at) VALUES(?,'post_batch',?,?,?)")
           .run(randomUUID(), input.requestKey, fingerprint, clock());

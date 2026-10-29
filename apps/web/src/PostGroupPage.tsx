@@ -26,6 +26,7 @@ import {
   type PostDraft,
   presetSelection,
   resolveStart,
+  resolvePostingInterval,
   similarToHistory,
   toVnLocal,
 } from './post-plan.ts';
@@ -196,7 +197,8 @@ export function PostGroupPage() {
     setLiveConfirm(false);
     setTemplateText(preset.captionTemplate ?? '');
     const start = preset.schedule.startMode === 'daily' && preset.schedule.timeOfDay ? nextDailyStart(preset.schedule.timeOfDay, Date.now()) : null;
-    setDraft((current) => ({ ...current, startMode: start === null ? 'now' : 'later', startLocal: start === null ? '' : toVnLocal(start) }));
+    setDraft((current) => ({ ...current, startMode: start === null ? 'now' : 'later', startLocal: start === null ? '' : toVnLocal(start),
+      intervalMin: String(preset.schedule.postingInterval?.minSeconds ?? 60), intervalMax: String(preset.schedule.postingInterval?.maxSeconds ?? 120) }));
     const accountIds = [...new Set(preset.targets.map((target) => target.accountId))];
     const accountId = accountIds.includes(draft.accountId) ? draft.accountId : (accountIds[0] ?? '');
     if (!accounts.some((item) => item.id === accountId)) { setMessage('Tài khoản của cấu hình này không còn dùng nữa.'); return; }
@@ -207,8 +209,9 @@ export function PostGroupPage() {
   }
 
   async function submit() {
-    if (!ready || startAt === null) return;
-    const signature = planSignature(draft.accountId, draft.productId, draft.startMode === 'now' ? 'now' : startAt, items);
+    const postingInterval = resolvePostingInterval(draft);
+    if (!ready || startAt === null || !postingInterval) return;
+    const signature = planSignature(draft.accountId, draft.productId, draft.startMode === 'now' ? 'now' : startAt, items, postingInterval);
     if (attempt.current?.signature !== signature) attempt.current = { signature, key: crypto.randomUUID(), startAt };
     const current = attempt.current;
     setBusy(true);
@@ -217,7 +220,7 @@ export function PostGroupPage() {
     try {
       // Gửi đúng một lần; mất phản hồi thì bấm lại dùng cùng mã yêu cầu nên không tạo job trùng.
       const response = await apiFetch('/api/posts', { method: 'POST', body: JSON.stringify({
-        requestKey: current.key, accountId: draft.accountId, productId: draft.productId, scheduledAt: current.startAt,
+        requestKey: current.key, accountId: draft.accountId, productId: draft.productId, scheduledAt: current.startAt, postingInterval,
         items: items.map((item) => ({ destinationId: item.destinationId, caption: item.caption, source: item.source })),
       }) });
       const body = (await response.json()) as { jobs?: Batch['jobs']; replayed?: boolean; failures?: Failure[]; message?: string };
@@ -253,5 +256,6 @@ export function PostGroupPage() {
     onRetryGroups={() => { setLiveConfirm(false); reloadGroups().catch(() => undefined); }}
     failureFor={(id) => failures.find((failure) => failure.destinationId === id)?.code}
     presets={<PresetPanel accountId={draft.accountId} selected={draft.selected} startMode={draft.startMode} startLocal={draft.startLocal}
+      postingInterval={resolvePostingInterval(draft)}
       templateText={templateText} onTemplateText={(value) => { setTemplateText(value); setLiveConfirm(false); }} onApply={applyPreset} notify={setMessage} />} />;
 }

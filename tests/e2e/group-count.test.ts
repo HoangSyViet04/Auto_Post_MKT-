@@ -88,6 +88,14 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     await page.getByRole('button', { name: 'Chọn theo số lượng', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Đã chọn 30/30 nhóm' }).waitFor();
     assert.equal(await page.getByRole('combobox', { name: 'Nhóm xem trước', exact: true }).locator('option').count(), 30);
+    const minRest = page.getByRole('spinbutton', { name: 'Nghỉ tối thiểu (giây)', exact: true });
+    const maxRest = page.getByRole('spinbutton', { name: 'Nghỉ tối đa (giây)', exact: true });
+    await minRest.fill('180'); await maxRest.fill('90');
+    await page.getByRole('checkbox', { name: /Tôi xác nhận ĐĂNG THẬT 30 bài/ }).check();
+    assert.equal(await page.getByRole('button', { name: 'Duyệt và xếp lịch (30 nhóm)', exact: true }).isEnabled(), false);
+    await page.getByRole('alert').filter({ hasText: 'Khoảng nghỉ phải' }).waitFor();
+    await minRest.fill('90'); await maxRest.fill('180');
+    assert.equal(await page.getByRole('checkbox', { name: /Tôi xác nhận ĐĂNG THẬT 30 bài/ }).isChecked(), false, 'đổi khoảng nghỉ cần xác nhận lại');
     const sharedCaption = page.getByRole('button', { name: 'Caption chung', exact: true });
     await sharedCaption.click();
     const originalCaption = await page.getByRole('textbox', { name: 'Caption', exact: true }).inputValue();
@@ -135,6 +143,8 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     await page.getByRole('status').filter({ hasText: 'Đã lưu cấu hình mới.' }).waitFor();
     await page.getByRole('button', { name: 'Cấu hình đăng thường dùng', exact: true }).click();
     assert.equal(ws.db.prepare('SELECT count(*) AS n FROM posting_presets').get()?.n, 1);
+    const savedSchedule = JSON.parse(String(ws.db.prepare('SELECT schedule_policy_json FROM posting_presets').get()?.schedule_policy_json));
+    assert.deepEqual(savedSchedule.postingInterval, { minSeconds: 90, maxSeconds: 180 });
     await page.evaluate('window.scrollTo(0, 0)');
     if (screenshotDir) await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-implemented-desktop.png'), fullPage: true });
     if (screenshotDir) await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-review-desktop-viewport.png') });
@@ -148,6 +158,7 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     await page.getByRole('combobox', { name: 'Nhóm xem trước', exact: true }).waitFor();
     await page.getByRole('combobox', { name: 'Nhóm xem trước', exact: true }).selectOption(previewGroup);
     assert.equal(await page.locator('.preview-caption').textContent(), ownCaption, 'đổi trang giữ bản nháp và caption từng nhóm');
+    assert.equal(await minRest.inputValue(), '90'); assert.equal(await maxRest.inputValue(), '180');
     await page.evaluate('window.scrollTo(0, 0)');
     if (screenshotDir) await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-implemented-mobile.png'), fullPage: true });
     if (screenshotDir) await page.screenshot({ animations: 'disabled', path: join(screenshotDir, 'ui-review-mobile-viewport.png') });
@@ -160,6 +171,7 @@ test('UI offline: quét 40 nhóm → nhập 30 → preview → duyệt đúng 30
     await page.getByRole('status').filter({ hasText: 'Đã duyệt và xếp 30 job.' }).waitFor();
     assert.equal(ws.db.prepare('SELECT count(*) AS n FROM publish_jobs').get()?.n, 30);
     assert.equal(ws.db.prepare("SELECT count(*) AS n FROM publish_jobs WHERE status='queued'").get()?.n, 30);
+    assert.equal(ws.db.prepare('SELECT count(*) AS n FROM job_posting_intervals WHERE min_seconds=90 AND max_seconds=180 AND rest_seconds BETWEEN 90 AND 180').get()?.n, 30);
     await page.getByRole('button', { name: 'Duyệt và xếp lịch (30 nhóm)', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Yêu cầu này đã được ghi nhận trước đó; không tạo thêm job.' }).waitFor();
     assert.equal(ws.db.prepare('SELECT count(*) AS n FROM publish_jobs').get()?.n, 30, 'bấm duyệt lại không tạo trùng');

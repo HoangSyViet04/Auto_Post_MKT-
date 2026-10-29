@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { postingIntervalSchema } from './posting-interval-schema.ts';
 import { BusinessError, type IntegrationMode, JOB_STATUSES, type JobStatus } from '#domain';
 import { createAccountRepository, createContentRepository, createJobQueries, createJobRepository, createPostBatchService, type Database, type PostBatchInput } from '#storage';
 
@@ -69,7 +70,7 @@ export function installJobsApi(app: FastifyInstance, db: Database, mode: Integra
   // trả 409 kèm danh sách đích bị chặn để người dùng bỏ chọn. Chống bấm hai lần theo requestKey.
   app.post<{ Body: PostBatchInput }>('/api/posts', {
     schema: { body: { type: 'object', additionalProperties: false, required: ['requestKey', 'accountId', 'productId', 'scheduledAt', 'items'], properties: {
-      requestKey: { type: 'string', minLength: 8, maxLength: 200 }, accountId: uuid, productId: uuid, scheduledAt: epochMs,
+      requestKey: { type: 'string', minLength: 8, maxLength: 200 }, accountId: uuid, productId: uuid, scheduledAt: epochMs, postingInterval: postingIntervalSchema,
       items: { type: 'array', minItems: 1, maxItems: 100, items: { type: 'object', additionalProperties: false, required: ['destinationId', 'caption'], properties: {
         destinationId: uuid, caption: { type: 'string', minLength: 1, maxLength: 10_000 }, source: { type: 'string', enum: ['template', 'manual'] } } } },
     } } },

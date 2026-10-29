@@ -238,6 +238,7 @@ Quản lý tài khoản trong bản đầu là quản lý kết nối và vận 
 ### 5.4. Lịch đăng và thực hiện tác vụ
 
 - Đăng ngay hoặc chọn lịch theo múi giờ Việt Nam (`Asia/Ho_Chi_Minh`).
+- Đăng nhóm có ô **Khoảng nghỉ giữa các nhóm: tối thiểu/tối đa (giây)** trong Lịch đăng; worker nghỉ sau lần gửi, lưu bền qua restart. Xem [hướng dẫn](docs/posting-interval.md).
 - Thiết lập giới hạn vận hành và khoảng cách tác vụ theo tài khoản/nơi đăng; đây là chính sách của người dùng, không phải bảo đảm an toàn tài khoản.
 - Xử lý tuần tự trong từng tài khoản; mức chạy đồng thời giữa hai tài khoản chỉ chốt sau thử nghiệm.
 - Khóa nhận tác vụ để tránh hai lượt xử lý cùng gửi một bài.
