@@ -902,3 +902,13 @@ Mẫu một mục:
 - **Kiểm tra:** `npm run check` đạt: typecheck, lint 219 file, **367/367 test** (28 suite, 0 fail/skip), build web. Test mới (Facebook giả): chỉ ô đồng ý nội quy → tick rồi gửi; tắt tự đồng ý/không cấu hình → không làm gì; câu viết tay → điền câu mặc định; trống → bỏ qua; nội quy + chữ cùng lúc; radio và ô tick lạ → bỏ qua; bảng thông báo có sẵn (chữ giống cảnh báo) không bị nhầm.
 - **Trung thực:** phần biểu mẫu **chưa kiểm chứng trên Facebook thật** (cấu trúc biểu mẫu thật chưa thấy lần nào); các nhãn nhận ô đồng ý nội quy/nút Gửi là suy đoán từ nhãn truy cập. Nếu sai, kết quả an toàn là bỏ qua hoặc "chưa rõ" (không gửi lại).
 - **Tiếp theo:** người dùng dùng thử qua ứng dụng với số nhóm nhỏ và báo lại khi gặp nhóm có biểu mẫu thật (kèm kết quả hiện trong bảng yêu cầu) để chỉnh. Lưu commit cục bộ, chưa push.
+
+## 2026-10-29 10:29 — P01/P03/P05: kiểm chứng và ghi sổ (nhóm "an toàn", không động tới Facebook)
+
+- **Việc:** đối chiếu từng mục còn mở với mã/test/bằng chứng thật đã có; chỉ tick khi đủ; sửa `docs/feasibility.md` đã cũ (còn ghi "chưa có khả năng thật nào đạt").
+- **Tick 12 mục:** P05.5, P05.6, P05.7; P03.4, P03.6, P03.7; P01.1, P01.4, P01.6, P01.8, P01.9, P01.10. Lý do từng mục ghi ngay trong `plan.md`.
+- **Cách kiểm:** chạy lại các test liên quan: storage (repository, job-reconcile, post-batch, account-repository), web (job-view, product-impact, post-plan), domain (caption), worker (job-runner, browser-commands), browser (browser, composer-publisher): **84 test đạt, 0 lỗi** (hai nhóm lệnh, 52 + 32). Tra cứu DB chỉ đọc: tài khoản `phu1` đang logged_in, `test1` đã gỡ; 5 job đã published, 1 failed.
+- **Viết lại `docs/feasibility.md`:** ma trận khả năng theo bằng chứng thật (đạt/một phần/hoãn), bảng selector–giao diện–dấu hiệu xác nhận (P01.9), kết luận theo kênh.
+- **Chủ ý KHÔNG tick:** P01.2 (chưa có profile thứ hai), P01.3 (proxy hoãn), P01.5 (chưa thấy chờ duyệt/từ chối), P01.7 (chưa thử riêng một ảnh, thời hạn token Page chưa rõ); P03.1 (ứng dụng không đọc tên/avatar tài khoản), P03.2 (chưa có "đóng phiên" riêng), P03.5 (chưa xử lý người dùng tự mở thư mục hồ sơ bằng Edge ngoài ứng dụng); P10.1 (chưa chọn lại từ bản đã lưu; trang TCN/fanpage chưa giữ bản nháp khi đổi trang).
+- **Kết quả:** tiến độ `plan.md` từ 73 lên 85 mục tick (checkbox mục chi tiết). Không sửa mã tính năng, không mở Facebook.
+- **Tiếp theo:** theo đề xuất: P07.2 (trần số bài mỗi ngày), quét nhóm đã tham gia qua ứng dụng (P06.2/4/8), và các mục còn thiếu nêu trên. Lưu commit cục bộ, chưa push.
