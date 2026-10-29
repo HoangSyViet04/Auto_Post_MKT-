@@ -835,3 +835,11 @@ Mẫu một mục:
 - **Ảnh:** 10 ảnh mới ở `docs/design/rounded-20261029/`; đã mở xem desktop, mobile và trang Máy. Khung/nút tròn hơn rõ rệt, không cắt chữ; nút quét trên mobile tự xuống dòng khi thiếu chỗ. `review.md` có liên kết trước/sau và thông số; cập nhật plan và liên kết tài liệu UI. Dữ liệu/ảnh/tài khoản giả; không mở Facebook thật hoặc gửi bài.
 - **Tiếp theo:** người dùng mở lại `Auto-Post-MKT.cmd`, Ctrl+F5 để nhận CSS mới và dùng thử. Lưu commit cục bộ, chưa push.
 - **Gate toàn dự án:** đã chạy `npm.cmd run check` theo quy định repo: typecheck/lint đạt, **319/320 test đạt**; test fanpage `prepare` 2 ảnh trả `network_error` ở ~1 giây với fixture localhost cấu hình timeout 800 ms. Chạy lại riêng toàn bộ `page-publisher.test.ts` **11/11 đạt**, ca đó ~94 ms. Chưa xác định chắc nguyên nhân timeout khi chạy chung; không sửa mã fanpage hoặc tăng timeout trong lượt CSS. Gate dừng trước build, nhưng build web riêng đã đạt ở trên; không báo full gate xanh.
+
+## 2026-10-29 08:08 — Kiểm tra giãn cách đăng nhiều nhóm
+
+- **Yêu cầu:** kiểm tra có thể chọn khoảng nghỉ từ X đến Y giây giữa các nhóm hay chưa.
+- **Kết quả đọc mã hiện tại:** `getMinGapMs()` (`packages/config/src/index.ts`) đọc `APM_MIN_GAP_SECONDS`, mặc định 60 giây; chấp nhận số nguyên 0–86400. Worker truyền vào `createJobRunner`, chỉ nhận job tiếp theo cùng tài khoản khi không có job đang chạy/khóa browser và đã đủ khoảng cách từ `lastSendStartedAt`. Đây là khoảng cách giữa các mốc gửi, không phải thời gian nghỉ sau khi bài trước kết thúc; tác vụ lỗi trước mốc gửi không bắt đầu khoảng chờ này.
+- **Chưa có:** input min/max giây trong UI Đăng nhóm; chọn ngẫu nhiên trong khoảng; cấu hình khoảng nghỉ theo từng lô hoặc từng nhóm. UI chỉ có bắt đầu ngay/hẹn giờ. Các job trong lô dùng chung scheduledAt, worker đảm nhiệm giãn cách.
+- **Cấu hình:** không tìm thấy override `APM_MIN_GAP_SECONDS` trong `.env` của project hoặc môi trường shell đang kiểm tra; không đọc môi trường riêng của worker đã chạy nên không khẳng định giá trị của tiến trình đó. Không sửa `.env` hay hàng chờ.
+- **Kiểm chứng:** `npm.cmd test -- apps/worker/src/job-runner.test.ts` **9/9 đạt**, gồm hai job cùng tài khoản phải chờ đủ giãn cách và trường hợp nhiều đích kết quả xen kẽ. Dữ liệu tạm/fake, không Facebook thật. Chỉ kiểm tra và ghi nhật ký, chưa triển khai min/max.
