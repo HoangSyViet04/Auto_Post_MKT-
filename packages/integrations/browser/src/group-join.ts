@@ -76,15 +76,21 @@ export function createGroupJoiner(deps: {
       const deadline = Date.now() + (deps.confirmMs ?? 12_000);
       for (;;) {
         await page.waitForTimeout(500);
+        // Trạng thái đã đổi thì ưu tiên hơn hộp thoại: nhóm công khai cho vào ngay thường hiện hộp thoại chào sau khi vào
+        // (lần thử thật 29/10/2026: coi hộp thoại đó là câu hỏi đã làm ghi sai "bỏ qua" dù nick đã vào nhóm).
+        const nowRequested = await visible(page, 'button', REQUESTED_BUTTON) > 0;
+        const nowJoined = !nowRequested && await visible(page, 'button', JOINED_BUTTON) > 0;
+        if (nowRequested || nowJoined) {
+          if (await page.locator('[role="dialog"]').count() > 0) await closeDialog(page);
+          return nowRequested ? result('requested', null) : result('joined', null);
+        }
         if (await page.locator('[role="dialog"]').count() > 0) {
           const dialogText = await page.locator('[role="dialog"]').first().textContent().catch(() => '') ?? '';
           if (JOIN_BLOCKED_TEXT.test(dialogText)) { await closeDialog(page); return result('failed', 'action_blocked'); }
-          // Câu hỏi, điều khoản hoặc bước xác nhận chưa rõ: đóng lại, chưa gửi gì, người dùng tự làm tay.
+          // Hộp thoại mà trạng thái chưa đổi: câu hỏi, điều khoản hoặc bước chưa rõ. Đóng lại, chưa gửi gì, người dùng tự làm tay.
           await closeDialog(page);
           return result('skipped', 'needs_answers');
         }
-        if (await visible(page, 'button', REQUESTED_BUTTON) > 0) return result('requested', null);
-        if (await visible(page, 'button', JOINED_BUTTON) > 0) return result('joined', null);
         if (JOIN_BLOCKED_TEXT.test(await noticeText(page))) return result('failed', 'action_blocked');
         if (Date.now() >= deadline) return result('unknown', 'unconfirmed');
       }

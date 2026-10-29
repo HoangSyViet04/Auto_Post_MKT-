@@ -17,6 +17,8 @@ const pages: Record<string, string> = {
   noButton: `<main>${header}<p>Giao diện khác</p></main>`,
   questions: `<main>${header}<div role="button" aria-label="Tham gia nhóm" onclick="document.getElementById('d').hidden=false">Tham gia nhóm</div>
     <div id="d" role="dialog" hidden><p>Trả lời câu hỏi để tham gia</p><input type="text"><div role="button" aria-label="Gửi" onclick="${clickJs}">Gửi</div><div role="button" aria-label="Đóng" onclick="document.getElementById('d').hidden=true">Đóng</div></div></main>`,
+  joinedWithWelcome: `<main>${header}<div role="button" aria-label="Tham gia nhóm" onclick="${clickJs};this.textContent='Đã tham gia';this.setAttribute('aria-label','Đã tham gia');document.getElementById('w').hidden=false">Tham gia nhóm</div>
+    <div id="w" role="dialog" hidden><p>Chào mừng bạn đến với nhóm</p><div role="button" aria-label="Đóng" onclick="document.getElementById('w').hidden=true">Đóng</div></div></main>`,
   blocked: `<main>${header}<div role="button" aria-label="Tham gia nhóm" onclick="${clickJs};document.body.insertAdjacentHTML('beforeend','<div role=alert>Bạn tạm thời bị chặn tham gia nhóm</div>')">Tham gia nhóm</div></main>`,
   silent: `<main>${header}<div role="button" aria-label="Tham gia nhóm" onclick="${clickJs}">Tham gia nhóm</div></main>`,
   postWithWarning: `<main>${header}<article>không thể tham gia nhóm khác nếu bạn tạm thời bị chặn</article><div id="b" role="button" aria-label="Tham gia nhóm" onclick="${clickJs};this.textContent='Hủy yêu cầu';this.setAttribute('aria-label','Hủy yêu cầu')">Tham gia nhóm</div></main>`,
@@ -59,6 +61,11 @@ test('Facebook giả: giao diện lạ, hai nút, sai nhóm → dừng trước 
     const done = await attempt(page);
     assert.deepEqual([done.result.status, done.result.reason, done.result.clicked, done.joins], ['failed', reason, false, 0]);
   }
+});
+
+test('Facebook giả: vào nhóm ngay kèm hộp thoại chào → joined (không nhầm là câu hỏi)', async () => {
+  const done = await attempt('joinedWithWelcome');
+  assert.deepEqual([done.result.status, done.result.reason, done.result.clicked, done.joins], ['joined', null, true, 1]);
 });
 
 test('Facebook giả: nhóm có câu hỏi → đóng hộp thoại, không gửi, báo cần làm tay', async () => {
