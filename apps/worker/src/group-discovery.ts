@@ -78,7 +78,7 @@ export function createGroupJoinRunner(deps: { db: Database; workerId: string; da
         lease = leases.acquireBrowser(claim.accountId, `join-${claim.id}`, 180_000);
         timer = setInterval(() => { try { tick(); } catch { lost = true; } }, 5000);
         const result = await deps.join({ profileDir: join(deps.dataDir, 'profiles', accounts.profileKey(claim.accountId)),
-          expectedIdentity: claim.expectedIdentity, externalId: claim.externalId,
+          expectedIdentity: claim.expectedIdentity, externalId: claim.externalId, form: { agreeRules: joins.settings().agreeRules, defaultAnswer: joins.settings().defaultAnswer },
           shouldCancel: () => lost || joins.shouldCancel(claim), onTick: tick,
           beforeSend: () => { if (lost) return false; sendStarted = joins.markSendStarted(claim.id, deps.workerId); return sendStarted; },
         });

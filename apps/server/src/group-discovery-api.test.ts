@@ -35,9 +35,12 @@ test('API tìm nhóm và yêu cầu tham gia: kiểm tra chế độ/worker/danh
     // Cài đặt hạn mức
     assert.equal((await app.inject({ method: 'GET', url: '/api/group-join-settings', headers })).json().settings.dailyCap, 5);
     const put = (payload: object) => app.inject({ method: 'PUT', url: '/api/group-join-settings', headers, payload });
-    assert.equal((await put({ dailyCap: 31, minGapSeconds: 180, maxGapSeconds: 360 })).statusCode, 400);
-    assert.equal((await put({ dailyCap: 5, minGapSeconds: 300, maxGapSeconds: 200 })).statusCode, 400); // tối đa < tối thiểu
-    assert.equal((await put({ dailyCap: 3, minGapSeconds: 120, maxGapSeconds: 240 })).json().settings.dailyCap, 3);
+    assert.equal((await put({ agreeRules: true, defaultAnswer: '', dailyCap: 31, minGapSeconds: 180, maxGapSeconds: 360 })).statusCode, 400);
+    assert.equal((await put({ agreeRules: true, defaultAnswer: '', dailyCap: 5, minGapSeconds: 300, maxGapSeconds: 200 })).statusCode, 400); // tối đa < tối thiểu
+    assert.equal((await put({ dailyCap: 5, minGapSeconds: 120, maxGapSeconds: 240 })).statusCode, 400); // thiếu lựa chọn tự đồng ý và câu mặc định
+    assert.equal((await put({ agreeRules: true, defaultAnswer: 'x'.repeat(501), dailyCap: 3, minGapSeconds: 120, maxGapSeconds: 240 })).statusCode, 400);
+    const saved = (await put({ agreeRules: false, defaultAnswer: 'Mình muốn mua bán điện thoại', dailyCap: 3, minGapSeconds: 120, maxGapSeconds: 240 })).json().settings;
+    assert.deepEqual([saved.dailyCap, saved.agreeRules, saved.defaultAnswer], [3, false, 'Mình muốn mua bán điện thoại']);
 
     // Yêu cầu tham gia
     const run = createGroupSearchRepository(ws.db);

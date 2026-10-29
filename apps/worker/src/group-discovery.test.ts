@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { afterEach, beforeEach, test } from 'node:test';
 import type { GroupJoiner, GroupSearchScanner } from '#browser';
+import { DEFAULT_JOIN_SETTINGS } from '#domain';
 import { createAccountRepository, createGroupJoinRepository, createGroupSearchRepository, createLeaseRepository } from '#storage';
 import { createTestWorkspace } from '#test-support';
 import { createGroupJoinRunner, createGroupSearchRunner } from './group-discovery.ts';
@@ -77,7 +78,7 @@ test('gửi yêu cầu: thành công tính vào hạn mức; mốc gửi ghi tr�
 test('gửi yêu cầu: lỗi sau mốc gửi là unknown (không gửi lại); lỗi trước mốc là failed', async () => {
   const [first, second] = await seed(2);
   const joins = createGroupJoinRepository(ws.db, { random: () => 0 });
-  joins.saveSettings({ dailyCap: 5, minGapSeconds: 60, maxGapSeconds: 60 });
+  joins.saveSettings({ ...DEFAULT_JOIN_SETTINGS, dailyCap: 5, minGapSeconds: 60, maxGapSeconds: 60 });
   joins.enqueue({ accountId, searchResultIds: [first as string], maxCount: 1 });
   await runJoin(async (input) => { input.beforeSend(); throw new Error('mất kết nối sau khi bấm'); });
   assert.deepEqual(joins.list(accountId).map((row) => [row.status, row.reasonCode]), [['unknown', 'unconfirmed']]);

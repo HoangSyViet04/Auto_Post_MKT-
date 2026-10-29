@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { BusinessError, type GroupJoinSettings, type IntegrationMode, JOIN_BATCH_MAX, JOIN_DAILY_CAP_MAX, SEARCH_KEYWORD_MAX, SEARCH_LIMIT_MAX } from '#domain';
+import { BusinessError, type GroupJoinSettings, type IntegrationMode, JOIN_ANSWER_MAX, JOIN_BATCH_MAX, JOIN_DAILY_CAP_MAX, SEARCH_KEYWORD_MAX, SEARCH_LIMIT_MAX } from '#domain';
 import { createGroupJoinRepository, createGroupSearchRepository, type Database, readWorkerStatus } from '#storage';
 
 const UUID = '^[a-fA-F0-9]{8}-(?:[a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}$';
@@ -37,9 +37,9 @@ export function installGroupDiscoveryApi(app: FastifyInstance, db: Database, mod
 
   app.get('/api/group-join-settings', async () => ({ settings: joins.settings() }));
   app.put<{ Body: GroupJoinSettings }>('/api/group-join-settings', {
-    schema: { body: { type: 'object', additionalProperties: false, required: ['dailyCap', 'minGapSeconds', 'maxGapSeconds'], properties: {
+    schema: { body: { type: 'object', additionalProperties: false, required: ['dailyCap', 'minGapSeconds', 'maxGapSeconds', 'agreeRules', 'defaultAnswer'], properties: {
       dailyCap: { type: 'integer', minimum: 1, maximum: JOIN_DAILY_CAP_MAX }, minGapSeconds: { type: 'integer', minimum: 60, maximum: 3600 },
-      maxGapSeconds: { type: 'integer', minimum: 60, maximum: 7200 },
+      maxGapSeconds: { type: 'integer', minimum: 60, maximum: 7200 }, agreeRules: { type: 'boolean' }, defaultAnswer: { type: 'string', maxLength: JOIN_ANSWER_MAX },
     } } },
   }, async (request) => ({ settings: joins.saveSettings(request.body) }));
 

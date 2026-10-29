@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
-import { BusinessError, type BusinessErrorCode, JOIN_WINDOW_MS } from '#domain';
+import { BusinessError, type BusinessErrorCode, DEFAULT_JOIN_SETTINGS, JOIN_WINDOW_MS } from '#domain';
 import { createTestWorkspace } from '#test-support';
 import { createAccountRepository } from './account-repository.ts';
 import { createGroupJoinRepository } from './group-join-repository.ts';
@@ -96,7 +96,7 @@ test('xếp yêu cầu tham gia: chỉ nhóm có thể tham gia, tối đa theo 
 
 test('worker nhận yêu cầu theo giờ, theo khoảng cách và hạn mức; mốc gửi chỉ ghi khi còn đủ điều kiện', () => {
   const { join } = repos();
-  join.saveSettings({ dailyCap: 2, minGapSeconds: 60, maxGapSeconds: 60 });
+  join.saveSettings({ ...DEFAULT_JOIN_SETTINGS, dailyCap: 2, minGapSeconds: 60, maxGapSeconds: 60 });
   const ids = seed([group(1), group(2), group(3)]);
   join.enqueue({ accountId, searchResultIds: [ids[0] as string, ids[1] as string], maxCount: 2 });
   const first = join.claimNext('w'); assert.ok(first);
@@ -121,7 +121,7 @@ test('hạn mức bị siết sau khi xếp: yêu cầu chờ bị bỏ qua, kh�
   const first = join.claimNext('w'); assert.ok(first);
   assert.equal(join.markSendStarted(first.id, 'w'), true);
   join.finish(first.id, 'w', 'requested', null);
-  join.saveSettings({ dailyCap: 1, minGapSeconds: 60, maxGapSeconds: 60 });
+  join.saveSettings({ ...DEFAULT_JOIN_SETTINGS, dailyCap: 1, minGapSeconds: 60, maxGapSeconds: 60 });
   clock += 600_000;
   assert.equal(join.claimNext('w'), undefined);
   assert.deepEqual(join.list(accountId).filter((row) => row.status === 'skipped').map((row) => row.reasonCode), ['daily_cap', 'daily_cap']);
@@ -169,7 +169,9 @@ test('cài đặt hạn mức: giá trị sai bị từ chối; lưu và đọc 
   const { join } = repos();
   for (const bad of [{ dailyCap: 0, minGapSeconds: 60, maxGapSeconds: 60 }, { dailyCap: 31, minGapSeconds: 60, maxGapSeconds: 60 },
     { dailyCap: 5, minGapSeconds: 30, maxGapSeconds: 60 }, { dailyCap: 5, minGapSeconds: 120, maxGapSeconds: 60 }, { dailyCap: 1.5, minGapSeconds: 60, maxGapSeconds: 60 }]) {
-    assert.throws(() => join.saveSettings(bad), code('invalid_input'));
+    assert.throws(() => join.saveSettings({ ...DEFAULT_JOIN_SETTINGS, ...bad }), code('invalid_input'));
   }
-  assert.deepEqual(join.saveSettings({ dailyCap: 8, minGapSeconds: 120, maxGapSeconds: 240 }), { dailyCap: 8, minGapSeconds: 120, maxGapSeconds: 240 });
+  const saved = { ...DEFAULT_JOIN_SETTINGS, dailyCap: 8, minGapSeconds: 120, maxGapSeconds: 240, agreeRules: false, defaultAnswer: 'Mình muốn mua bán điện thoại' };
+  assert.deepEqual(join.saveSettings(saved), saved);
+  assert.throws(() => join.saveSettings({ ...saved, defaultAnswer: 'x'.repeat(501) }), code('invalid_input'));
 });

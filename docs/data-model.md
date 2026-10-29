@@ -86,3 +86,5 @@ Lượt đọc giao diện luôn kết thúc `partial` (hoặc stopped/blocked/f
 ## Tìm nhóm theo từ khóa và yêu cầu tham gia (migration 0008)
 
 `scan_runs` dùng lại cho `mode='keyword'` (mỗi tài khoản một lượt đang chờ/chạy). Kết quả tìm ở `group_search_results` (ID số, tên, công khai/riêng tư, số thành viên, trạng thái tham gia lúc đọc), duy nhất theo lượt–ID; **không** tạo `destinations`. `group_join_settings` (một dòng): hạn mức yêu cầu/24 giờ mỗi tài khoản và khoảng cách min–max. `group_join_requests`: mỗi dòng một nhóm cho một tài khoản/danh tính, có `not_before`, `send_started_at` (mốc gửi ghi trước khi bấm), trạng thái `queued/running/requested/joined/skipped/failed/unknown/cancelled`; chỉ mục duy nhất ngăn hai yêu cầu đang chờ cho cùng tài khoản–nhóm. Hạn mức tính các dòng `requested/joined/unknown` hoặc đang chạy sau mốc gửi trong 24 giờ gần nhất. Xem [group-search-join.md](group-search-join.md).
+
+Migration 0009 thêm vào `group_join_settings`: `agree_rules` (tự tick ô đồng ý nội quy khi nhóm hỏi) và `default_answer` (câu trả lời mặc định cho câu hỏi viết tay, tối đa 500 ký tự, mặc định trống).

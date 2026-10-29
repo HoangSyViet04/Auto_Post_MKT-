@@ -12,9 +12,14 @@ export interface GroupJoinSettings {
   /** Khoảng cách ngẫu nhiên giữa hai lần gửi của cùng một tài khoản. */
   minGapSeconds: number;
   maxGapSeconds: number;
+  /** Tự tick ô đồng ý nội quy/điều khoản trong hộp thoại tham gia. */
+  agreeRules: boolean;
+  /** Câu trả lời mặc định (do người dùng soạn) cho câu hỏi viết tay; trống thì nhóm có câu hỏi viết tay bị bỏ qua. */
+  defaultAnswer: string;
 }
 
-export const DEFAULT_JOIN_SETTINGS: GroupJoinSettings = { dailyCap: 5, minGapSeconds: 180, maxGapSeconds: 360 };
+export const DEFAULT_JOIN_SETTINGS: GroupJoinSettings = { dailyCap: 5, minGapSeconds: 180, maxGapSeconds: 360, agreeRules: true, defaultAnswer: '' };
+export const JOIN_ANSWER_MAX = 500;
 
 /** Rỗng nếu hợp lệ; ngược lại là lý do bằng tiếng Việt. */
 export function joinSettingsProblem(value: GroupJoinSettings): string | null {
@@ -22,6 +27,8 @@ export function joinSettingsProblem(value: GroupJoinSettings): string | null {
   if (!whole(value.dailyCap) || value.dailyCap < 1 || value.dailyCap > JOIN_DAILY_CAP_MAX) return `Số yêu cầu mỗi ngày phải từ 1 đến ${JOIN_DAILY_CAP_MAX}.`;
   if (!whole(value.minGapSeconds) || value.minGapSeconds < 60 || value.minGapSeconds > 3600) return 'Khoảng cách tối thiểu phải từ 60 đến 3600 giây.';
   if (!whole(value.maxGapSeconds) || value.maxGapSeconds < value.minGapSeconds || value.maxGapSeconds > 7200) return 'Khoảng cách tối đa phải từ mức tối thiểu đến 7200 giây.';
+  if (typeof value.agreeRules !== 'boolean') return 'Thiếu lựa chọn tự đồng ý nội quy.';
+  if (typeof value.defaultAnswer !== 'string' || value.defaultAnswer.length > JOIN_ANSWER_MAX) return `Câu trả lời mặc định tối đa ${JOIN_ANSWER_MAX} ký tự.`;
   return null;
 }
 
@@ -88,7 +95,7 @@ export const GROUP_JOIN_STATUS_LABEL: Record<GroupJoinStatus, string> = {
 };
 
 export const GROUP_JOIN_REASON: Record<string, string> = {
-  needs_answers: 'Nhóm có câu hỏi hoặc điều khoản bắt buộc: cần tự làm tay',
+  needs_answers: 'Nhóm có câu hỏi/điều khoản mà ứng dụng không tự xử lý (hoặc bạn đã tắt tự trả lời): cần tự làm tay',
   already_joined: 'Nick đã là thành viên',
   already_requested: 'Đã gửi yêu cầu từ trước',
   daily_cap: 'Đạt hạn mức yêu cầu trong 24 giờ',

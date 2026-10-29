@@ -21,7 +21,7 @@ export function GroupSearchPanel({ account }: { account: AccountSummary | undefi
   const [maxCount, setMaxCount] = useState('3');
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [confirmed, setConfirmed] = useState(false);
-  const [rule, setRule] = useState({ dailyCap: '5', minMinutes: '3', maxMinutes: '6' });
+  const [rule, setRule] = useState({ dailyCap: '5', minMinutes: '3', maxMinutes: '6', agreeRules: true, answer: '' });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const accountId = account?.id ?? '';
@@ -52,9 +52,13 @@ export function GroupSearchPanel({ account }: { account: AccountSummary | undefi
   const savedCap = saved?.dailyCap;
   const savedMin = saved?.minGapSeconds;
   const savedMax = saved?.maxGapSeconds;
+  const savedAgree = saved?.agreeRules;
+  const savedAnswer = saved?.defaultAnswer;
   useEffect(() => {
-    if (savedCap !== undefined && savedMin !== undefined && savedMax !== undefined) setRule({ dailyCap: String(savedCap), minMinutes: String(savedMin / 60), maxMinutes: String(savedMax / 60) });
-  }, [savedCap, savedMin, savedMax]);
+    if (savedCap !== undefined && savedMin !== undefined && savedMax !== undefined && savedAgree !== undefined && savedAnswer !== undefined) {
+      setRule({ dailyCap: String(savedCap), minMinutes: String(savedMin / 60), maxMinutes: String(savedMax / 60), agreeRules: savedAgree, answer: savedAnswer });
+    }
+  }, [savedCap, savedMin, savedMax, savedAgree, savedAnswer]);
 
   const live = health?.integrations === 'live';
   const available = live && health.worker.alive && health.worker.browser === 'real';
@@ -73,7 +77,7 @@ export function GroupSearchPanel({ account }: { account: AccountSummary | undefi
     finally { setBusy(false); }
   }
   function saveRule() {
-    const body = { dailyCap: Number(rule.dailyCap), minGapSeconds: Math.round(Number(rule.minMinutes) * 60), maxGapSeconds: Math.round(Number(rule.maxMinutes) * 60) };
+    const body = { dailyCap: Number(rule.dailyCap), minGapSeconds: Math.round(Number(rule.minMinutes) * 60), maxGapSeconds: Math.round(Number(rule.maxMinutes) * 60), agreeRules: rule.agreeRules, defaultAnswer: rule.answer.trim() };
     void send('/api/group-join-settings', body, 'PUT');
   }
 
@@ -158,6 +162,11 @@ export function GroupSearchPanel({ account }: { account: AccountSummary | undefi
           <label>Tối đa (phút) <input type="number" aria-label="Khoảng cách tối đa phút" min={1} max={120} value={rule.maxMinutes} onChange={(e) => setRule({ ...rule, maxMinutes: e.target.value })} /></label>
           <button type="button" disabled={busy} onClick={saveRule}>Lưu</button>
         </div>
+        <label className="check"><input type="checkbox" checked={rule.agreeRules} onChange={(e) => setRule({ ...rule, agreeRules: e.target.checked })} />Tự tick ô “đồng ý nội quy/điều khoản” khi nhóm hỏi lúc tham gia</label>
+        <label>Câu trả lời mặc định cho câu hỏi viết tay của nhóm (để trống = bỏ qua nhóm có câu hỏi viết tay)
+          <textarea rows={3} maxLength={500} aria-label="Câu trả lời mặc định khi tham gia nhóm" value={rule.answer} onChange={(e) => setRule({ ...rule, answer: e.target.value })}
+            placeholder="ví dụ: Mình muốn tham gia để mua bán, trao đổi điện thoại và đã đọc, đồng ý nội quy nhóm." /></label>
+        <p className="muted">Câu hỏi chọn đáp án (trắc nghiệm, danh sách chọn) và ô tick không phải đồng ý nội quy không bao giờ được trả lời hộ: nhóm đó bị bỏ qua để bạn tự làm tay. Cùng một câu trả lời sẽ được dùng cho mọi nhóm, nên chỉ nên viết câu chung chung, đúng sự thật.</p>
         <p className="muted">Mỗi yêu cầu cách yêu cầu trước một khoảng ngẫu nhiên trong khoảng này. Hạn mức tính theo 24 giờ gần nhất, không theo ngày lịch. Ứng dụng từ chối xếp vượt hạn mức và kiểm tra lại ngay trước khi bấm.</p>
       </details>
     </>}

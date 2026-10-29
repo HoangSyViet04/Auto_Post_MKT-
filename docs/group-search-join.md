@@ -28,7 +28,13 @@ Những con số này giảm rủi ro nhưng **không bảo đảm** Facebook kh
 
 ## Khi gặp vấn đề
 
-- **Nhóm có câu hỏi/điều khoản bắt buộc** (hộp thoại sau khi bấm Tham gia): ứng dụng đóng hộp thoại, **không gửi**, ghi “cần tự làm tay”. Không trả lời hộ.
+- **Nhóm có câu hỏi/điều khoản** (biểu mẫu hiện sau khi bấm Tham gia). Cách xử lý do bạn chọn trong mục “Hạn mức và khoảng cách”:
+  - **Tự tick đồng ý nội quy** (mặc định bật): tick các ô có nhãn nhắc tới nội quy/quy định/điều khoản/đồng ý.
+  - **Câu trả lời mặc định** (mặc định trống): điền vào mọi câu hỏi viết tay; trống thì nhóm có câu hỏi viết tay bị bỏ qua. Cùng một câu cho mọi nhóm nên chỉ nên viết câu chung chung, đúng sự thật.
+  - **Không bao giờ trả lời hộ** câu chọn đáp án (trắc nghiệm, danh sách chọn) hay ô tick không phải đồng ý nội quy.
+  - Chỉ làm khi trả lời được **toàn bộ** biểu mẫu và có đúng một nút gửi; ngược lại không đụng gì, đóng lại, ghi “cần tự làm tay”. Nút Gửi chỉ bấm một lần.
+  - Nhận diện biểu mẫu theo **nội dung** (hộp thoại mới xuất hiện sau khi bấm và có ô nhập/ô tick/lựa chọn), không theo `role="dialog"`: Facebook luôn có sẵn hộp thoại (bảng thông báo), nên lần thử thật đầu đã nhầm.
+  - **Chưa kiểm chứng trên Facebook thật:** cả bốn nhóm công khai điện thoại đã thử (29/10/2026) đều cho vào thẳng, **chưa gặp biểu mẫu thật nào**; cấu trúc biểu mẫu mới chỉ thử với Facebook giả dựng theo nhãn truy cập. Gặp nhóm có biểu mẫu thật, kết quả có thể là bỏ qua hoặc “chưa rõ”: hãy báo lại để chỉnh.
 - **Facebook báo hạn chế/đã đạt giới hạn** (thông báo trong hộp thoại/cảnh báo): đánh dấu `action_blocked` và **bỏ qua mọi yêu cầu còn chờ** của tài khoản đó. Chữ tương tự nằm trong bài của nhóm không bị coi là hạn chế (chỉ đọc hộp thoại/cảnh báo).
 - **Phiên hết hạn / checkpoint / sai danh tính:** dừng, bỏ qua các yêu cầu còn chờ, cập nhật trạng thái tài khoản. Không tự giải CAPTCHA.
 - **Bấm nhưng không thấy xác nhận:** `unknown` (“Chưa rõ kết quả”); tính vào hạn mức; **không bao giờ bấm lại**. Hãy mở Facebook xem.

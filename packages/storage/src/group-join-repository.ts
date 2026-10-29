@@ -29,8 +29,8 @@ export function createGroupJoinRepository(db: Database, options: GroupJoinReposi
       WHERE a.id=? AND a.archived_at IS NULL AND a.paused=0 AND a.session_status='logged_in'`, accountId);
   }
   function settings(): GroupJoinSettings {
-    const row = one<GroupJoinSettings>(db, 'SELECT daily_cap AS dailyCap,min_gap_seconds AS minGapSeconds,max_gap_seconds AS maxGapSeconds FROM group_join_settings WHERE id=1');
-    return row ? { ...row } : DEFAULT_JOIN_SETTINGS;
+    const row = one<Omit<GroupJoinSettings, 'agreeRules'> & { agreeRules: number }>(db, 'SELECT daily_cap AS dailyCap,min_gap_seconds AS minGapSeconds,max_gap_seconds AS maxGapSeconds,agree_rules AS agreeRules,default_answer AS defaultAnswer FROM group_join_settings WHERE id=1');
+    return row ? { ...row, agreeRules: row.agreeRules === 1 } : DEFAULT_JOIN_SETTINGS;
   }
   function sentTimes(accountId: string, since: number): number[] {
     return (db.prepare(`SELECT send_started_at AS t FROM group_join_requests WHERE account_id=? AND send_started_at>? AND ${COUNTED_SQL} ORDER BY send_started_at`)
@@ -56,8 +56,8 @@ export function createGroupJoinRepository(db: Database, options: GroupJoinReposi
     settings,
     saveSettings(value: GroupJoinSettings): GroupJoinSettings {
       if (joinSettingsProblem(value) !== null) throw new BusinessError('invalid_input');
-      db.prepare('UPDATE group_join_settings SET daily_cap=?,min_gap_seconds=?,max_gap_seconds=?,updated_at=? WHERE id=1')
-        .run(value.dailyCap, value.minGapSeconds, value.maxGapSeconds, now());
+      db.prepare('UPDATE group_join_settings SET daily_cap=?,min_gap_seconds=?,max_gap_seconds=?,agree_rules=?,default_answer=?,updated_at=? WHERE id=1')
+        .run(value.dailyCap, value.minGapSeconds, value.maxGapSeconds, value.agreeRules ? 1 : 0, value.defaultAnswer, now());
       return settings();
     },
     quota,
