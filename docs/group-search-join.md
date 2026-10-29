@@ -2,7 +2,7 @@
 
 Mục đích: tìm nhóm mới trên Facebook bằng từ khóa, tick chọn và gửi yêu cầu tham gia với **số lượng do bạn kiểm soát**, để tránh tham gia quá nhiều nhóm trong thời gian ngắn.
 
-> **Trạng thái trung thực:** toàn bộ phần này đã chạy và được kiểm thử với **Facebook giả** (Edge ngầm, chặn mọi yêu cầu ra ngoài). **Chưa chạy lần nào trên Facebook thật.** Cách nhận diện thẻ kết quả tìm, nút “Tham gia nhóm”, hộp thoại câu hỏi và thông báo hạn chế là suy từ nhãn truy cập (vi/en), chưa đối chiếu giao diện thật. Phải thử thật từng bước (bên dưới) trước khi tin vào nó.
+> **Trạng thái trung thực:** phần **tìm (chỉ đọc)** đã chạy thật một lần ngày 29/10/2026 trên nick phụ `phu1` (từ khóa "mua bán điện thoại", 3 vòng cuộn: 38 nhóm, 35 có ID số) và bộ đọc đã được chỉnh theo giao diện thật. Phần **gửi yêu cầu tham gia chưa chạy thật lần nào**: chỉ kiểm thử với Facebook giả (Edge ngầm, chặn mọi yêu cầu ra ngoài); nút trên **trang nhóm**, hộp thoại câu hỏi và thông báo hạn chế vẫn là suy từ nhãn truy cập (vi/en).
 
 ## Luồng sử dụng
 
@@ -47,8 +47,8 @@ Những con số này giảm rủi ro nhưng **không bảo đảm** Facebook kh
 
 Test Facebook giả (không có kết nối thật): đọc kết quả, trạng thái từng thẻ, thẻ không có nút không mượn nút nhóm khác, loại trùng, giới hạn, hủy, giao diện đổi, sai danh tính/checkpoint; gửi một lần, ghi mốc trước khi bấm, đã là thành viên/đã gửi → không bấm, hai nút/không nút/sai nhóm → không bấm, hộp thoại câu hỏi → không gửi, thông báo hạn chế → dừng, chữ cảnh báo trong bài không làm dừng, bấm mà không xác nhận → `unknown`; hạn mức/giãn cách/trùng/hủy/worker mất ở kho dữ liệu; API (xác nhận, giới hạn, chế độ mô phỏng không gửi); logic chọn số lượng ở giao diện.
 
-## Thử thật theo từng bước (chưa làm)
+## Thử thật theo từng bước
 
-1. **Chỉ đọc:** tìm một từ khóa bằng nick phụ, kiểm tra tên/loại/số thành viên/trạng thái có đúng với Facebook không. Script hỗ trợ: `node spikes/fb-groups-search.ts --label=<nhãn> --keyword="..." --confirm-real` (chỉ đọc, ghi bằng chứng vào thư mục dữ liệu, ngoài repo).
-2. **Gửi đúng MỘT yêu cầu** vào một nhóm bạn chọn, có bạn xem trên màn hình; đối chiếu kết quả “đã gửi, chờ duyệt”.
+1. **Chỉ đọc — ĐÃ LÀM 29/10/2026.** Facebook thật: mỗi thẻ kết quả có tên, dòng "Công khai · 578K thành viên · 90+ bài viết/ngày", "N người bạn là thành viên" và một nút có nhãn **"Tham gia nhóm &lt;tên nhóm&gt;"** (nhãn có kèm tên). Bộ đọc ban đầu đoán nhãn là "Tham gia nhóm" trơn và dòng loại là "Nhóm công khai" nên đọc sai; đã sửa và kiểm lại offline trên 38 thẻ thật: 38/38 đọc được, 38 "có thể tham gia", 37 công khai + 1 riêng tư, 38 có số thành viên, 3 thẻ không có ID số (bị bỏ qua khi lưu). Script: `node spikes/fb-groups-search.ts --label=<nhãn> --keyword="..." --confirm-real` (chỉ đọc, ghi bằng chứng vào thư mục dữ liệu, ngoài repo).
+2. **Gửi đúng MỘT yêu cầu — CHƯA LÀM** (cần bạn chọn nhóm và cho phép riêng) vào một nhóm bạn chọn, có bạn xem trên màn hình; đối chiếu kết quả “đã gửi, chờ duyệt”.
 3. Chỉ khi bước 1–2 đúng mới tăng số lượng; giữ hạn mức thấp những ngày đầu.

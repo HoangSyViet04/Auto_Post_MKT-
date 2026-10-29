@@ -3,9 +3,10 @@ import { readIdentityRef, sessionOf } from './facebook-ui.ts';
 import { type LaunchedProfile, launchProfile } from './profile-session.ts';
 
 /** Nhận diện theo nhãn nút (vi/en), không theo class CSS. Regex không dùng cờ u vì Playwright không nhận khi dựng selector. */
-export const JOIN_BUTTON = /^(tham gia nhóm|tham gia|join group|join)$/i;
-export const JOINED_BUTTON = /^(đã tham gia|joined)$/i;
-export const REQUESTED_BUTTON = /(hủy yêu cầu|cancel request|đã gửi yêu cầu|request sent|yêu cầu đã gửi)/i;
+// Facebook thật gắn tên nhóm vào nhãn nút ("Tham gia nhóm <tên>", đã xác nhận ngày 29/10/2026), nên khớp theo phần đầu của nhãn.
+export const JOIN_BUTTON = /^(tham gia nhóm|join group)(\s.*)?$|^(tham gia|join)$/i;
+export const JOINED_BUTTON = /^(đã tham gia|joined)(\s.*)?$/i;
+export const REQUESTED_BUTTON = /^(hủy yêu cầu|cancel request|đã gửi yêu cầu|request sent|yêu cầu đã gửi)/i;
 
 export interface SearchObservation {
   reference: string;
@@ -38,10 +39,11 @@ export function joinStateOf(buttons: readonly string[], shared: boolean): GroupJ
   return 'unknown';
 }
 
+/** Dòng thông tin thật có dạng "Công khai · 578K thành viên · 90+ bài viết/ngày" (đã xác nhận 29/10/2026); bỏ dòng đầu là tên nhóm. */
 export function privacyOf(lines: readonly string[]): GroupPrivacy {
-  const joined = lines.join(' ');
-  if (/nhóm riêng tư|private group/i.test(joined)) return 'private';
-  if (/nhóm công khai|public group/i.test(joined)) return 'public';
+  const info = lines.slice(1);
+  if (info.some((line) => /^(nhóm )?(riêng tư|private)( group)?\s*(·|$)/i.test(line))) return 'private';
+  if (info.some((line) => /^(nhóm )?(công khai|public)( group)?\s*(·|$)/i.test(line))) return 'public';
   return 'unknown';
 }
 
@@ -55,7 +57,7 @@ export function parseSearchCard(card: RawSearchCard): SearchObservation | null {
     reference: normalized.canonicalUrl,
     name,
     privacy: card.shared ? 'unknown' : privacyOf(card.lines),
-    memberCount: card.shared ? null : parseMemberCount(card.lines.join(' ')),
+    memberCount: card.shared ? null : parseMemberCount(card.lines.slice(1).join(' ')),
     joinState: joinStateOf(card.buttons, card.shared),
   };
 }
