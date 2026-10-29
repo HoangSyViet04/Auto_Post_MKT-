@@ -16,6 +16,7 @@ const MESSAGES = {
   account_limit: 'Đã đủ hai tài khoản đang dùng. Gỡ một tài khoản trước khi thêm.',
   secret_unavailable: 'Bí mật chưa sẵn sàng hoặc đã bị thu hồi.',
   secret_lost: 'Không thể mở bí mật. Cần kết nối lại.',
+  join_limit: 'Vượt hạn mức yêu cầu tham gia nhóm trong 24 giờ của tài khoản này.',
 } as const;
 
 export type BusinessErrorCode = keyof typeof MESSAGES;

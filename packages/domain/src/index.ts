@@ -11,4 +11,5 @@ export * from './caption.ts';
 export * from './caption-template.ts';
 export * from './business-error.ts';
 export * from './joined-scan.ts';
+export * from './group-join.ts';
 export * from './posting-interval.ts';

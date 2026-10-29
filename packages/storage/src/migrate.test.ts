@@ -27,7 +27,7 @@ describe('migrate', () => {
     try {
       migrate(db, migrations.filter((m) => m.version < 7));
       db.prepare('INSERT INTO accounts(id,label,slot,created_at) VALUES(?,?,1,0)').run('11111111-1111-4111-8111-111111111111', 'Tài khoản đang dùng');
-      assert.deepEqual(migrate(db).applied, [7]);
+      assert.deepEqual(migrate(db).applied, migrations.filter((m) => m.version >= 7).map((m) => m.version)); // 7 và mọi migration sau đó
       assert.equal(db.prepare('SELECT label FROM accounts').get()?.label, 'Tài khoản đang dùng');
       assert.equal(db.prepare('SELECT count(*) AS n FROM job_posting_intervals').get()?.n, 0);
       assert.deepEqual(migrate(db).applied, []);

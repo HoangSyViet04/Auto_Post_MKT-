@@ -8,3 +8,5 @@ export * from './profile-lock.ts';
 export * from './profile-session.ts';
 export * from './session.ts';
 export * from './joined-groups.ts';
+export * from './group-search.ts';
+export * from './group-join.ts';

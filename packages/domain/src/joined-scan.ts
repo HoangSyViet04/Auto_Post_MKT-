@@ -15,6 +15,7 @@ export const JOINED_SCAN_ACTIVE = ['queued', 'running'] as const;
 export const JOINED_SCAN_REASON: Record<string, string> = {
   result_limit: 'Đã đạt giới hạn quét',
   no_more_results_seen: 'Không thấy nhóm mới sau nhiều lượt cuộn',
+  no_results: 'Không thấy nhóm nào cho từ khóa này',
   round_cap: 'Đã đạt giới hạn lượt cuộn',
   cancelled: 'Đã dừng theo yêu cầu',
   worker_lost: 'Worker bị gián đoạn; có thể quét lại',

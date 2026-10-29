@@ -16,7 +16,7 @@
 ## Phạm vi và giới hạn
 
 - Mỗi lượt xếp tối đa 100 nhóm. Giới hạn quét khác số nhóm muốn đăng: quét 200 nhóm có thể chỉ chọn 30 nhóm để đăng.
-- Chỉ đọc nhóm đã tham gia từ giao diện Facebook; chưa tìm nhóm bằng từ khóa, chưa tự tham gia/rời nhóm, chưa áp dụng cho fanpage.
+- Chỉ đọc nhóm đã tham gia từ giao diện Facebook; tìm theo từ khóa và gửi yêu cầu tham gia là phần riêng (xem [group-search-join.md](group-search-join.md)), chưa tự rời nhóm, chưa áp dụng cho fanpage.
 - Kết quả luôn ghi **một phần**, kể cả khi không thấy nhóm mới. Dừng khi đạt giới hạn, không thấy nhóm mới ba lượt, đạt 60 lượt cuộn, mất phiên, cảnh báo, yêu cầu dừng hoặc lỗi.
 - Nhóm vắng trong lượt quét không bị đánh dấu đã rời, không xóa dữ liệu cũ. Chỉ lưu nhóm có ID số; nhóm có tên rút gọn được đếm riêng, chưa làm giàu ID tự động.
 - Worker dùng chung khóa trình duyệt với đăng bài/đăng nhập. Quét chờ khi hồ sơ đang bận; dừng và đóng hồ sơ nếu mất quyền xử lý. Không tiếp tục scan cũ của worker đã mất; người dùng chủ động quét lại.

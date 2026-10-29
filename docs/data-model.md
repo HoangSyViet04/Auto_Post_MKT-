@@ -82,3 +82,7 @@ Bảng `sales_events`: mỗi dòng là một lần **người dùng tự ghi nh�
 Mỗi vòng đọc lưu các nhóm có ID số và `scan_results` trong cùng transaction, nguồn `joined_scan`, membership `joined`, giữ nguyên quyền đăng/nội quy/ưu tiên có sẵn. Không suy quyền đăng từ membership. `scan_results` duy nhất theo lượt–đích; nhóm vắng không bị cập nhật trạng thái đã rời. Các kết quả chưa có ID số chỉ được đếm, chưa nhập vào danh sách đích.
 
 Lượt đọc giao diện luôn kết thúc `partial` (hoặc stopped/blocked/failed), không tuyên bố đã đọc toàn bộ. Heartbeat mất quá 180 giây → partial/worker_lost, không tự chạy lại. API chỉ trả trạng thái, số lượng, giới hạn, mã lý do; không trả profile path, chủ lease hay tham chiếu danh tính.
+
+## Tìm nhóm theo từ khóa và yêu cầu tham gia (migration 0008)
+
+`scan_runs` dùng lại cho `mode='keyword'` (mỗi tài khoản một lượt đang chờ/chạy). Kết quả tìm ở `group_search_results` (ID số, tên, công khai/riêng tư, số thành viên, trạng thái tham gia lúc đọc), duy nhất theo lượt–ID; **không** tạo `destinations`. `group_join_settings` (một dòng): hạn mức yêu cầu/24 giờ mỗi tài khoản và khoảng cách min–max. `group_join_requests`: mỗi dòng một nhóm cho một tài khoản/danh tính, có `not_before`, `send_started_at` (mốc gửi ghi trước khi bấm), trạng thái `queued/running/requested/joined/skipped/failed/unknown/cancelled`; chỉ mục duy nhất ngăn hai yêu cầu đang chờ cho cùng tài khoản–nhóm. Hạn mức tính các dòng `requested/joined/unknown` hoặc đang chạy sau mốc gửi trong 24 giờ gần nhất. Xem [group-search-join.md](group-search-join.md).

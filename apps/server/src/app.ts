@@ -6,6 +6,7 @@ import { createLogger } from '#logging';
 import { installLocalAccess, type LocalAccessOptions } from './local-access.ts';
 import { installAccountsApi } from './accounts-api.ts';
 import { installDataApi } from './data-api.ts';
+import { installGroupDiscoveryApi } from './group-discovery-api.ts';
 import { installGroupsApi } from './groups-api.ts';
 import { installJobsApi } from './jobs-api.ts';
 import { installPagesApi } from './pages-api.ts';
@@ -41,6 +42,7 @@ export function buildApp({ db, env, integrations, logger = true, security, media
   installDataApi(app, db, mediaStore ?? createMediaStore(db), uploadLimitBytes);
   installAccountsApi(app, db);
   installGroupsApi(app, db, integrations);
+  installGroupDiscoveryApi(app, db, integrations);
   installJobsApi(app, db, integrations, overdueAfterMs);
   installPresetsApi(app, db);
   installPagesApi(app, db, integrations);

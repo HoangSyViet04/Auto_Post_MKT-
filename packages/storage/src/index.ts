@@ -9,6 +9,8 @@ export * from './content-repository.ts';
 export * from './diagnostics.ts';
 export * from './group-repository.ts';
 export * from './joined-scan-repository.ts';
+export * from './group-search-repository.ts';
+export * from './group-join-repository.ts';
 export * from './job-query.ts';
 export * from './job-repository.ts';
 export * from './media-store.ts';

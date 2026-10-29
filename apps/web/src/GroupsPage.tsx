@@ -13,6 +13,7 @@ import { normalizeGroupReference } from '#domain';
 import { apiFetch } from './api.ts';
 import { setHandoff } from './handoff.ts';
 import { networkMessage, readError } from './http.ts';
+import { GroupSearchPanel } from './GroupSearchPanel.tsx';
 import { JoinedScanPanel } from './JoinedScanPanel.tsx';
 
 const PAGE_SIZE = 20;
@@ -171,6 +172,7 @@ export function GroupsPage() {
       </div>
 
       <JoinedScanPanel key={accountId} account={chosenAccount} onRefresh={load} />
+      <GroupSearchPanel key={accountId} account={chosenAccount} />
 
       {adding && (
         <form className="product-form" onSubmit={add} noValidate>
