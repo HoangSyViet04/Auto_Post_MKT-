@@ -353,6 +353,8 @@ Mặc định thực hiện từ trên xuống. Khi chờ quyền Page hoặc đ
 
 **Tinh chỉnh chuyển động (29/10/2026):** đã thêm phản hồi nút/điều hướng, mở–thu panel/menu mobile, chuyển tab preview, trạng thái tải nhóm và chế độ giảm chuyển động. Kiểm tra thao tác liên tiếp/giữ nội dung/bàn phím, full gate 320/320 đạt; xem `docs/design/motion-20261029/motion.md`.
 
+**Tinh chỉnh hình dáng (29/10/2026):** card bo 24 px, ô nhập 14 px, nút dạng viên, viền/bóng nhẹ và đệm thoáng hơn. Đã xem ảnh desktop/mobile và test UI offline; xem `docs/design/rounded-20261029/review.md`.
+
 **Giao diện theo bản tham khảo v1 (28/10/2026):** đã áp dụng shell/sidebar mới, màn Đăng nhóm hai cột chọn máy/nhóm + preview/lịch, quét ngay trong trang, chọn số lượng, caption riêng theo nhóm và cấu hình thu gọn; responsive desktop/mobile. Giữ các luồng duyệt/xếp lịch và trang fanpage vừa bổ sung. Có test UI offline 40 → chọn 30 → sửa caption → lưu cấu hình → giữ nháp khi đổi trang → xếp đúng 30 job, menu mobile/no-overflow. Xem `docs/design/ui-implementation.md`; không coi việc đổi bố cục là hoàn thành phần tích hợp còn mở ở P10.1/P10.4.
 
 - [ ] P10.1. Composer chung: máy, ảnh, caption/phiên bản, tài khoản/đích/lịch; không mất nội dung khi đổi màn hình. *(Phần cho kênh nhóm xong: máy, ảnh theo thứ tự, caption mẫu/sửa tay, tài khoản, nhóm, lịch; bản nháp đang soạn được giữ khi chuyển trang trong phiên. Chưa có phiên bản chọn lại từ bản đã lưu, trang cá nhân và fanpage dùng lại sau.)*
